@@ -264,121 +264,116 @@
             }
         }
     
-        /* Update the print media query in your style section */
         @media print {
-            /* Reset and base settings */
-            @page {
-                margin: 0;
-                size: 58mm 100%; /* Width set to 58mm */
-            }
-
-            body * {
-                visibility: hidden;
-                margin: 0;
-                padding: 0;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
-
-            /* Receipt section specific styles */
-            .receipt-section,
-            .receipt-section * {
-                visibility: visible;
-                color: black !important;
-                background: none !important;
-            }
-
-            .receipt-section {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 58mm !important; /* Force 58mm width */
-                margin: 0 !important;
-                padding: 3mm !important;
-                font-size: 12px !important;
-                line-height: 1.2 !important;
-                font-family: 'Courier New', monospace !important; /* Use monospace for better receipt printing */
-            }
-
-            /* Header styling */
-            .receipt-section h1 {
-                font-size: 14px !important;
-                text-align: center !important;
-                margin-bottom: 3mm !important;
-                font-weight: bold !important;
-            }
-
-            /* Date and cashier info */
-            #current-date,
-            #cashier-name {
-                font-size: 10px !important;
-                text-align: center !important;
-                margin-bottom: 2mm !important;
-            }
-
-            /* Items list styling */
-            #item-list {
-                margin: 3mm 0 !important;
-                border-top: 1px dashed black !important;
-                border-bottom: 1px dashed black !important;
-                padding: 2mm 0 !important;
-            }
-
-            #item-list .flex.flex-col {
-                margin-bottom: 2mm !important;
-            }
-
-            /* Item details */
-            #item-list .font-semibold {
-                font-size: 12px !important;
-                margin-bottom: 1mm !important;
-            }
-
-            #item-list ul {
-                margin-left: 2mm !important;
-                font-size: 10px !important;
-            }
-
-            #item-list li {
-                margin-bottom: 0.5mm !important;
-            }
-
-            /* Subtotal section */
-            .receipt-section .text-lg {
-                font-size: 12px !important;
-                margin: 2mm 0 !important;
-            }
-
-            /* Hide unnecessary elements */
-            .button-group,
-            .edit-button,
-            .remove-button,
-            #scrollLeft,
-            #scrollRight,
-            .nav-text,
-            .hover-link {
-                display: none !important;
-            }
-
-            /* Custom dashed separator */
-            hr {
-                border: none !important;
-                border-top: 1px dashed black !important;
-                margin: 2mm 0 !important;
-            }
-
-            /* Ensure text doesn't overflow */
-            * {
-                white-space: normal !important;
-                word-wrap: break-word !important;
-            }
-
-            /* Sharp text rendering */
-            * {
-                -webkit-font-smoothing: none !important;
-                text-rendering: optimizeLegibility !important;
-            }
+        /* Reset and base settings for ZPrinter */
+        @page {
+            margin: 0;
+            size: 72mm 100%; /* Width set to 72mm for ZPrinter */
         }
+
+        /* High DPI specific adjustments */
+        * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            /* Optimize text rendering for 203 DPI */
+            -webkit-font-smoothing: antialiased;
+            text-rendering: optimizeLegibility;
+        }
+
+        /* Receipt section specific styles */
+        .receipt-section,
+        .receipt-section * {
+            visibility: visible;
+            width: 72mm !important; /* Match printer width */
+            margin: 0 auto !important;
+            padding: 2mm !important;
+            /* Adjust font sizes for better readability at 203 DPI */
+            font-size: 10pt !important;
+            line-height: 1.2 !important;
+            font-family: 'Courier New', monospace !important;
+        }
+
+        /* Header styling optimized for 203 DPI */
+        .receipt-section h1 {
+            font-size: 12pt !important;
+            font-weight: bold !important;
+            margin-bottom: 2mm !important;
+            text-align: center !important;
+        }
+
+        /* Date and cashier info */
+        #current-date,
+        #cashier-name {
+            font-size: 9pt !important;
+            margin-bottom: 1.5mm !important;
+            text-align: center !important;
+        }
+
+        /* Items list styling */
+        #item-list {
+            margin: 2mm 0 !important;
+            padding: 1.5mm 0 !important;
+        }
+
+        #item-list .flex.flex-col {
+            margin-bottom: 1.5mm !important;
+            border-bottom: 0.1mm dashed black !important;
+            padding-bottom: 1.5mm !important;
+        }
+
+        /* Item details with optimized spacing */
+        #item-list .font-semibold {
+            font-size: 10pt !important;
+            margin-bottom: 0.8mm !important;
+        }
+
+        #item-list ul {
+            margin-left: 1.5mm !important;
+            font-size: 9pt !important;
+        }
+
+        #item-list li {
+            margin-bottom: 0.5mm !important;
+            line-height: 1.3 !important;
+        }
+
+        /* Subtotal section */
+        .receipt-section .text-lg {
+            font-size: 11pt !important;
+            margin: 1.5mm 0 !important;
+            font-weight: bold !important;
+        }
+
+        /* Crisp borders and separators */
+        hr {
+            border: none !important;
+            border-top: 0.2mm dashed black !important;
+            margin: 2mm 0 !important;
+        }
+
+        /* Ensure proper text wrapping */
+        * {
+            word-break: break-word !important;
+            white-space: normal !important;
+        }
+
+        /* Hide unnecessary elements */
+        .button-group,
+        .edit-button,
+        .remove-button,
+        #scrollLeft,
+        #scrollRight,
+        .nav-text,
+        .hover-link {
+            display: none !important;
+        }
+
+        /* Optimize image quality */
+        img {
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
+        }
+    }
     </style>
 </head>
 <body>
