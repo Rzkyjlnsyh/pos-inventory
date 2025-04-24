@@ -266,72 +266,117 @@
     
         /* Update the print media query in your style section */
         @media print {
-            /* Hide all elements initially */
+            /* Reset and base settings */
+            @page {
+                margin: 0;
+                size: 58mm 100%; /* Width set to 58mm */
+            }
+
             body * {
                 visibility: hidden;
+                margin: 0;
+                padding: 0;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
-            
-            /* Show only receipt section and its contents */
-            .receipt-section, 
+
+            /* Receipt section specific styles */
+            .receipt-section,
             .receipt-section * {
                 visibility: visible;
+                color: black !important;
+                background: none !important;
             }
-            
-            /* Position receipt for full screen */
+
             .receipt-section {
                 position: absolute;
                 left: 0;
                 top: 0;
-                width: 100vw !important; /* Force full viewport width */
-                height: 100vh !important; /* Force full viewport height */
-                padding: 20px;
-                margin: 0;
-                max-width: none !important; /* Remove max-width restriction */
+                width: 58mm !important; /* Force 58mm width */
+                margin: 0 !important;
+                padding: 3mm !important;
+                font-size: 12px !important;
+                line-height: 1.2 !important;
+                font-family: 'Courier New', monospace !important; /* Use monospace for better receipt printing */
             }
 
-            /* Adjust content scaling for full screen */
-            .receipt-section {
-                font-size: 16px; /* Increase font size for better readability */
-                line-height: 1.5;
+            /* Header styling */
+            .receipt-section h1 {
+                font-size: 14px !important;
+                text-align: center !important;
+                margin-bottom: 3mm !important;
+                font-weight: bold !important;
             }
 
-            /* Center the content */
-            .receipt-section > div {
-                max-width: 800px;
-                margin: 0 auto;
+            /* Date and cashier info */
+            #current-date,
+            #cashier-name {
+                font-size: 10px !important;
+                text-align: center !important;
+                margin-bottom: 2mm !important;
             }
 
-            /* Hide buttons when printing */
-            .receipt-section .button-group {
+            /* Items list styling */
+            #item-list {
+                margin: 3mm 0 !important;
+                border-top: 1px dashed black !important;
+                border-bottom: 1px dashed black !important;
+                padding: 2mm 0 !important;
+            }
+
+            #item-list .flex.flex-col {
+                margin-bottom: 2mm !important;
+            }
+
+            /* Item details */
+            #item-list .font-semibold {
+                font-size: 12px !important;
+                margin-bottom: 1mm !important;
+            }
+
+            #item-list ul {
+                margin-left: 2mm !important;
+                font-size: 10px !important;
+            }
+
+            #item-list li {
+                margin-bottom: 0.5mm !important;
+            }
+
+            /* Subtotal section */
+            .receipt-section .text-lg {
+                font-size: 12px !important;
+                margin: 2mm 0 !important;
+            }
+
+            /* Hide unnecessary elements */
+            .button-group,
+            .edit-button,
+            .remove-button,
+            #scrollLeft,
+            #scrollRight,
+            .nav-text,
+            .hover-link {
                 display: none !important;
             }
 
-            /* Adjust spacing for items */
-            .receipt-section #item-list {
-                margin: 30px 0;
-                max-height: none !important; /* Remove scroll restrictions */
+            /* Custom dashed separator */
+            hr {
+                border: none !important;
+                border-top: 1px dashed black !important;
+                margin: 2mm 0 !important;
             }
 
-            /* Enhance headers and totals visibility */
-            .receipt-section h1 {
-                font-size: 24px;
-                margin-bottom: 20px;
+            /* Ensure text doesn't overflow */
+            * {
+                white-space: normal !important;
+                word-wrap: break-word !important;
             }
 
-            /* Improve spacing between items */
-            .receipt-section .flex.flex-col {
-                margin-bottom: 20px;
-            }
-
-            /* Remove any background colors and shadows */
-            .receipt-section {
-                background: none !important;
-                box-shadow: none !important;
-            }
-
-            /* Hide scrollbars */
-            .receipt-section::-webkit-scrollbar {
-                display: none;
+            /* Sharp text rendering */
+            * {
+                -webkit-font-smoothing: none !important;
+                text-rendering: optimizeLegibility !important;
             }
         }
     </style>
@@ -1412,13 +1457,72 @@
 
         // Function to print receipt
         function printReceipt() {
-            const subtotal = document.getElementById('subtotal').textContent;
-            if (subtotal === 'Rp 0') {
-                alert('No items in the order to print');
-                return;
-            }
-            window.print();
-        }
+        // Create a new hidden iframe
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+        
+        // Get the receipt content
+        const receiptSection = document.querySelector('.receipt-section');
+        const content = receiptSection.cloneNode(true);
+        
+        // Remove any edit/remove buttons from the clone
+        content.querySelectorAll('.button-group, button').forEach(el => el.remove());
+        
+        // Write the content to the iframe
+        iframe.contentDocument.write(`
+            <html>
+                <head>
+                    <style>
+                        @page {
+                            margin: 0;
+                            size: 58mm auto;
+                        }
+                        body {
+                            font-family: 'Courier New', monospace;
+                            width: 58mm;
+                            margin: 0;
+                            padding: 3mm;
+                        }
+                        * {
+                            color: black !important;
+                            background: none !important;
+                        }
+                        hr {
+                            border: none;
+                            border-top: 1px dashed black;
+                            margin: 2mm 0;
+                        }
+                        h1 {
+                            font-size: 14px;
+                            text-align: center;
+                            margin-bottom: 3mm;
+                        }
+                        #current-date, #cashier-name {
+                            font-size: 10px;
+                            text-align: center;
+                        }
+                        ul {
+                            margin: 1mm 0;
+                            padding-left: 2mm;
+                            font-size: 10px;
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${content.innerHTML}
+                </body>
+            </html>
+        `);
+        
+        // Print the iframe
+        iframe.contentWindow.print();
+        
+        // Remove the iframe after printing
+        setTimeout(() => {
+            document.body.removeChild(iframe);
+        }, 1000);
+    }
 
         // Function to clear order
         function clearOrder() {
