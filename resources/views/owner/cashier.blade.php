@@ -1450,7 +1450,7 @@
                             size: 58mm auto;
                         }
                         body {
-                            font-family: 'Courier New', monospace;
+                            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
                             width: 58mm;
                             margin: 0;
                             padding: 3mm;
@@ -1465,18 +1465,18 @@
                             margin: 2mm 0;
                         }
                         h1 {
-                            font-size: 14px;
+                            font-size: 24px;
                             text-align: center;
                             margin-bottom: 3mm;
                         }
                         #current-date, #cashier-name {
-                            font-size: 10px;
+                            font-size: 14px;
                             text-align: center;
                         }
                         ul {
                             margin: 1mm 0;
                             padding-left: 2mm;
-                            font-size: 10px;
+                            font-size: 14px;
                         }
                     </style>
                 </head>
