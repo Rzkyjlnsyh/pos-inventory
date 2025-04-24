@@ -9,6 +9,9 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
 
+    <!-- Add this after the other font imports -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
     <!-- Bootstrap Icons CDN -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css" />
 
@@ -54,26 +57,31 @@
             top: 0;
             height: 100vh;
             overflow-y: auto;
-            width: 16.666667%; /* This is equivalent to w-1/6 */
+            width: 16.666667%;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem; /* Slightly larger than the original */
         }
 
-        /* Style the scrollbar for better appearance */
-        .receipt-section::-webkit-scrollbar {
-            width: 6px;
+        /* Update specific elements within the receipt */
+        .receipt-section h1 {
+            font-family: 'Inter', sans-serif;
+            font-weight: 700;
+            font-size: 1.5rem;
         }
 
-        .receipt-section::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
+        .receipt-section #item-list {
+            font-weight: 500;
+            font-size: 0.95rem;
         }
 
-        .receipt-section::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 10px;
+        .receipt-section #item-list .font-semibold {
+            font-weight: 600;
+            font-size: 1rem;
         }
 
-        .receipt-section::-webkit-scrollbar-thumb:hover {
-            background: #555;
+        .receipt-section #subtotal {
+            font-weight: 700;
+            font-size: 1.1rem;
         }
 
         /* Adjust main content to account for fixed receipt section */
@@ -265,115 +273,76 @@
         }
     
         @media print {
-        /* Reset and base settings for ZPrinter */
-        @page {
-            margin: 0;
-            size: 72mm 100%; /* Width set to 72mm for ZPrinter */
-        }
+            @page {
+                margin: 0;
+                size: 72mm 100%;
+            }
 
-        /* High DPI specific adjustments */
-        * {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-            /* Optimize text rendering for 203 DPI */
-            -webkit-font-smoothing: antialiased;
-            text-rendering: optimizeLegibility;
-        }
+            .receipt-section,
+            .receipt-section * {
+                visibility: visible;
+                width: 72mm !important;
+                margin: 0 auto !important;
+                padding: 2mm !important;
+                /* Updated font settings for better print readability */
+                font-family: 'Arial', 'Helvetica', sans-serif !important;
+                font-size: 12pt !important; /* Increased base font size */
+                line-height: 1.3 !important;
+            }
 
-        /* Receipt section specific styles */
-        .receipt-section,
-        .receipt-section * {
-            visibility: visible;
-            width: 72mm !important; /* Match printer width */
-            margin: 0 auto !important;
-            padding: 2mm !important;
-            /* Adjust font sizes for better readability at 203 DPI */
-            font-size: 10pt !important;
-            line-height: 1.2 !important;
-            font-family: 'Courier New', monospace !important;
-        }
+            /* Header styling with larger, bolder text */
+            .receipt-section h1 {
+                font-size: 16pt !important;
+                font-weight: 700 !important;
+                margin-bottom: 3mm !important;
+                text-align: center !important;
+            }
 
-        /* Header styling optimized for 203 DPI */
-        .receipt-section h1 {
-            font-size: 12pt !important;
-            font-weight: bold !important;
-            margin-bottom: 2mm !important;
-            text-align: center !important;
-        }
+            /* Date and cashier info */
+            #current-date,
+            #cashier-name {
+                font-size: 11pt !important;
+                font-weight: 500 !important;
+                margin-bottom: 2mm !important;
+            }
 
-        /* Date and cashier info */
-        #current-date,
-        #cashier-name {
-            font-size: 9pt !important;
-            margin-bottom: 1.5mm !important;
-            text-align: center !important;
-        }
+            /* Items list styling */
+            #item-list {
+                margin: 3mm 0 !important;
+                padding: 2mm 0 !important;
+            }
 
-        /* Items list styling */
-        #item-list {
-            margin: 2mm 0 !important;
-            padding: 1.5mm 0 !important;
-        }
+            #item-list .font-semibold {
+                font-size: 13pt !important;
+                font-weight: 700 !important;
+                margin-bottom: 1mm !important;
+            }
 
-        #item-list .flex.flex-col {
-            margin-bottom: 1.5mm !important;
-            border-bottom: 0.1mm dashed black !important;
-            padding-bottom: 1.5mm !important;
-        }
+            #item-list ul {
+                margin-left: 2mm !important;
+                font-size: 11pt !important;
+            }
 
-        /* Item details with optimized spacing */
-        #item-list .font-semibold {
-            font-size: 10pt !important;
-            margin-bottom: 0.8mm !important;
-        }
+            #item-list li {
+                margin-bottom: 1mm !important;
+                line-height: 1.4 !important;
+                font-weight: 500 !important;
+            }
 
-        #item-list ul {
-            margin-left: 1.5mm !important;
-            font-size: 9pt !important;
-        }
+            /* Subtotal section with larger text */
+            .receipt-section .text-lg {
+                font-size: 14pt !important;
+                font-weight: 700 !important;
+                margin: 2mm 0 !important;
+            }
 
-        #item-list li {
-            margin-bottom: 0.5mm !important;
-            line-height: 1.3 !important;
+            /* Ensure proper text contrast */
+            * {
+                color: black !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
         }
-
-        /* Subtotal section */
-        .receipt-section .text-lg {
-            font-size: 11pt !important;
-            margin: 1.5mm 0 !important;
-            font-weight: bold !important;
-        }
-
-        /* Crisp borders and separators */
-        hr {
-            border: none !important;
-            border-top: 0.2mm dashed black !important;
-            margin: 2mm 0 !important;
-        }
-
-        /* Ensure proper text wrapping */
-        * {
-            word-break: break-word !important;
-            white-space: normal !important;
-        }
-
-        /* Hide unnecessary elements */
-        .button-group,
-        .edit-button,
-        .remove-button,
-        #scrollLeft,
-        #scrollRight,
-        .nav-text,
-        .hover-link {
-            display: none !important;
-        }
-
-        /* Optimize image quality */
-        img {
-            image-rendering: -webkit-optimize-contrast;
-            image-rendering: crisp-edges;
-        }
-    }
     </style>
 </head>
 <body>
