@@ -284,56 +284,63 @@
                 width: 72mm !important;
                 margin: 0 auto !important;
                 padding: 2mm !important;
-                /* Updated font settings for better print readability */
-                font-family: 'Arial', 'Helvetica', sans-serif !important;
-                font-size: 12pt !important; /* Increased base font size */
-                line-height: 1.3 !important;
+                /* Use the same font family as web version */
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+                /* Increase base font size */
+                font-size: 14pt !important;
+                line-height: 1.4 !important;
             }
 
-            /* Header styling with larger, bolder text */
+            /* Header styling */
             .receipt-section h1 {
-                font-size: 16pt !important;
+                font-size: 36pt !important;
                 font-weight: 700 !important;
-                margin-bottom: 3mm !important;
+                margin-bottom: 4mm !important;
                 text-align: center !important;
+                font-family: 'Inter', sans-serif !important;
             }
 
             /* Date and cashier info */
             #current-date,
             #cashier-name {
-                font-size: 11pt !important;
+                font-size: 24pt !important;
                 font-weight: 500 !important;
                 margin-bottom: 2mm !important;
+                font-family: 'Inter', sans-serif !important;
             }
 
             /* Items list styling */
             #item-list {
-                margin: 3mm 0 !important;
+                margin: 4mm 0 !important;
                 padding: 2mm 0 !important;
             }
 
             #item-list .font-semibold {
-                font-size: 13pt !important;
-                font-weight: 700 !important;
-                margin-bottom: 1mm !important;
+                font-size: 24pt !important;
+                font-weight: 600 !important;
+                margin-bottom: 2mm !important;
+                font-family: 'Inter', sans-serif !important;
             }
 
             #item-list ul {
-                margin-left: 2mm !important;
-                font-size: 11pt !important;
+                margin-left: 3mm !important;
+                font-size: 22pt !important;
             }
 
             #item-list li {
-                margin-bottom: 1mm !important;
+                margin-bottom: 1.5mm !important;
                 line-height: 1.4 !important;
                 font-weight: 500 !important;
+                font-family: 'Inter', sans-serif !important;
             }
 
-            /* Subtotal section with larger text */
-            .receipt-section .text-lg {
-                font-size: 14pt !important;
+            /* Subtotal section */
+            #subtotal,
+            .text-lg {
+                font-size: 24pt !important;
                 font-weight: 700 !important;
-                margin: 2mm 0 !important;
+                margin: 3mm 0 !important;
+                font-family: 'Inter', sans-serif !important;
             }
 
             /* Ensure proper text contrast */
