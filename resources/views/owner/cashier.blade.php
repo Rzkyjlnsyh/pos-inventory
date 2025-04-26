@@ -1465,18 +1465,18 @@
                             margin: 2mm 0;
                         }
                         h1 {
-                            font-size: 24px;
+                            font-size: 16px;
                             text-align: center;
                             margin-bottom: 3mm;
                         }
                         #current-date, #cashier-name {
-                            font-size: 14px;
+                            font-size: 12px;
                             text-align: center;
                         }
                         ul {
                             margin: 1mm 0;
                             padding-left: 2mm;
-                            font-size: 14px;
+                            font-size: 12px;
                         }
                     </style>
                 </head>
