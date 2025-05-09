@@ -12,6 +12,11 @@
             font-family: 'Raleway', sans-serif;
             background-color: #f8fafc;
         }
+        .cursor-pointer:hover {
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+            transform: translateY(-3px);
+            transition: all 0.3s ease;
+        }
         .nav-text {
             position: relative;
             display: inline-block;
@@ -113,7 +118,7 @@
                     <!-- Stats Overview -->
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                         <!-- Total Items Stats -->
-                        <div class="bg-white rounded-lg shadow p-6">
+                        <div class="bg-white rounded-lg shadow p-6 cursor-pointer" onclick="showAllStocks()">
                             <div class="flex items-center">
                                 <div class="p-3 bg-blue-100 rounded-full">
                                     <i class="bi bi-box text-blue-600 text-xl"></i>
@@ -137,14 +142,14 @@
                             </div>
                         </div>
                         <!-- Low Stock Warning -->
-                        <div class="bg-white rounded-lg shadow p-6">
+                        <div class="bg-white rounded-lg shadow p-6 cursor-pointer" onclick="showLowStock()">
                             <div class="flex items-center">
                                 <div class="p-3 bg-yellow-100 rounded-full">
                                     <i class="bi bi-exclamation-triangle text-yellow-600 text-xl"></i>
                                 </div>
                                 <div class="ml-4">
                                     <h3 class="text-gray-500 text-sm">Stok Menipis</h3>
-                                    <p class="text-2xl font-semibold">{{ $stocks->where('qty', '<', 10)->count() }}</p>
+                                    <p class="text-2xl font-semibold">{{ $stocks->where('qty', '<', 3)->count() }}</p>
                                 </div>
                             </div>
                         </div>
@@ -442,6 +447,40 @@
                 dropdownMenu.classList.remove("max-h-40");
                 dropdownArrow.classList.remove("rotate-180");
             }
+        }
+    </script>
+    <script>
+        function showLowStock() {
+            // Filter card stok yang kuantitasnya kurang dari 3
+            filteredCards = stockCards.filter(card => {
+                // Find the quantity element more precisely by looking for it within the context of "Kuantitas:"
+                const qtyContainer = Array.from(card.querySelectorAll('.flex.justify-between'))
+                    .find(div => div.textContent.includes('Kuantitas:'));
+                if (!qtyContainer) return false;
+                
+                const qtyElement = qtyContainer.querySelector('.font-medium');
+                if (!qtyElement) return false;
+                
+                const qty = parseInt(qtyElement.textContent.trim());
+                return qty < 3;
+            });
+
+            // Reset pagination
+            currentPage = 1;
+            updateDisplay();
+            updateButtonStates();
+        }
+
+        function showAllStocks() {
+            // Reset filtered cards to show all stock cards
+            filteredCards = [...stockCards];  // Create a new array with all stock cards
+            
+            // Reset to first page
+            currentPage = 1;
+            
+            // Update the display with all cards
+            updateDisplay();
+            updateButtonStates();
         }
     </script>
 </body>

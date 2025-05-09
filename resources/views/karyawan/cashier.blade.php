@@ -9,6 +9,9 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
 
+    <!-- Add this after the other font imports -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
     <!-- Bootstrap Icons CDN -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css" />
 
@@ -54,26 +57,31 @@
             top: 0;
             height: 100vh;
             overflow-y: auto;
-            width: 16.666667%; /* This is equivalent to w-1/6 */
+            width: 16.666667%;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem; /* Slightly larger than the original */
         }
 
-        /* Style the scrollbar for better appearance */
-        .receipt-section::-webkit-scrollbar {
-            width: 6px;
+        /* Update specific elements within the receipt */
+        .receipt-section h1 {
+            font-family: 'Inter', sans-serif;
+            font-weight: 700;
+            font-size: 1.5rem;
         }
 
-        .receipt-section::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
+        .receipt-section #item-list {
+            font-weight: 500;
+            font-size: 0.95rem;
         }
 
-        .receipt-section::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 10px;
+        .receipt-section #item-list .font-semibold {
+            font-weight: 600;
+            font-size: 1rem;
         }
 
-        .receipt-section::-webkit-scrollbar-thumb:hover {
-            background: #555;
+        .receipt-section #subtotal {
+            font-weight: 700;
+            font-size: 1.1rem;
         }
 
         /* Adjust main content to account for fixed receipt section */
@@ -198,14 +206,20 @@
         }
 
         .product-card-image {
-            height: 150px;
+            position: relative;
+            width: 100%;
+            padding-top: 100%; /* Ini akan membuat rasio 1:1 */
             overflow: hidden;
         }
 
         .product-card-image img {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
             object-fit: cover;
+            object-position: center;
         }
 
         .product-card-details {
@@ -258,74 +272,82 @@
             }
         }
     
-        /* Update the print media query in your style section */
         @media print {
-            /* Hide all elements initially */
-            body * {
-                visibility: hidden;
+            @page {
+                margin: 0;
+                size: 72mm 100%;
             }
-            
-            /* Show only receipt section and its contents */
-            .receipt-section, 
+
+            .receipt-section,
             .receipt-section * {
                 visibility: visible;
-            }
-            
-            /* Position receipt for full screen */
-            .receipt-section {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100vw !important; /* Force full viewport width */
-                height: 100vh !important; /* Force full viewport height */
-                padding: 20px;
-                margin: 0;
-                max-width: none !important; /* Remove max-width restriction */
+                width: 72mm !important;
+                margin: 0 auto !important;
+                padding: 2mm !important;
+                /* Use the same font family as web version */
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+                /* Increase base font size */
+                font-size: 14pt !important;
+                line-height: 1.4 !important;
             }
 
-            /* Adjust content scaling for full screen */
-            .receipt-section {
-                font-size: 16px; /* Increase font size for better readability */
-                line-height: 1.5;
-            }
-
-            /* Center the content */
-            .receipt-section > div {
-                max-width: 800px;
-                margin: 0 auto;
-            }
-
-            /* Hide buttons when printing */
-            .receipt-section .button-group {
-                display: none !important;
-            }
-
-            /* Adjust spacing for items */
-            .receipt-section #item-list {
-                margin: 30px 0;
-                max-height: none !important; /* Remove scroll restrictions */
-            }
-
-            /* Enhance headers and totals visibility */
+            /* Header styling */
             .receipt-section h1 {
-                font-size: 24px;
-                margin-bottom: 20px;
+                font-size: 36pt !important;
+                font-weight: 700 !important;
+                margin-bottom: 4mm !important;
+                text-align: center !important;
+                font-family: 'Inter', sans-serif !important;
             }
 
-            /* Improve spacing between items */
-            .receipt-section .flex.flex-col {
-                margin-bottom: 20px;
+            /* Date and cashier info */
+            #current-date,
+            #cashier-name {
+                font-size: 24pt !important;
+                font-weight: 500 !important;
+                margin-bottom: 2mm !important;
+                font-family: 'Inter', sans-serif !important;
             }
 
-            /* Remove any background colors and shadows */
-            .receipt-section {
-                background: none !important;
-                box-shadow: none !important;
+            /* Items list styling */
+            #item-list {
+                margin: 4mm 0 !important;
+                padding: 2mm 0 !important;
             }
 
-            /* Hide scrollbars */
-            .receipt-section::-webkit-scrollbar {
-                display: none;
+            #item-list .font-semibold {
+                font-size: 24pt !important;
+                font-weight: 600 !important;
+                margin-bottom: 2mm !important;
+                font-family: 'Inter', sans-serif !important;
+            }
+
+            #item-list ul {
+                margin-left: 3mm !important;
+                font-size: 22pt !important;
+            }
+
+            #item-list li {
+                margin-bottom: 1.5mm !important;
+                line-height: 1.4 !important;
+                font-weight: 500 !important;
+                font-family: 'Inter', sans-serif !important;
+            }
+
+            /* Subtotal section */
+            #subtotal,
+            .text-lg {
+                font-size: 24pt !important;
+                font-weight: 700 !important;
+                margin: 3mm 0 !important;
+                font-family: 'Inter', sans-serif !important;
+            }
+
+            /* Ensure proper text contrast */
+            * {
+                color: black !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
         }
     </style>
@@ -334,7 +356,7 @@
 
     <div class="flex relative">
 
-        <!-- Navbar Karyawan -->
+        <!-- Navbar karyawan -->
         <x-navbar-karyawan></x-navbar-karyawan>
 
         <!-- Main Content -->
@@ -1406,13 +1428,72 @@
 
         // Function to print receipt
         function printReceipt() {
-            const subtotal = document.getElementById('subtotal').textContent;
-            if (subtotal === 'Rp 0') {
-                alert('No items in the order to print');
-                return;
-            }
-            window.print();
-        }
+        // Create a new hidden iframe
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+        
+        // Get the receipt content
+        const receiptSection = document.querySelector('.receipt-section');
+        const content = receiptSection.cloneNode(true);
+        
+        // Remove any edit/remove buttons from the clone
+        content.querySelectorAll('.button-group, button').forEach(el => el.remove());
+        
+        // Write the content to the iframe
+        iframe.contentDocument.write(`
+            <html>
+                <head>
+                    <style>
+                        @page {
+                            margin: 0;
+                            size: 58mm auto;
+                        }
+                        body {
+                            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+                            width: 58mm;
+                            margin: 0;
+                            padding: 3mm;
+                        }
+                        * {
+                            color: black !important;
+                            background: none !important;
+                        }
+                        hr {
+                            border: none;
+                            border-top: 1px dashed black;
+                            margin: 2mm 0;
+                        }
+                        h1 {
+                            font-size: 16px;
+                            text-align: center;
+                            margin-bottom: 3mm;
+                        }
+                        #current-date, #cashier-name {
+                            font-size: 12px;
+                            text-align: center;
+                        }
+                        ul {
+                            margin: 1mm 0;
+                            padding-left: 2mm;
+                            font-size: 12px;
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${content.innerHTML}
+                </body>
+            </html>
+        `);
+        
+        // Print the iframe
+        iframe.contentWindow.print();
+        
+        // Remove the iframe after printing
+        setTimeout(() => {
+            document.body.removeChild(iframe);
+        }, 1000);
+    }
 
         // Function to clear order
         function clearOrder() {
