@@ -12,11 +12,6 @@
             font-family: 'Raleway', sans-serif;
             background-color: #f8fafc;
         }
-        .cursor-pointer:hover {
-            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
-            transform: translateY(-3px);
-            transition: all 0.3s ease;
-        }
         .nav-text {
             position: relative;
             display: inline-block;
@@ -37,13 +32,6 @@
         a:hover .nav-text::after {
             width: 100%;
         }
-        .card-hover {
-            transition: all 0.3s ease;
-        }
-        .card-hover:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-        }
         .search-animation {
             animation: pulse 2s infinite;
         }
@@ -51,17 +39,6 @@
             0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5); }
             70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
             100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
-        }
-        .page-transition {
-            transition: all 0.3s ease-in-out;
-        }
-        .fade-enter {
-            opacity: 0;
-            transform: translateY(10px);
-        }
-        .fade-enter-active {
-            opacity: 1;
-            transform: translateY(0);
         }
     </style>
 </head>
@@ -155,75 +132,75 @@
                         </div>
                     </div>
 
-                    <!-- Stock Cards Section with Pagination -->
+                    <!-- Stock List Section with Pagination -->
                     <div class="space-y-6">
-                        <!-- Cards Grid -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="stocksGrid">
-                            @foreach($stocks as $stock)
-                            <div class="bg-white rounded-lg shadow-sm card-hover stock-card page-transition">
-                                <div class="p-6">
-                                    <!-- Card Header -->
-                                    <div class="flex justify-between items-start mb-4">
-                                        <div>
-                                            <h3 class="text-lg font-semibold text-gray-800">{{ $stock->raw_material }}</h3>
-                                            <p class="text-sm text-gray-500">ID: {{ $stock->id }}</p>
-                                        </div>
-                                        <div class="flex gap-2">
-                                            <button onclick="showStockActions({{ $stock->id }})" 
-                                                    class="text-gray-400 hover:text-gray-600">
-                                                <i class="bi bi-three-dots-vertical"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Card Content -->
-                                    <div class="space-y-3">
-                                        <div class="flex justify-between items-center">
-                                            <span class="text-gray-600">Berat per Unit:</span>
-                                            <span class="font-medium">{{ $stock->weight }} {{ $stock->unit }}</span>
-                                        </div>
-                                        <div class="flex justify-between items-center">
-                                            <span class="text-gray-600">Kuantitas:</span>
-                                            <div class="flex items-center gap-3">
+                        <!-- Table/List View -->
+                        <div class="bg-white rounded-lg shadow-sm overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200" id="stocksTable">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Bahan Baku</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">ID</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Berat/Unit</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Kuantitas</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Berat</th>
+                                        <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="stocksTbody" class="divide-y divide-gray-200">
+                                    @foreach($stocks as $stock)
+                                    <tr class="stock-row hover:bg-gray-50 transition-colors page-transition">
+                                        <td class="px-4 py-2 font-medium text-gray-800">
+                                            {{ $stock->raw_material }}
+                                        </td>
+                                        <td class="px-4 py-2 text-gray-500 text-sm">
+                                            {{ $stock->id }}
+                                        </td>
+                                        <td class="px-4 py-2">
+                                            {{ $stock->weight }} {{ $stock->unit }}
+                                        </td>
+                                        <td class="px-4 py-2">
+                                            <div class="flex items-center gap-2">
                                                 <form action="{{ route('owner.stock.decrement', $stock->id) }}" method="POST" class="inline">
                                                     @csrf
                                                     @method('PATCH')
-                                                    <button type="submit" class="p-1 hover:bg-gray-100 rounded">
+                                                    <button type="submit" class="p-1 hover:bg-gray-100 rounded" title="Kurangi">
                                                         <i class="bi bi-dash-circle text-red-500"></i>
                                                     </button>
                                                 </form>
-                                                <span class="font-medium">{{ $stock->qty }}</span>
+                                                <span class="font-medium qty-value">{{ $stock->qty }}</span>
                                                 <form action="{{ route('owner.stock.increment', $stock->id) }}" method="POST" class="inline">
                                                     @csrf
                                                     @method('PATCH')
-                                                    <button type="submit" class="p-1 hover:bg-gray-100 rounded">
+                                                    <button type="submit" class="p-1 hover:bg-gray-100 rounded" title="Tambah">
                                                         <i class="bi bi-plus-circle text-green-500"></i>
                                                     </button>
                                                 </form>
                                             </div>
-                                        </div>
-                                        <div class="flex justify-between items-center">
-                                            <span class="text-gray-600">Total Berat:</span>
-                                            <span class="font-medium">{{ $stock->weight * $stock->qty }} {{ $stock->unit }}</span>
-                                        </div>
-                                    </div>
-
-                                    <!-- Card Actions -->
-                                    <div class="mt-6 flex gap-2">
-                                        <a href="{{ route('owner.stock.show', $stock) }}" 
-                                           class="flex-1 inline-flex justify-center items-center px-4 py-2 text-sm text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors duration-200">
-                                            <i class="bi bi-eye mr-2"></i>
-                                            Detail
-                                        </a>
-                                        <a href="{{ route('owner.stock.edit', $stock) }}" 
-                                           class="flex-1 inline-flex justify-center items-center px-4 py-2 text-sm text-yellow-600 bg-yellow-50 hover:bg-yellow-100 rounded-md transition-colors duration-200">
-                                            <i class="bi bi-pencil mr-2"></i>
-                                            Edit
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                            @endforeach
+                                        </td>
+                                        <td class="px-4 py-2">
+                                            {{ $stock->weight * $stock->qty }} {{ $stock->unit }}
+                                        </td>
+                                        <td class="px-4 py-2 text-center">
+                                            <div class="flex justify-center gap-2">
+                                                <a href="{{ route('owner.stock.show', $stock) }}" 
+                                                   class="inline-flex items-center px-2 py-1 text-blue-600 hover:text-blue-800 rounded transition-colors duration-200 text-sm" title="Lihat Detail">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                                <a href="{{ route('owner.stock.edit', $stock) }}" 
+                                                   class="inline-flex items-center px-2 py-1 text-yellow-600 hover:text-yellow-800 rounded transition-colors duration-200 text-sm" title="Edit">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                                <button onclick="confirmDelete({{ $stock->id }})" 
+                                                   class="inline-flex items-center px-2 py-1 text-red-600 hover:text-red-800 rounded transition-colors duration-200 text-sm" title="Hapus">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
                         </div>
 
                         <!-- Pagination Controls -->
@@ -236,7 +213,7 @@
                             
                             <div class="flex items-center space-x-2">
                                 <span class="text-sm font-medium text-gray-700">Halaman <span id="pageNumber">1</span></span>
-                                <span class="text-sm text-gray-500">dari <span id="totalPages">{{ ceil($stocks->count() / 3) }}</span></span>
+                                <span class="text-sm text-gray-500">dari <span id="totalPages">{{ ceil($stocks->count() / 10) }}</span></span>
                             </div>
 
                             <button onclick="changePage('next')" 
@@ -251,61 +228,33 @@
         </div>
     </div>
 
-    <!-- Stock Actions Modal -->
-    <div id="stockActionsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50">
-        <div class="flex items-center justify-center min-h-screen px-4">
-            <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
-                <div class="p-6">
-                    <h3 class="text-lg font-semibold mb-4">Aksi Stok</h3>
-                    <div class="space-y-3">
-                        <button onclick="viewStock()" class="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-md">
-                            <i class="bi bi-eye mr-2"></i> Lihat Detail
-                        </button>
-                        <button onclick="editStock()" class="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-md">
-                            <i class="bi bi-pencil mr-2"></i> Edit Stok
-                        </button>
-                        <button onclick="deleteStock()" class="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-md text-red-600">
-                            <i class="bi bi-trash mr-2"></i> Hapus Stok
-                        </button>
-                    </div>
-                </div>
-                <div class="border-t px-6 py-4">
-                    <button onclick="closeStockActions()" class="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-md">
-                        Tutup
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Hidden Delete Form for JS -->
+    <form id="deleteForm" method="POST" style="display:none;">
+        @csrf
+        @method('DELETE')
+    </form>
 
     <script>
-        // Global Variables
+        // Pagination Parameters
         let currentPage = 1;
-        const itemsPerPage = 3;
-        let stockCards = [];
-        let currentStockId = null;
-        let filteredCards = [];
+        const itemsPerPage = 10; // More natural for list/table
+        let stockRows = [];
+        let filteredRows = [];
+        let currentDeleteId = null;
 
-        // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
-            initializePagination();
+            stockRows = Array.from(document.getElementsByClassName('stock-row'));
+            filteredRows = [...stockRows];
+            updateDisplay();
             updateButtonStates();
         });
 
-        // Sidebar Toggle
-        function toggleSidebar() {
-            const sidebar = document.querySelector('.sidebar');
-            sidebar.classList.toggle('-translate-x-full');
-        }
-
-        // Stock Filter
         function filterStocks() {
             const searchInput = document.getElementById('searchInput');
             const filter = searchInput.value.toLowerCase();
-            
-            filteredCards = Array.from(stockCards).filter(card => {
-                const text = card.textContent.toLowerCase();
-                return text.includes(filter);
+
+            filteredRows = stockRows.filter(row => {
+                return row.textContent.toLowerCase().includes(filter);
             });
 
             currentPage = 1;
@@ -313,15 +262,8 @@
             updateButtonStates();
         }
 
-        // Pagination Functions
-        function initializePagination() {
-            stockCards = Array.from(document.getElementsByClassName('stock-card'));
-            filteredCards = [...stockCards];
-            updateDisplay();
-        }
-
         function changePage(direction) {
-            const totalPages = Math.ceil(filteredCards.length / itemsPerPage);
+            const totalPages = Math.ceil(filteredRows.length / itemsPerPage);
             
             if (direction === 'next' && currentPage < totalPages) {
                 currentPage++;
@@ -336,86 +278,55 @@
         function updateDisplay() {
             const start = (currentPage - 1) * itemsPerPage;
             const end = start + itemsPerPage;
-            
-            stockCards.forEach(card => card.style.display = 'none');
-            
-            filteredCards.slice(start, end).forEach((card, index) => {
-                card.style.display = '';
-                card.style.opacity = '0';
-                setTimeout(() => {
-                    card.style.transition = 'opacity 0.3s ease-in-out';
-                    card.style.opacity = '1';
-                }, 50 * index);
+
+            stockRows.forEach(row => row.style.display = 'none');
+            filteredRows.slice(start, end).forEach(row => {
+                row.style.display = '';
             });
-            
+
             document.getElementById('pageNumber').textContent = currentPage;
-            document.getElementById('totalPages').textContent = Math.ceil(filteredCards.length / itemsPerPage);
+            document.getElementById('totalPages').textContent = Math.max(1, Math.ceil(filteredRows.length / itemsPerPage));
         }
 
         function updateButtonStates() {
             const prevButton = document.getElementById('prevButton');
             const nextButton = document.getElementById('nextButton');
-            const totalPages = Math.ceil(filteredCards.length / itemsPerPage);
+            const totalPages = Math.ceil(filteredRows.length / itemsPerPage);
 
             prevButton.disabled = currentPage === 1;
-            nextButton.disabled = currentPage === totalPages;
+            nextButton.disabled = currentPage === totalPages || totalPages === 0;
 
             prevButton.classList.toggle('opacity-50', currentPage === 1);
-            nextButton.classList.toggle('opacity-50', currentPage === totalPages);
+            nextButton.classList.toggle('opacity-50', currentPage === totalPages || totalPages === 0);
         }
 
-        // Stock Actions Functions
-        function showStockActions(stockId) {
-            currentStockId = stockId;
-            document.getElementById('stockActionsModal').classList.remove('hidden');
+        function showLowStock() {
+            filteredRows = stockRows.filter(row => {
+                const qtyElem = row.querySelector('.qty-value');
+                if (!qtyElem) return false;
+                const qty = parseInt(qtyElem.textContent.trim());
+                return qty < 3;
+            });
+            currentPage = 1;
+            updateDisplay();
+            updateButtonStates();
         }
 
-        function closeStockActions() {
-            document.getElementById('stockActionsModal').classList.add('hidden');
-            currentStockId = null;
+        function showAllStocks() {
+            filteredRows = [...stockRows];
+            currentPage = 1;
+            updateDisplay();
+            updateButtonStates();
         }
 
-        function viewStock() {
-            if (currentStockId) {
-                window.location.href = `/owner/stock/${currentStockId}`;
-            }
-        }
-
-        function editStock() {
-            if (currentStockId) {
-                window.location.href = `/owner/stock/${currentStockId}/edit`;
-            }
-        }
-
-        function deleteStock() {
-            if (currentStockId && confirm('Apakah Anda yakin ingin menghapus stok ini?')) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = `/owner/stock/${currentStockId}`;
-                
-                const csrfToken = document.createElement('input');
-                csrfToken.type = 'hidden';
-                csrfToken.name = '_token';
-                csrfToken.value = '{{ csrf_token() }}';
-                
-                const methodField = document.createElement('input');
-                methodField.type = 'hidden';
-                methodField.name = '_method';
-                methodField.value = 'DELETE';
-                
-                form.appendChild(csrfToken);
-                form.appendChild(methodField);
-                document.body.appendChild(form);
+        // Confirm delete
+        function confirmDelete(stockId) {
+            if (confirm('Apakah Anda yakin ingin menghapus stok ini?')) {
+                const form = document.getElementById('deleteForm');
+                form.action = `/owner/stock/${stockId}`;
                 form.submit();
             }
         }
-
-        // Close modal when clicking outside
-        document.getElementById('stockActionsModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeStockActions();
-            }
-        });
     </script>
     <script>
         function toggleDropdown(button) {
@@ -447,40 +358,6 @@
                 dropdownMenu.classList.remove("max-h-40");
                 dropdownArrow.classList.remove("rotate-180");
             }
-        }
-    </script>
-    <script>
-        function showLowStock() {
-            // Filter card stok yang kuantitasnya kurang dari 3
-            filteredCards = stockCards.filter(card => {
-                // Find the quantity element more precisely by looking for it within the context of "Kuantitas:"
-                const qtyContainer = Array.from(card.querySelectorAll('.flex.justify-between'))
-                    .find(div => div.textContent.includes('Kuantitas:'));
-                if (!qtyContainer) return false;
-                
-                const qtyElement = qtyContainer.querySelector('.font-medium');
-                if (!qtyElement) return false;
-                
-                const qty = parseInt(qtyElement.textContent.trim());
-                return qty < 3;
-            });
-
-            // Reset pagination
-            currentPage = 1;
-            updateDisplay();
-            updateButtonStates();
-        }
-
-        function showAllStocks() {
-            // Reset filtered cards to show all stock cards
-            filteredCards = [...stockCards];  // Create a new array with all stock cards
-            
-            // Reset to first page
-            currentPage = 1;
-            
-            // Update the display with all cards
-            updateDisplay();
-            updateButtonStates();
         }
     </script>
 </body>

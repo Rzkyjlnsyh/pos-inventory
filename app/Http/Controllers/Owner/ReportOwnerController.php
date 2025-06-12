@@ -66,10 +66,11 @@ class ReportOwnerController extends Controller
         // Sort by total count
         $employeeCollection = $employeeCollection->sortByDesc('total_count');
 
-        // Calculate percentages
+        // Calculate percentages - Fixed division by zero issue
         $totalTransactions = $qrisCount + $tunaiCount;
         $employeeCollection = $employeeCollection->map(function ($stats) use ($totalTransactions) {
-            $stats['percentage'] = round(($stats['total_count'] / $totalTransactions) * 100, 1);
+            $stats['percentage'] = $totalTransactions > 0 ? 
+                round(($stats['total_count'] / $totalTransactions) * 100, 1) : 0;
             return $stats;
         });
 
@@ -116,7 +117,8 @@ class ReportOwnerController extends Controller
             $totalHourlyData[$hour] = ($qrisHourlyData[$hour] ?? 0) + ($tunaiHourlyData[$hour] ?? 0);
         }
         arsort($totalHourlyData);
-        $peakHours = array_slice($totalHourlyData, 0, 3, true);
+        // Fixed: Handle empty data case
+        $peakHours = !empty($totalHourlyData) ? array_slice($totalHourlyData, 0, 3, true) : [];
 
         // Get best seller data
         $bestSellers = MenuBestSeller::select('product_ordered')
@@ -130,10 +132,12 @@ class ReportOwnerController extends Controller
 
         $totalOrders = $bestSellers->sum();
         
+        // Fixed: Handle division by zero for best sellers
         $bestSellersWithPercentage = $bestSellers->map(function ($count) use ($totalOrders) {
             return [
                 'count' => $count,
-                'percentage' => round(($count / $totalOrders) * 100, 1)
+                'percentage' => $totalOrders > 0 ? 
+                    round(($count / $totalOrders) * 100, 1) : 0
             ];
         });
 
@@ -144,7 +148,8 @@ class ReportOwnerController extends Controller
             'formattedHourlyData',
             'peakHours',
             'topEmployees',  // Add topEmployees to the view
-            'employeeCollection' // Add full employee collection if needed
+            'employeeCollection', // Add full employee collection if needed
+            'totalTransactions'   // Add totalTransactions to check for empty data in view
         ));
     }
 

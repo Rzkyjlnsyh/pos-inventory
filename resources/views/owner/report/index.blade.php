@@ -110,12 +110,16 @@
                             <div class="flex items-center">
                                 <i class="bi bi-trophy-fill text-yellow-500 text-3xl mr-4"></i>
                                 <p class="text-lg">
-                                    @if($qrisCount > $tunaiCount)
-                                        <span class="font-semibold text-purple-600">QRIS</span> adalah metode pembayaran terpopuler dengan {{ $qrisCount }} transaksi
-                                    @elseif($tunaiCount > $qrisCount)
-                                        <span class="font-semibold text-blue-600">Tunai</span> adalah metode pembayaran terpopuler dengan {{ $tunaiCount }} transaksi
+                                    @if(isset($totalTransactions) && $totalTransactions > 0)
+                                        @if($qrisCount > $tunaiCount)
+                                            <span class="font-semibold text-purple-600">QRIS</span> adalah metode pembayaran terpopuler dengan {{ $qrisCount }} transaksi
+                                        @elseif($tunaiCount > $qrisCount)
+                                            <span class="font-semibold text-blue-600">Tunai</span> adalah metode pembayaran terpopuler dengan {{ $tunaiCount }} transaksi
+                                        @else
+                                            QRIS dan Tunai memiliki jumlah yang sama yaitu {{ $qrisCount }} transaksi
+                                        @endif
                                     @else
-                                        QRIS dan Tunai memiliki jumlah yang sama yaitu {{ $qrisCount }} transaksi
+                                        Belum ada data transaksi untuk dianalisis
                                     @endif
                                 </p>
                             </div>
@@ -131,33 +135,49 @@
                         <div class="bg-white rounded-xl shadow-lg p-6">
                             <h3 class="text-xl font-semibold mb-4">Top 5 Menu Terlaris</h3>
                             <div class="chart-container">
-                                <canvas id="bestSellerChart"></canvas>
+                                @if(count($bestSellersWithPercentage) > 0)
+                                    <canvas id="bestSellerChart"></canvas>
+                                @else
+                                    <div class="flex flex-col items-center justify-center h-full">
+                                        <i class="bi bi-info-circle text-orange-400 text-4xl mb-3"></i>
+                                        <p class="text-gray-500">Belum ada data penjualan menu</p>
+                                    </div>
+                                @endif
                             </div>
                         </div>
 
                         <!-- Best Seller Cards -->
                         <div class="grid grid-cols-1 gap-4">
-                            @foreach($bestSellersWithPercentage as $menu => $data)
-                            <div class="stats-card bg-white rounded-xl shadow-lg p-6">
-                                <div class="flex items-center justify-between">
-                                    <div class="flex items-center space-x-4">
-                                        <div class="bg-gradient-to-r from-orange-400 to-orange-500 p-3 rounded-lg">
-                                            <i class="bi bi-cup-hot text-2xl text-white"></i>
+                            @if(count($bestSellersWithPercentage) > 0)
+                                @foreach($bestSellersWithPercentage as $menu => $data)
+                                <div class="stats-card bg-white rounded-xl shadow-lg p-6">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center space-x-4">
+                                            <div class="bg-gradient-to-r from-orange-400 to-orange-500 p-3 rounded-lg">
+                                                <i class="bi bi-cup-hot text-2xl text-white"></i>
+                                            </div>
+                                            <div>
+                                                <h4 class="text-lg font-semibold">{{ $menu }}</h4>
+                                                <p class="text-gray-600">Terjual {{ $data['count'] }} kali</p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <h4 class="text-lg font-semibold">{{ $menu }}</h4>
-                                            <p class="text-gray-600">Terjual {{ $data['count'] }} kali</p>
-                                        </div>
-                                    </div>
-                                    <div class="text-right">
-                                        <span class="text-2xl font-bold text-orange-500">{{ $data['percentage'] }}%</span>
-                                        <div class="w-24 bg-gray-200 rounded-full h-2 mt-2">
-                                            <div class="bg-orange-500 rounded-full h-2" style="width: {{ $data['percentage'] }}%"></div>
+                                        <div class="text-right">
+                                            <span class="text-2xl font-bold text-orange-500">{{ $data['percentage'] }}%</span>
+                                            <div class="w-24 bg-gray-200 rounded-full h-2 mt-2">
+                                                <div class="bg-orange-500 rounded-full h-2" style="width: {{ $data['percentage'] }}%"></div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                            @endforeach
+                                @endforeach
+                            @else
+                                <div class="stats-card bg-white rounded-xl shadow-lg p-6 text-center">
+                                    <div class="p-4">
+                                        <i class="bi bi-info-circle text-orange-400 text-4xl"></i>
+                                        <p class="text-gray-600 mt-2">Belum ada data penjualan menu</p>
+                                    </div>
+                                </div>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -178,26 +198,33 @@
                         <div class="bg-white rounded-xl shadow-lg p-6">
                             <h3 class="text-xl font-semibold mb-4">Jam Tersibuk</h3>
                             <div class="space-y-4">
-                                @foreach($peakHours as $hour => $count)
-                                <div class="bg-gray-50 rounded-lg p-4">
-                                    <div class="flex items-center justify-between">
-                                        <div>
-                                            <p class="text-lg font-semibold text-gray-800">
-                                                {{ sprintf('%02d:00', $hour) }} - {{ sprintf('%02d:00', $hour + 1) }}
-                                            </p>
-                                            <p class="text-gray-600">{{ $count }} Transaksi</p>
+                                @if(!empty($peakHours))
+                                    @foreach($peakHours as $hour => $count)
+                                    <div class="bg-gray-50 rounded-lg p-4">
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <p class="text-lg font-semibold text-gray-800">
+                                                    {{ sprintf('%02d:00', $hour) }} - {{ sprintf('%02d:00', $hour + 1) }}
+                                                </p>
+                                                <p class="text-gray-600">{{ $count }} Transaksi</p>
+                                            </div>
+                                            <div class="bg-blue-100 text-blue-800 p-3 rounded-full">
+                                                <i class="bi bi-clock text-2xl"></i>
+                                            </div>
                                         </div>
-                                        <div class="bg-blue-100 text-blue-800 p-3 rounded-full">
-                                            <i class="bi bi-clock text-2xl"></i>
+                                        <div class="mt-2">
+                                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                                <div class="bg-blue-600 rounded-full h-2" 
+                                                    style="width: {{ max($peakHours) > 0 ? ($count / max($peakHours) * 100) : 0 }}%"></div>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div class="mt-2">
-                                        <div class="w-full bg-gray-200 rounded-full h-2">
-                                            <div class="bg-blue-600 rounded-full h-2" style="width: {{ ($count / max($peakHours)) * 100 }}%"></div>
-                                        </div>
+                                    @endforeach
+                                @else
+                                    <div class="bg-gray-50 rounded-lg p-4 text-center">
+                                        <p class="text-gray-600">Tidak ada data transaksi untuk dianalisis</p>
                                     </div>
-                                </div>
-                                @endforeach
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -211,7 +238,14 @@
                         <div class="bg-white rounded-xl shadow-lg p-6">
                             <h3 class="text-xl font-semibold mb-4">Grafik Performa Karyawan</h3>
                             <div class="chart-container">
-                                <canvas id="employeeChart"></canvas>
+                                @if(isset($topEmployees) && $topEmployees->count() > 0)
+                                    <canvas id="employeeChart"></canvas>
+                                @else
+                                    <div class="flex flex-col items-center justify-center h-full">
+                                        <i class="bi bi-people text-blue-400 text-4xl mb-3"></i>
+                                        <p class="text-gray-500">Belum ada data karyawan untuk dianalisis</p>
+                                    </div>
+                                @endif
                             </div>
                         </div>
 
@@ -219,38 +253,44 @@
                         <div class="bg-white rounded-xl shadow-lg p-6">
                             <h3 class="text-xl font-semibold mb-4">Top 5 Karyawan</h3>
                             <div class="space-y-4">
-                                @foreach($topEmployees as $employee)
-                                <div class="bg-gray-50 rounded-lg p-4">
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center space-x-3">
-                                            <div class="bg-gradient-to-r from-purple-500 to-blue-500 text-white h-10 w-10 rounded-full flex items-center justify-center font-bold">
-                                                {{ strtoupper(substr($employee['name'], 0, 1)) }}
+                                @if(isset($topEmployees) && $topEmployees->count() > 0)
+                                    @foreach($topEmployees as $employee)
+                                    <div class="bg-gray-50 rounded-lg p-4">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center space-x-3">
+                                                <div class="bg-gradient-to-r from-purple-500 to-blue-500 text-white h-10 w-10 rounded-full flex items-center justify-center font-bold">
+                                                    {{ strtoupper(substr($employee['name'], 0, 1)) }}
+                                                </div>
+                                                <div>
+                                                    <p class="text-lg font-semibold text-gray-800">{{ $employee['name'] }}</p>
+                                                    <p class="text-sm text-gray-600">
+                                                        QRIS: {{ $employee['qris_count'] }} | Tunai: {{ $employee['tunai_count'] }}
+                                                    </p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p class="text-lg font-semibold text-gray-800">{{ $employee['name'] }}</p>
-                                                <p class="text-sm text-gray-600">
-                                                    QRIS: {{ $employee['qris_count'] }} | Tunai: {{ $employee['tunai_count'] }}
-                                                </p>
+                                            <div class="text-right">
+                                                <p class="text-2xl font-bold text-blue-600">{{ $employee['total_count'] }}</p>
+                                                <p class="text-sm text-gray-600">Transaksi</p>
                                             </div>
                                         </div>
-                                        <div class="text-right">
-                                            <p class="text-2xl font-bold text-blue-600">{{ $employee['total_count'] }}</p>
-                                            <p class="text-sm text-gray-600">Transaksi</p>
+                                        <div class="mt-3">
+                                            <div class="flex justify-between text-sm text-gray-600 mb-1">
+                                                <span>Kontribusi</span>
+                                                <span>{{ $employee['percentage'] }}%</span>
+                                            </div>
+                                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                                <div class="bg-gradient-to-r from-purple-500 to-blue-500 rounded-full h-2" 
+                                                    style="width: {{ $employee['percentage'] }}%">
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div class="mt-3">
-                                        <div class="flex justify-between text-sm text-gray-600 mb-1">
-                                            <span>Kontribusi</span>
-                                            <span>{{ $employee['percentage'] }}%</span>
-                                        </div>
-                                        <div class="w-full bg-gray-200 rounded-full h-2">
-                                            <div class="bg-gradient-to-r from-purple-500 to-blue-500 rounded-full h-2" 
-                                                style="width: {{ $employee['percentage'] }}%">
-                                            </div>
-                                        </div>
+                                    @endforeach
+                                @else
+                                    <div class="bg-gray-50 rounded-lg p-4 text-center">
+                                        <p class="text-gray-600">Belum ada data karyawan untuk dianalisis</p>
                                     </div>
-                                </div>
-                                @endforeach
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -342,6 +382,7 @@
             }
         });
 
+        @if(count($bestSellersWithPercentage) > 0)
         // Best Seller Chart
         const bestSellerCtx = document.getElementById('bestSellerChart').getContext('2d');
         const bestSellerChart = new Chart(bestSellerCtx, {
@@ -398,7 +439,7 @@
                                 const dataset = tooltipItem.dataset;
                                 const total = dataset.data.reduce((acc, data) => acc + data, 0);
                                 const value = dataset.data[tooltipItem.dataIndex];
-                                const percentage = Math.round((value / total) * 100);
+                                const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
                                 return `${tooltipItem.label}: ${value} (${percentage}%)`;
                             }
                         }
@@ -406,6 +447,7 @@
                 }
             }
         });
+        @endif
 
         function toggleDropdown(button) {
             const dropdownMenus = document.querySelectorAll(".dropdown-menu");
@@ -515,6 +557,7 @@
             }
         });
     </script>
+    @if(isset($topEmployees) && $topEmployees->count() > 0)
     <script>
         // Employee Performance Chart
         const employeeCtx = document.getElementById('employeeChart').getContext('2d');
@@ -599,5 +642,6 @@
             }
         });
     </script>
+    @endif
 </body>
 </html>

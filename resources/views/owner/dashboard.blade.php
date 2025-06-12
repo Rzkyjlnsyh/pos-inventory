@@ -449,6 +449,82 @@
             </div>
           </div>
 
+          <!-- Quick Navigation Cards -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+              <!-- Produk -->
+              <a href="{{ route('owner.product.index') }}"
+                class="group bg-white p-5 rounded-xl shadow-lg hover:shadow-xl transition flex items-center justify-between cursor-pointer border border-transparent hover:border-[#005281]">
+                  <div class="flex items-center gap-4">
+                      <span class="inline-flex items-center justify-center w-14 h-14 bg-blue-100 rounded-full">
+                          <i class="bi bi-box-seam text-2xl text-blue-700"></i>
+                      </span>
+                      <div>
+                          <p class="text-gray-800 font-semibold text-lg">Produk</p>
+                          <span class="text-gray-500 text-sm">Kelola Produk</span>
+                      </div>
+                  </div>
+                  <span class="ml-4 flex-shrink-0">
+                      <span class="inline-flex items-center justify-center w-10 h-10 bg-blue-50 rounded-full group-hover:bg-blue-200 transition">
+                          <i class="bi bi-arrow-right text-xl text-blue-700"></i>
+                      </span>
+                  </span>
+              </a>
+              <!-- Stok -->
+              <a href="{{ route('owner.stock.index') }}"
+                class="group bg-white p-5 rounded-xl shadow-lg hover:shadow-xl transition flex items-center justify-between cursor-pointer border border-transparent hover:border-[#005281]">
+                  <div class="flex items-center gap-4">
+                      <span class="inline-flex items-center justify-center w-14 h-14 bg-yellow-100 rounded-full">
+                          <i class="bi bi-archive text-2xl text-yellow-700"></i>
+                      </span>
+                      <div>
+                          <p class="text-gray-800 font-semibold text-lg">Stok</p>
+                          <span class="text-gray-500 text-sm">Manajemen Stok</span>
+                      </div>
+                  </div>
+                  <span class="ml-4 flex-shrink-0">
+                      <span class="inline-flex items-center justify-center w-10 h-10 bg-yellow-50 rounded-full group-hover:bg-yellow-200 transition">
+                          <i class="bi bi-arrow-right text-xl text-yellow-700"></i>
+                      </span>
+                  </span>
+              </a>
+              <!-- Laporan -->
+              <a href="{{ route('owner.report.index') }}"
+                class="group bg-white p-5 rounded-xl shadow-lg hover:shadow-xl transition flex items-center justify-between cursor-pointer border border-transparent hover:border-[#005281]">
+                  <div class="flex items-center gap-4">
+                      <span class="inline-flex items-center justify-center w-14 h-14 bg-green-100 rounded-full">
+                          <i class="bi bi-graph-up text-2xl text-green-700"></i>
+                      </span>
+                      <div>
+                          <p class="text-gray-800 font-semibold text-lg">Laporan</p>
+                          <span class="text-gray-500 text-sm">Ringkasan Bisnis</span>
+                      </div>
+                  </div>
+                  <span class="ml-4 flex-shrink-0">
+                      <span class="inline-flex items-center justify-center w-10 h-10 bg-green-50 rounded-full group-hover:bg-green-200 transition">
+                          <i class="bi bi-arrow-right text-xl text-green-700"></i>
+                      </span>
+                  </span>
+              </a>
+              <!-- Kasir -->
+              <a href="{{ route('owner.cashier.index') }}"
+                class="group bg-white p-5 rounded-xl shadow-lg hover:shadow-xl transition flex items-center justify-between cursor-pointer border border-transparent hover:border-[#005281]">
+                  <div class="flex items-center gap-4">
+                      <span class="inline-flex items-center justify-center w-14 h-14 bg-purple-100 rounded-full">
+                          <i class="bi bi-basket3"></i>
+                      </span>
+                      <div>
+                          <p class="text-gray-800 font-semibold text-lg">Kasir</p>
+                          <span class="text-gray-500 text-sm">Transaksi Penjualan</span>
+                      </div>
+                  </div>
+                  <span class="ml-4 flex-shrink-0">
+                      <span class="inline-flex items-center justify-center w-10 h-10 bg-purple-50 rounded-full group-hover:bg-purple-200 transition">
+                          <i class="bi bi-arrow-right text-xl text-purple-700"></i>
+                      </span>
+                  </span>
+              </a>
+          </div>
+
           <!-- Footer -->
           <footer class="text-gray-400 text-center py-4 mt-8">
             <p>Copyright &#169; 2024 Bblaratech3. All Rights Reserved.</p>
