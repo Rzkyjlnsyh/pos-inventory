@@ -51,9 +51,8 @@
                                             <tr class="border-b">
                                                 <td class="px-2 py-2">
                                                     <div class="space-y-1">
-                                                        <input class="border rounded p-2 text-gray-900 w-64" type="text" placeholder="Ketik nama/SKU..." @input.debounce.300ms="search(idx, $event.target.value)" :value="it.product_name" />
+                                                        <input class="border rounded p-2 text-gray-900 w-64" :name="`items[${idx}][product_name]`" x-model="it.product_name" placeholder="Ketik nama/SKU..." @input.debounce.300ms="search(idx, it.product_name)" required />
                                                         <input type="hidden" :name="`items[${idx}][product_id]`" :value="it.product_id">
-                                                        <input class="border rounded p-2 text-gray-900 w-64" :name="`items[${idx}][product_name]`" x-model="it.product_name" required />
                                                         <div class="bg-white border rounded shadow max-h-40 overflow-auto" x-show="it.suggestions && it.suggestions.length">
                                                             <template x-for="p in it.suggestions">
                                                                 <div class="px-2 py-1 cursor-pointer hover:bg-gray-100" @click="selectProduct(idx, p)">
