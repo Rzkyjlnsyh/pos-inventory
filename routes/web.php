@@ -20,6 +20,7 @@ use App\Http\Controllers\Inventaris\ProfileInventarisController;
 use App\Http\Controllers\Karyawan\NotificationKaryawanController;
 use App\Http\Controllers\Karyawan\MenuBestSellerKaryawanController;
 use App\Http\Controllers\Inventaris\NotificationInventarisController;
+use App\Http\Controllers\Owner\ContactController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -123,6 +124,11 @@ Route::middleware(['auth', 'owner'])->prefix('owner')->name('owner.')->group(fun
     Route::delete('profile/destroy', [ProfileOwnerController::class, 'destroy'])->name('profile.destroy');
 
     Route::resource('menu-best-sellers', MenuBestSellerOwnerController::class);
+
+    // Contacts: Customer & Supplier (single page with two tabs)
+    Route::get('contacts', [ContactController::class, 'index'])->name('contacts.index');
+    Route::post('contacts/customers', [ContactController::class, 'storeCustomer'])->name('contacts.customers.store');
+    Route::post('contacts/suppliers', [ContactController::class, 'storeSupplier'])->name('contacts.suppliers.store');
 });
 
 require __DIR__.'/auth.php';
