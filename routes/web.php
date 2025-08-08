@@ -131,6 +131,17 @@ Route::middleware(['auth', 'owner'])->prefix('owner')->name('owner.')->group(fun
     Route::get('report/daily-income', [ReportOwnerController::class, 'dailyIncome'])->name('report.daily-income');
     Route::get('report/export-excel', [ReportOwnerController::class, 'exportExcel'])->name('report.export-excel');
     Route::resource('report', ReportOwnerController::class);   
+
+    // Purchases
+    Route::resource('purchases', \App\Http\Controllers\Owner\PurchaseOrderController::class)
+        ->parameters(['purchases' => 'purchase'])
+        ->only(['index','create','store','show']);
+    Route::post('purchases/{purchase}/submit', [\App\Http\Controllers\Owner\PurchaseOrderController::class, 'submit'])->name('purchases.submit');
+    Route::post('purchases/{purchase}/approve', [\App\Http\Controllers\Owner\PurchaseOrderController::class, 'approve'])->name('purchases.approve');
+    Route::post('purchases/{purchase}/receive', [\App\Http\Controllers\Owner\PurchaseOrderController::class, 'receive'])->name('purchases.receive');
+
+    // Inventory - Stock In
+    Route::get('inventory/stock-ins', [\App\Http\Controllers\Owner\StockInController::class, 'index'])->name('inventory.stock-ins.index');
     
     // Notifications
     Route::resource('notification', NotificationOwnerController::class);

@@ -24,6 +24,12 @@
                     <x-nav-link :href="route('owner.catalog.products.index')" :active="request()->routeIs('owner.catalog.products.*')">
                         Produk
                     </x-nav-link>
+                    <x-nav-link :href="route('owner.purchases.index')" :active="request()->routeIs('owner.purchases.*')">
+                        Pembelian
+                    </x-nav-link>
+                    <x-nav-link :href="route('owner.inventory.stock-ins.index')" :active="request()->routeIs('owner.inventory.stock-ins.*')">
+                        Stok Masuk
+                    </x-nav-link>
                 </div>
             </div>
 
