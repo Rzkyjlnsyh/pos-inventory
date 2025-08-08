@@ -91,8 +91,29 @@ Route::middleware(['auth', 'owner'])->prefix('owner')->name('owner.')->group(fun
     // Cashier
     Route::resource('cashier', CashierOwnerController::class);
     
-    // Product
+    // Product (legacy UI)
     Route::resource('product', ProductOwnerController::class);
+
+    // Catalog (new UI)
+    Route::prefix('catalog')->name('catalog.')->group(function () {
+        Route::resource('categories', \App\Http\Controllers\Owner\CategoryController::class)->names([
+            'index' => 'category.index',
+            'create' => 'category.create',
+            'store' => 'category.store',
+            'edit' => 'category.edit',
+            'update' => 'category.update',
+            'destroy' => 'category.destroy',
+        ])->except(['show']);
+
+        Route::resource('products', \App\Http\Controllers\Owner\ProductCatalogController::class)->names([
+            'index' => 'products.index',
+            'create' => 'products.create',
+            'store' => 'products.store',
+            'edit' => 'products.edit',
+            'update' => 'products.update',
+            'destroy' => 'products.destroy',
+        ])->except(['show']);
+    });
     
     // Transactions
     Route::resource('transaksitunai', TransaksiTunaiController::class);
