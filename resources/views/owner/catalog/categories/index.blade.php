@@ -10,7 +10,7 @@
                     <form method="GET" class="mb-4">
                         <input type="text" name="q" value="{{ $q }}" placeholder="Cari kategori" class="border rounded p-2 text-gray-900" />
                         <button class="bg-gray-200 px-3 py-2 rounded">Cari</button>
-                        <a href="{{ route('owner.category.create') }}" class="bg-indigo-600 text-white px-3 py-2 rounded ml-2">Tambah</a>
+                        <a href="{{ route('owner.catalog.category.create') }}" class="bg-indigo-600 text-white px-3 py-2 rounded ml-2">Tambah</a>
                     </form>
 
                     <div class="overflow-x-auto">
