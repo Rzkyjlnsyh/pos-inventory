@@ -38,7 +38,7 @@
                                 <table class="min-w-full text-left text-sm">
                                     <thead>
                                         <tr class="border-b">
-                                            <th class="px-2 py-2">Nama Produk</th>
+                                            <th class="px-2 py-2">Cari Produk</th>
                                             <th class="px-2 py-2">SKU</th>
                                             <th class="px-2 py-2">Harga Beli</th>
                                             <th class="px-2 py-2">Qty</th>
@@ -50,7 +50,19 @@
                                         <template x-for="(it, idx) in items" :key="idx">
                                             <tr class="border-b">
                                                 <td class="px-2 py-2">
-                                                    <input class="border rounded p-2 text-gray-900" :name="`items[${idx}][product_name]`" x-model="it.product_name" required />
+                                                    <div class="space-y-1">
+                                                        <input class="border rounded p-2 text-gray-900 w-64" type="text" placeholder="Ketik nama/SKU..." @input.debounce.300ms="search(idx, $event.target.value)" :value="it.product_name" />
+                                                        <input type="hidden" :name="`items[${idx}][product_id]`" :value="it.product_id">
+                                                        <input class="border rounded p-2 text-gray-900 w-64" :name="`items[${idx}][product_name]`" x-model="it.product_name" required />
+                                                        <div class="bg-white border rounded shadow max-h-40 overflow-auto" x-show="it.suggestions && it.suggestions.length">
+                                                            <template x-for="p in it.suggestions">
+                                                                <div class="px-2 py-1 cursor-pointer hover:bg-gray-100" @click="selectProduct(idx, p)">
+                                                                    <span x-text="p.name"></span>
+                                                                    <span class="text-xs text-gray-500" x-text="p.sku ? '('+p.sku+')' : ''"></span>
+                                                                </div>
+                                                            </template>
+                                                        </div>
+                                                    </div>
                                                 </td>
                                                 <td class="px-2 py-2">
                                                     <input class="border rounded p-2 text-gray-900" :name="`items[${idx}][sku]`" x-model="it.sku" />
@@ -87,9 +99,25 @@
     <script>
     function purchaseForm() {
         return {
-            items: [ { product_name: '', sku: '', cost_price: '', qty: 1, discount: 0 } ],
-            addItem() { this.items.push({ product_name: '', sku: '', cost_price: '', qty: 1, discount: 0 }); },
-            removeItem(i) { this.items.splice(i, 1); }
+            items: [ { product_id: '', product_name: '', sku: '', cost_price: '', qty: 1, discount: 0, suggestions: [] } ],
+            addItem() { this.items.push({ product_id: '', product_name: '', sku: '', cost_price: '', qty: 1, discount: 0, suggestions: [] }); },
+            removeItem(i) { this.items.splice(i, 1); },
+            async search(idx, q) {
+                if (!q || q.length < 2) { this.items[idx].suggestions = []; return; }
+                try {
+                    const resp = await fetch(`{{ route('owner.catalog.products.search') }}?q=${encodeURIComponent(q)}`);
+                    const data = await resp.json();
+                    this.items[idx].suggestions = data;
+                } catch (e) { this.items[idx].suggestions = []; }
+            },
+            selectProduct(idx, p) {
+                const it = this.items[idx];
+                it.product_id = p.id;
+                it.product_name = p.name;
+                it.sku = p.sku;
+                it.cost_price = p.cost_price;
+                it.suggestions = [];
+            }
         };
     }
     </script>

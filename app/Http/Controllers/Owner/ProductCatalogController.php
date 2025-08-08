@@ -105,4 +105,21 @@ class ProductCatalogController extends Controller
         $product->delete();
         return redirect()->route('owner.catalog.products.index')->with('success', 'Product deleted');
     }
+
+    public function search(Request $request)
+    {
+        $q = $request->get('q');
+        $products = Product::query()
+            ->where('is_active', true)
+            ->when($q, function ($query) use ($q) {
+                $query->where(function ($qq) use ($q) {
+                    $qq->where('name', 'like', "%$q%")
+                       ->orWhere('sku', 'like', "%$q%");
+                });
+            })
+            ->orderBy('name')
+            ->limit(20)
+            ->get(['id','name','sku','cost_price','price']);
+        return response()->json($products);
+    }
 }

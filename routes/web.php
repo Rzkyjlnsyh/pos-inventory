@@ -113,6 +113,7 @@ Route::middleware(['auth', 'owner'])->prefix('owner')->name('owner.')->group(fun
             'update' => 'products.update',
             'destroy' => 'products.destroy',
         ])->except(['show']);
+        Route::get('products-search', [\App\Http\Controllers\Owner\ProductCatalogController::class, 'search'])->name('products.search');
     });
     
     // Transactions
