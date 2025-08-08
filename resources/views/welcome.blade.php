@@ -87,7 +87,7 @@
     <div class="p-8 rounded-lg w-full max-w-md">
       <!-- Logo -->
       <div class="text-center mb-6">
-        <img src="{{ asset('assets/logo-transparent.png') }}" alt="BbIarA Logo" class="w-48 mx-auto">
+        <img src="{{ asset('assets/logo.png') }}" alt="Pare Custom Logo" class="w-48 mx-auto">
       </div>
 
       @auth

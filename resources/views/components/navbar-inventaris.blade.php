@@ -4,7 +4,7 @@
   >
   <!-- Sidebar Header -->
   <div class="flex items-center justify-between mb-4 p-4">
-    <img src="{{ asset('assets/logo-transparent.png') }}" alt="" class="w-auto h-40 mx-auto xl:h-40 lg:h-36">
+    <img src="{{ asset('assets/logo.png') }}" alt="" class="w-auto h-40 mx-auto xl:h-40 lg:h-36">
     <button
       class="lg:hidden text-gray-400 hover:text-gray-600"
       onclick="toggleSidebar()"
