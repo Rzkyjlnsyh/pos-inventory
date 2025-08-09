@@ -20,6 +20,8 @@
                                     <th class="px-3 py-2">Tanggal</th>
                                     <th class="px-3 py-2">Supplier</th>
                                     <th class="px-3 py-2">No. Pembelian</th>
+                                    <th class="px-3 py-2">Status</th>
+                                    <th class="px-3 py-2">Diterima Oleh</th>
                                     <th class="px-3 py-2">Jumlah Item</th>
                                 </tr>
                             </thead>
@@ -30,6 +32,8 @@
                                     <td class="px-3 py-2">{{ \Carbon\Carbon::parse($s->received_date)->format('d M Y') }}</td>
                                     <td class="px-3 py-2">{{ $s->supplier?->name }}</td>
                                     <td class="px-3 py-2">{{ $s->purchaseOrder?->po_number }}</td>
+                                    <td class="px-3 py-2 capitalize">{{ $s->status }}</td>
+                                    <td class="px-3 py-2">{{ $s->receiver?->name }}</td>
                                     <td class="px-3 py-2">{{ $s->items->sum('qty') }}</td>
                                 </tr>
                                 @endforeach
