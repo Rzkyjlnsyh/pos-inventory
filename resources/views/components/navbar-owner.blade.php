@@ -68,6 +68,12 @@
       </div>
     </div>
 
+    <!-- Customer & Supplier -->
+    <a href="{{ route('owner.contacts.index') }}" class="flex items-center p-3 rounded-md bg-none transition hover-link">
+      <i class="bi bi-people-fill"></i>
+      <span class="ml-3 nav-text font-semibold">Customer & Supplier</span>
+    </a>
+
     <!-- Stok Dropdown -->
     <div>
       <button
