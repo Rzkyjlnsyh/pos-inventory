@@ -3,110 +3,99 @@
 namespace App\Http\Controllers\Owner;
 
 use App\Models\Product;
+use App\Models\Category;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Storage;
 
 class ProductOwnerController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
-        // Ambil semua produk dan tampilkan ke view
-        $products = Product::all();
+        $products = Product::with('category')->orderByDesc('id')->get();
         return view('owner.product.index', compact('products'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
-        // Tampilkan form untuk menambah produk baru
-        return view('owner.product.create');
+        $categories = Category::orderBy('name')->get();
+        return view('owner.product.create', compact('categories'));
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        // Validasi data
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'cost_price' => 'required|numeric',
-            'price' => 'required|numeric',
-            'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:10000', // Validate image upload
+            'sku' => ['nullable','string','max:100','unique:products,sku'],
+            'name' => ['required','string','max:255'],
+            'category_id' => ['nullable','exists:categories,id'],
+            'cost_price' => ['required','numeric','min:0'],
+            'price' => ['required','numeric','min:0'],
+            'is_active' => ['sometimes','boolean'],
+            'image' => ['required','image','mimes:jpeg,png,jpg,gif','max:10240'],
         ]);
 
-        // Handle image upload
+        if ((float)$validated['price'] < (float)$validated['cost_price']) {
+            return back()->withErrors(['price' => 'Harga jual tidak boleh lebih kecil dari harga beli.'])->withInput();
+        }
+
         if ($request->hasFile('image')) {
             $validated['image_path'] = $request->file('image')->store('products', 'public');
         }
 
-        // Simpan data produk baru
+        $validated['is_active'] = (bool) ($validated['is_active'] ?? true);
+
         Product::create($validated);
 
         return redirect()->route('owner.product.index')->with('success', 'Produk berhasil ditambahkan.');
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(Product $product)
     {
-        // Tampilkan detail produk
         return view('owner.product.show', compact('product'));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(Product $product)
     {
-        // Tampilkan form edit produk
-        return view('owner.product.edit', compact('product'));
+        $categories = Category::orderBy('name')->get();
+        return view('owner.product.edit', compact('product','categories'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, Product $product)
     {
-        // Validasi data
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'cost_price' => 'required|numeric',
-            'price' => 'required|numeric',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:10000', // Validate image upload
+            'sku' => ['nullable','string','max:100','unique:products,sku,'.$product->id],
+            'name' => ['required','string','max:255'],
+            'category_id' => ['nullable','exists:categories,id'],
+            'cost_price' => ['required','numeric','min:0'],
+            'price' => ['required','numeric','min:0'],
+            'is_active' => ['sometimes','boolean'],
+            'image' => ['nullable','image','mimes:jpeg,png,jpg,gif','max:10240'],
         ]);
 
-        // Handle image upload
+        if ((float)$validated['price'] < (float)$validated['cost_price']) {
+            return back()->withErrors(['price' => 'Harga jual tidak boleh lebih kecil dari harga beli.'])->withInput();
+        }
+
         if ($request->hasFile('image')) {
-            // Hapus gambar lama jika ada
             if ($product->image_path) {
                 Storage::disk('public')->delete($product->image_path);
             }
-            
             $validated['image_path'] = $request->file('image')->store('products', 'public');
         }
 
-        // Update data produk
+        $validated['is_active'] = (bool) ($validated['is_active'] ?? false);
+
         $product->update($validated);
 
         return redirect()->route('owner.product.index')->with('success', 'Produk berhasil diperbarui.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Product $product)
     {
-        // Hapus produk
+        if ($product->image_path) {
+            Storage::disk('public')->delete($product->image_path);
+        }
         $product->delete();
-
         return redirect()->route('owner.product.index')->with('success', 'Produk berhasil dihapus.');
     }
 }

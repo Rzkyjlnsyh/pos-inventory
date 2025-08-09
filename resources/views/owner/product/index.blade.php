@@ -143,10 +143,13 @@
                               <thead class="bg-gray-50">
                                   <tr>
                                       <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gambar</th>
-                                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama</th>
-                                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Harga Modal</th>
-                                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Harga Jual</th>
-                                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                                                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama</th>
+                                       <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
+                                       <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kategori</th>
+                                       <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Harga Modal</th>
+                                       <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Harga Jual</th>
+                                       <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                       <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                                   </tr>
                               </thead>
                               <tbody class="bg-white divide-y divide-gray-200">
@@ -157,8 +160,11 @@
                                                   class="h-16 w-16 object-cover rounded">
                                           </td>
                                           <td class="px-6 py-4 whitespace-nowrap">{{ $product->name }}</td>
+                                          <td class="px-6 py-4 whitespace-nowrap">{{ $product->sku }}</td>
+                                          <td class="px-6 py-4 whitespace-nowrap">{{ $product->category?->name }}</td>
                                           <td class="px-6 py-4 whitespace-nowrap">Rp {{ number_format($product->cost_price, 0, ',', '.') }}</td>
                                           <td class="px-6 py-4 whitespace-nowrap">Rp {{ number_format($product->price, 0, ',', '.') }}</td>
+                                          <td class="px-6 py-4 whitespace-nowrap">{{ $product->is_active ? 'Aktif' : 'Nonaktif' }}</td>
                                           <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="flex space-x-2">
                                                 {{-- Button Lihat --}}
