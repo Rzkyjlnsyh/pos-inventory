@@ -2,40 +2,48 @@
 
 namespace App\Http\Controllers\Owner;
 
-use App\Models\Product;
-use App\Models\Category;
-use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Models\Category;
+use App\Models\Product;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\View\View;
 
-class ProductOwnerController extends Controller
+class ProductCatalogController extends Controller
 {
-
-    public function index()
+    public function index(Request $request): View
     {
-        $products = Product::with('category')->orderByDesc('id')->get();
-        return view('owner.product.index', compact('products'));
+        $q = $request->get('q');
+        $categoryId = $request->get('category_id');
+
+        $products = Product::with('category')
+            ->when($q, fn($query) => $query->where('name', 'like', "%$q%"))
+            ->when($categoryId, fn($query) => $query->where('category_id', $categoryId))
+            ->orderByDesc('id')
+            ->paginate(15);
+
+        $categories = Category::orderBy('name')->get();
+
+        return view('owner.catalog.products.index', compact('products','categories','q','categoryId'));
     }
 
-
-    public function create()
+    public function create(): View
     {
         $categories = Category::orderBy('name')->get();
-        return view('owner.product.create', compact('categories'));
+        return view('owner.catalog.products.create', compact('categories'));
     }
 
-
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
-        // Validasi data
         $validated = $request->validate([
             'sku' => ['nullable','string','max:100','unique:products,sku'],
             'name' => ['required','string','max:255'],
             'category_id' => ['nullable','exists:categories,id'],
             'cost_price' => ['required','numeric','min:0'],
             'price' => ['required','numeric','min:0'],
+            'image' => ['nullable','image','mimes:jpeg,png,jpg,gif','max:10240'],
             'is_active' => ['sometimes','boolean'],
-            'image' => ['required','image','mimes:jpeg,png,jpg,gif','max:10240'],
         ]);
 
         if ((float)$validated['price'] < (float)$validated['cost_price']) {
@@ -46,40 +54,29 @@ class ProductOwnerController extends Controller
             $validated['image_path'] = $request->file('image')->store('products', 'public');
         }
 
-        // Simpan data produk baru
         $validated['is_active'] = (bool) ($validated['is_active'] ?? true);
 
         Product::create($validated);
 
-        return redirect()->route('owner.product.index')->with('success', 'Produk berhasil ditambahkan.');
+        return redirect()->route('owner.catalog.products.index')->with('success', 'Product created');
     }
 
-    public function show(Product $product)
-    {
-        // Tampilkan detail produk
-        return view('owner.product.show', compact('product'));
-    }
-
-    public function edit(Product $product)
+    public function edit(Product $product): View
     {
         $categories = Category::orderBy('name')->get();
-        return view('owner.product.edit', compact('product','categories'));
+        return view('owner.catalog.products.edit', compact('product','categories'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Product $product)
+    public function update(Request $request, Product $product): RedirectResponse
     {
-        // Validasi data
         $validated = $request->validate([
             'sku' => ['nullable','string','max:100','unique:products,sku,'.$product->id],
             'name' => ['required','string','max:255'],
             'category_id' => ['nullable','exists:categories,id'],
             'cost_price' => ['required','numeric','min:0'],
             'price' => ['required','numeric','min:0'],
-            'is_active' => ['sometimes','boolean'],
             'image' => ['nullable','image','mimes:jpeg,png,jpg,gif','max:10240'],
+            'is_active' => ['sometimes','boolean'],
         ]);
 
         if ((float)$validated['price'] < (float)$validated['cost_price']) {
@@ -87,34 +84,42 @@ class ProductOwnerController extends Controller
         }
 
         if ($request->hasFile('image')) {
-            // Hapus gambar lama jika ada
             if ($product->image_path) {
                 Storage::disk('public')->delete($product->image_path);
             }
-            
             $validated['image_path'] = $request->file('image')->store('products', 'public');
         }
 
-        // Update data produk
         $validated['is_active'] = (bool) ($validated['is_active'] ?? false);
 
         $product->update($validated);
 
-        return redirect()->route('owner.product.index')->with('success', 'Produk berhasil diperbarui.');
+        return redirect()->route('owner.catalog.products.index')->with('success', 'Product updated');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Product $product)
+    public function destroy(Product $product): RedirectResponse
     {
-        // Hapus produk
         if ($product->image_path) {
             Storage::disk('public')->delete($product->image_path);
         }
         $product->delete();
+        return redirect()->route('owner.catalog.products.index')->with('success', 'Product deleted');
+    }
 
-        return redirect()->route('owner.product.index')->with('success', 'Produk berhasil dihapus.');
+    public function search(Request $request)
+    {
+        $q = $request->get('q');
+        $products = Product::query()
+            ->where('is_active', true)
+            ->when($q, function ($query) use ($q) {
+                $query->where(function ($qq) use ($q) {
+                    $qq->where('name', 'like', "%$q%")
+                       ->orWhere('sku', 'like', "%$q%");
+                });
+            })
+            ->orderBy('name')
+            ->limit(20)
+            ->get(['id','name','sku','cost_price','price']);
+        return response()->json($products);
     }
 }
-//102

@@ -20,6 +20,7 @@ use App\Http\Controllers\Inventaris\ProfileInventarisController;
 use App\Http\Controllers\Karyawan\NotificationKaryawanController;
 use App\Http\Controllers\Karyawan\MenuBestSellerKaryawanController;
 use App\Http\Controllers\Inventaris\NotificationInventarisController;
+use App\Http\Controllers\Owner\ContactController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -90,8 +91,30 @@ Route::middleware(['auth', 'owner'])->prefix('owner')->name('owner.')->group(fun
     // Cashier
     Route::resource('cashier', CashierOwnerController::class);
     
-    // Product
+    // Product (legacy UI)
     Route::resource('product', ProductOwnerController::class);
+
+    // Catalog (new UI)
+    Route::prefix('catalog')->name('catalog.')->group(function () {
+        Route::resource('categories', \App\Http\Controllers\Owner\CategoryController::class)->names([
+            'index' => 'category.index',
+            'create' => 'category.create',
+            'store' => 'category.store',
+            'edit' => 'category.edit',
+            'update' => 'category.update',
+            'destroy' => 'category.destroy',
+        ])->except(['show']);
+
+        Route::resource('products', \App\Http\Controllers\Owner\ProductCatalogController::class)->names([
+            'index' => 'products.index',
+            'create' => 'products.create',
+            'store' => 'products.store',
+            'edit' => 'products.edit',
+            'update' => 'products.update',
+            'destroy' => 'products.destroy',
+        ])->except(['show']);
+        Route::get('products-search', [\App\Http\Controllers\Owner\ProductCatalogController::class, 'search'])->name('products.search');
+    });
     
     // Transactions
     Route::resource('transaksitunai', TransaksiTunaiController::class);
@@ -109,6 +132,18 @@ Route::middleware(['auth', 'owner'])->prefix('owner')->name('owner.')->group(fun
     Route::get('report/daily-income', [ReportOwnerController::class, 'dailyIncome'])->name('report.daily-income');
     Route::get('report/export-excel', [ReportOwnerController::class, 'exportExcel'])->name('report.export-excel');
     Route::resource('report', ReportOwnerController::class);   
+
+    // Purchases
+    Route::resource('purchases', \App\Http\Controllers\Owner\PurchaseOrderController::class)
+        ->parameters(['purchases' => 'purchase'])
+        ->only(['index','create','store','show']);
+    Route::post('purchases/{purchase}/submit', [\App\Http\Controllers\Owner\PurchaseOrderController::class, 'submit'])->name('purchases.submit');
+    Route::post('purchases/{purchase}/approve', [\App\Http\Controllers\Owner\PurchaseOrderController::class, 'approve'])->name('purchases.approve');
+    Route::post('purchases/{purchase}/receive', [\App\Http\Controllers\Owner\PurchaseOrderController::class, 'receive'])->name('purchases.receive');
+
+    // Inventory - Tabs page and Stock In
+    Route::view('inventory', 'owner.inventory.index')->name('inventory.index');
+    Route::get('inventory/stock-ins', [\App\Http\Controllers\Owner\StockInController::class, 'index'])->name('inventory.stock-ins.index');
     
     // Notifications
     Route::resource('notification', NotificationOwnerController::class);
@@ -123,6 +158,11 @@ Route::middleware(['auth', 'owner'])->prefix('owner')->name('owner.')->group(fun
     Route::delete('profile/destroy', [ProfileOwnerController::class, 'destroy'])->name('profile.destroy');
 
     Route::resource('menu-best-sellers', MenuBestSellerOwnerController::class);
+
+    // Contacts: Customer & Supplier (single page with two tabs)
+    Route::get('contacts', [ContactController::class, 'index'])->name('contacts.index');
+    Route::post('contacts/customers', [ContactController::class, 'storeCustomer'])->name('contacts.customers.store');
+    Route::post('contacts/suppliers', [ContactController::class, 'storeSupplier'])->name('contacts.suppliers.store');
 });
 
 require __DIR__.'/auth.php';

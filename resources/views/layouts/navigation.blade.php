@@ -15,6 +15,21 @@
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         {{ __('Dashboard') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('owner.contacts.index')" :active="request()->routeIs('owner.contacts.*')">
+                        Customer & Supplier
+                    </x-nav-link>
+                    <x-nav-link :href="route('owner.catalog.category.index')" :active="request()->routeIs('owner.catalog.category.*')">
+                        Kategori
+                    </x-nav-link>
+                    <x-nav-link :href="route('owner.catalog.products.index')" :active="request()->routeIs('owner.catalog.products.*')">
+                        Produk
+                        </x-nav-link>
+                    <x-nav-link :href="route('owner.purchases.index')" :active="request()->routeIs('owner.purchases.*')">
+                        Pembelian
+                    </x-nav-link>
+                    <x-nav-link :href="route('owner.inventory.stock-ins.index')" :active="request()->routeIs('owner.inventory.stock-ins.*')">
+                        Stok Masuk
+                    </x-nav-link>
                 </div>
             </div>
 

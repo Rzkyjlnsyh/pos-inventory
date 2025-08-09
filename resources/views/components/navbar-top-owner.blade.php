@@ -1,8 +1,8 @@
-<div class="flex justify-between items-center p-4 bg-white shadow">
+<div class="flex justify-between items-center p-4 bg-white shadow sticky top-0 z-50">
     <!-- Bagian Kiri: Dashboard Label -->
     <div class="flex items-center">
         <i class="fas fa-chart-bar text-gray-500 mr-2"></i>
-        <span class="text-gray-700 font-semibold">BBlarA - Pos</span>
+        <span class="text-gray-700 font-semibold">Custom Pare - Beriman</span>
     </div>
 
     <!-- Bagian Kanan: Profile dan Notifikasi -->

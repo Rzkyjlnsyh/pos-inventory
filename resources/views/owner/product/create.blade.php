@@ -106,22 +106,66 @@
 
                             <!-- Enhanced Input Groups -->
                             <div class="space-y-6">
-                                <div class="input-group relative">
-                                    <label for="name" class="absolute -top-2 left-2 z-10 px-1 text-xs font-medium text-gray-500 floating-label">
-                                        Nama Produk
-                                    </label>
-                                    <input type="text" 
-                                           name="name" 
-                                           id="name"
-                                           class="form-input block w-full px-4 py-3 text-gray-700"
-                                           value="{{ old('name') }}"
-                                           required>
-                                    @error('name')
-                                        <p class="mt-2 text-sm text-red-600">
-                                            <i class="bi bi-exclamation-circle mr-1"></i>
-                                            {{ $message }}
-                                        </p>
-                                    @enderror
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="input-group relative">
+                                        <label for="sku" class="absolute -top-2 left-2 z-10 px-1 text-xs font-medium text-gray-500 floating-label">
+                                            SKU (Opsional)
+                                        </label>
+                                        <input type="text" 
+                                               name="sku" 
+                                               id="sku"
+                                               class="form-input block w-full px-4 py-3 text-gray-700"
+                                               value="{{ old('sku') }}">
+                                        @error('sku')
+                                            <p class="mt-2 text-sm text-red-600">
+                                                <i class="bi bi-exclamation-circle mr-1"></i>
+                                                {{ $message }}
+                                            </p>
+                                        @enderror
+                                    </div>
+                                    
+                                    <div class="input-group relative">
+                                        <label for="name" class="absolute -top-2 left-2 z-10 px-1 text-xs font-medium text-gray-500 floating-label">
+                                            Nama Produk
+                                        </label>
+                                        <input type="text" 
+                                               name="name" 
+                                               id="name"
+                                               class="form-input block w-full px-4 py-3 text-gray-700"
+                                               value="{{ old('name') }}"
+                                               required>
+                                        @error('name')
+                                            <p class="mt-2 text-sm text-red-600">
+                                                <i class="bi bi-exclamation-circle mr-1"></i>
+                                                {{ $message }}
+                                            </p>
+                                        @enderror
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="input-group relative">
+                                        <label for="category_id" class="absolute -top-2 left-2 z-10 px-1 text-xs font-medium text-gray-500 floating-label">
+                                            Kategori
+                                        </label>
+                                        <select name="category_id" id="category_id" class="form-input block w-full px-4 py-3 text-gray-700">
+                                            <option value="">-</option>
+                                            @foreach($categories as $cat)
+                                                <option value="{{ $cat->id }}" @selected(old('category_id')==$cat->id)>{{ $cat->name }}</option>
+                                            @endforeach
+                                        </select>
+                                        @error('category_id')
+                                            <p class="mt-2 text-sm text-red-600">
+                                                <i class="bi bi-exclamation-circle mr-1"></i>
+                                                {{ $message }}
+                                            </p>
+                                        @enderror
+                                    </div>
+                                    
+                                    <div class="flex items-center pt-6">
+                                        <input type="checkbox" id="is_active" name="is_active" value="1" class="mr-2" checked>
+                                        <label for="is_active" class="text-sm text-gray-700">Aktif</label>
+                                    </div>
                                 </div>
 
                                 <div class="input-group relative">

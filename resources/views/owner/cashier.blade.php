@@ -592,7 +592,7 @@
         <!-- Receipt Section -->
         <section class="w-1/6 bg-white p-6 shadow rounded font-mono text-sm receipt-section xl:w-1/6 lg:w-[20.83%]">
             <div class="text-center mb-4">
-                <h1 class="text-xl font-bold">Struk Pesanan</h1>
+                <h1 class="text-xl font-bold">Pare Custom</h1>
                 <p class="text-xs text-gray-500" id="current-date"></p>
                 <p class="text-xs text-gray-500" id="cashier-name"></p>
             </div>

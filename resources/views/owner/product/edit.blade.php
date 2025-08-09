@@ -141,18 +141,32 @@
                             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                                 <!-- Left Column - Product Details -->
                                 <div class="space-y-6">
-                                    <div>
-                                        <label for="name" class="block text-sm font-medium text-gray-700 mb-2">
-                                            <i class="bi bi-tag-fill mr-2 text-amber-500"></i>Nama Produk
-                                        </label>
-                                        <input type="text" name="name" id="name"
-                                               class="form-input"
-                                               value="{{ old('name', $product->name) }}" 
-                                               placeholder="Masukkan nama produk"
-                                               required>
-                                        @error('name')
-                                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                        @enderror
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label for="sku" class="block text-sm font-medium text-gray-700 mb-2">
+                                                <i class="bi bi-upc-scan mr-2 text-amber-500"></i>SKU (Opsional)
+                                            </label>
+                                            <input type="text" name="sku" id="sku"
+                                                   class="form-input"
+                                                   value="{{ old('sku', $product->sku) }}"
+                                                   placeholder="SKU">
+                                            @error('sku')
+                                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                            @enderror
+                                        </div>
+                                        <div>
+                                            <label for="name" class="block text-sm font-medium text-gray-700 mb-2">
+                                                <i class="bi bi-tag-fill mr-2 text-amber-500"></i>Nama Produk
+                                            </label>
+                                            <input type="text" name="name" id="name"
+                                                   class="form-input"
+                                                   value="{{ old('name', $product->name) }}" 
+                                                   placeholder="Masukkan nama produk"
+                                                   required>
+                                            @error('name')
+                                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                            @enderror
+                                        </div>
                                     </div>
 
                                     <div>
@@ -170,6 +184,32 @@
                                         @error('cost_price')
                                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                         @enderror
+                                    </div>
+                                    
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label for="category_id" class="block text-sm font-medium text-gray-700 mb-2">
+                                                <i class="bi bi-folder mr-2 text-blue-500"></i>Kategori
+                                            </label>
+                                            <select name="category_id" id="category_id" class="form-input">
+                                                <option value="">-</option>
+                                                @foreach($categories as $cat)
+                                                    <option value="{{ $cat->id }}" @selected(old('category_id', $product->category_id)==$cat->id)>{{ $cat->name }}</option>
+                                                @endforeach
+                                            </select>
+                                            @error('category_id')
+                                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                            @enderror
+                                        </div>
+                                        <div>
+                                            <label for="is_active" class="block text-sm font-medium text-gray-700 mb-2">
+                                                <i class="bi bi-toggle-on mr-2 text-green-500"></i>Status
+                                            </label>
+                                            <div class="flex items-center h-full pt-2">
+                                                <input type="checkbox" name="is_active" id="is_active" value="1" class="mr-2" @checked(old('is_active', $product->is_active))>
+                                                <span>Aktif</span>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <div>
