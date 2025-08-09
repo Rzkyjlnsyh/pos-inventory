@@ -80,6 +80,12 @@
       <span class="ml-3 nav-text font-semibold">Inventory</span>
     </a>
 
+    <!-- Pembelian -->
+    <a href="{{ route('owner.purchases.index') }}" class="flex items-center p-3 rounded-md bg-none transition hover-link">
+      <i class="bi bi-bag-check-fill"></i>
+      <span class="ml-3 nav-text font-semibold">Pembelian</span>
+    </a>
+
     <!-- Laporan -->
     <a href="{{ route('owner.report.index') }}" class="flex items-center p-3 rounded-md bg-none transition hover-link">
       <i class="bi bi-file-earmark-fill"></i>
