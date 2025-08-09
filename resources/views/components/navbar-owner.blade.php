@@ -74,23 +74,11 @@
       <span class="ml-3 nav-text font-semibold">Customer & Supplier</span>
     </a>
 
-    <!-- Stok Dropdown -->
-    <div>
-      <button
-        onclick="toggleDropdown(this)"
-        class="flex items-center justify-between w-full p-3 rounded-md bg-none transition focus:outline-none hover-link">
-        <span class="flex items-center">
-          <i class="bi bi-clipboard-data"></i>
-          <span class="ml-3 nav-text font-semibold">Stok</span>
-        </span>
-        <i class="bi bi-chevron-down transition-transform"></i>
-      </button>
-      <div class="dropdown-menu space-y-2 overflow-hidden max-h-0 transition-all duration-300">
-        <a href="{{ route('owner.stock.index') }}" class="block p-3 rounded-md bg-none transition mt-2 hover-link">
-          <span class="nav-text font-semibold">Kelola Stok</span>
-        </a>
-      </div>
-    </div>
+    <!-- Inventory -->
+    <a href="{{ url('owner/inventory') }}" class="flex items-center p-3 rounded-md bg-none transition hover-link">
+      <i class="bi bi-clipboard-data"></i>
+      <span class="ml-3 nav-text font-semibold">Inventory</span>
+    </a>
 
     <!-- Laporan -->
     <a href="{{ route('owner.report.index') }}" class="flex items-center p-3 rounded-md bg-none transition hover-link">

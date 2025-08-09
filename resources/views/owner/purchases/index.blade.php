@@ -8,17 +8,26 @@
             <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg">
                 <div class="p-6">
                     <div class="flex items-center justify-between mb-4">
-                        <form method="GET" class="flex items-center space-x-2">
-                            <input type="text" name="q" value="{{ $q }}" placeholder="Cari No Pembelian/Supplier" class="border rounded p-2 text-gray-900" />
-                            <select name="status" class="border rounded p-2 text-gray-900">
-                                <option value="">Semua Status</option>
-                                @foreach(['draft','pending','approved','received'] as $st)
-                                <option value="{{ $st }}" @selected($status==$st)>{{ ucfirst($st) }}</option>
-                                @endforeach
-                            </select>
-                            <button class="bg-gray-200 px-3 py-2 rounded">Filter</button>
-                        </form>
-                        <a href="{{ route('owner.purchases.create') }}" class="bg-indigo-600 text-white px-3 py-2 rounded">Buat Pembelian</a>
+                        <div class="flex items-center space-x-2">
+                            <a href="{{ route('owner.purchases.index', ['group' => 'todo']) }}" class="px-3 py-2 rounded {{ ($group ?? '')==='todo' ? 'bg-[#005281] text-white' : 'bg-gray-100 text-gray-700' }}">Butuh Diproses</a>
+                            <a href="{{ route('owner.purchases.index', ['group' => 'processed']) }}" class="px-3 py-2 rounded {{ ($group ?? '')==='processed' ? 'bg-[#005281] text-white' : 'bg-gray-100 text-gray-700' }}">Telah Diproses</a>
+                            <a href="{{ route('owner.purchases.index', ['group' => 'returned']) }}" class="px-3 py-2 rounded {{ ($group ?? '')==='returned' ? 'bg-[#005281] text-white' : 'bg-gray-100 text-gray-700' }}">Retur</a>
+                            <a href="{{ route('owner.purchases.index', ['group' => 'cancelled']) }}" class="px-3 py-2 rounded {{ ($group ?? '')==='cancelled' ? 'bg-[#005281] text-white' : 'bg-gray-100 text-gray-700' }}">Dibatalkan</a>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <form method="GET" class="flex items-center space-x-2">
+                                <input type="hidden" name="group" value="{{ $group }}" />
+                                <input type="text" name="q" value="{{ $q }}" placeholder="Cari No Pembelian/Supplier" class="border rounded p-2 text-gray-900" />
+                                <select name="status" class="border rounded p-2 text-gray-900">
+                                    <option value="">Semua Status</option>
+                                    @foreach(['draft','pending','approved','received'] as $st)
+                                    <option value="{{ $st }}" @selected($status==$st)>{{ ucfirst($st) }}</option>
+                                    @endforeach
+                                </select>
+                                <button class="bg-gray-200 px-3 py-2 rounded">Filter</button>
+                            </form>
+                            <a href="{{ route('owner.purchases.create') }}" class="bg-indigo-600 text-white px-3 py-2 rounded">Buat Pembelian</a>
+                        </div>
                     </div>
 
                     <div class="overflow-x-auto">

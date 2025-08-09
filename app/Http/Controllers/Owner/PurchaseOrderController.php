@@ -21,17 +21,27 @@ class PurchaseOrderController extends Controller
     {
         $q = $request->get('q');
         $status = $request->get('status');
+        $group = $request->get('group');
 
         $purchases = PurchaseOrder::with(['supplier','creator','approver'])
             ->when($q, function ($query) use ($q) {
                 $query->where('po_number', 'like', "%$q%")
                       ->orWhereHas('supplier', fn($qq) => $qq->where('name', 'like', "%$q%"));
             })
+            ->when($group, function ($query) use ($group) {
+                return match ($group) {
+                    'todo' => $query->whereIn('status', ['draft','pending']),
+                    'processed' => $query->whereIn('status', ['approved','received']),
+                    'returned' => $query->where('status', 'returned'),
+                    'cancelled' => $query->where('status', 'cancelled'),
+                    default => $query,
+                };
+            })
             ->when($status, fn($query) => $query->where('status', $status))
             ->orderByDesc('id')
             ->paginate(15);
 
-        return view('owner.purchases.index', compact('purchases','q','status'));
+        return view('owner.purchases.index', compact('purchases','q','status','group'));
     }
 
     public function create(): View
