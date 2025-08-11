@@ -26,6 +26,7 @@ class ProductOwnerController extends Controller
     {
         $validated = $request->validate([
             'sku' => ['nullable','string','max:100','unique:products,sku'],
+            'barcode' => ['nullable','string','max:150','unique:products,barcode'],
             'name' => ['required','string','max:255'],
             'category_id' => ['nullable','exists:categories,id'],
             'cost_price' => ['required','numeric','min:0'],
@@ -64,6 +65,7 @@ class ProductOwnerController extends Controller
     {
         $validated = $request->validate([
             'sku' => ['nullable','string','max:100','unique:products,sku,'.$product->id],
+            'barcode' => ['nullable','string','max:150','unique:products,barcode,'.$product->id],
             'name' => ['required','string','max:255'],
             'category_id' => ['nullable','exists:categories,id'],
             'cost_price' => ['required','numeric','min:0'],

@@ -125,6 +125,23 @@
                                     </div>
                                     
                                     <div class="input-group relative">
+                                        <label for="barcode" class="absolute -top-2 left-2 z-10 px-1 text-xs font-medium text-gray-500 floating-label">
+                                            Barcode (Opsional)
+                                        </label>
+                                        <input type="text" 
+                                               name="barcode" 
+                                               id="barcode"
+                                               class="form-input block w-full px-4 py-3 text-gray-700"
+                                               value="{{ old('barcode') }}">
+                                        @error('barcode')
+                                            <p class="mt-2 text-sm text-red-600">
+                                                <i class="bi bi-exclamation-circle mr-1"></i>
+                                                {{ $message }}
+                                            </p>
+                                        @enderror
+                                    </div>
+                                    
+                                    <div class="input-group relative">
                                         <label for="name" class="absolute -top-2 left-2 z-10 px-1 text-xs font-medium text-gray-500 floating-label">
                                             Nama Produk
                                         </label>
@@ -143,8 +160,8 @@
                                     </div>
                                 </div>
 
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div class="input-group relative">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div class="input-group relative md:col-span-1">
                                         <label for="category_id" class="absolute -top-2 left-2 z-10 px-1 text-xs font-medium text-gray-500 floating-label">
                                             Kategori
                                         </label>
@@ -161,8 +178,21 @@
                                             </p>
                                         @enderror
                                     </div>
+
+                                    <div class="input-group relative md:col-span-1">
+                                        <label for="stock_qty" class="absolute -top-2 left-2 z-10 px-1 text-xs font-medium text-gray-500 floating-label">
+                                            Qty Stok
+                                        </label>
+                                        <input type="number" name="stock_qty" id="stock_qty" class="form-input block w-full px-4 py-3 text-gray-700" value="{{ old('stock_qty', 0) }}" min="0">
+                                        @error('stock_qty')
+                                            <p class="mt-2 text-sm text-red-600">
+                                                <i class="bi bi-exclamation-circle mr-1"></i>
+                                                {{ $message }}
+                                            </p>
+                                        @enderror
+                                    </div>
                                     
-                                    <div class="flex items-center pt-6">
+                                    <div class="flex items-center pt-6 md:col-span-1">
                                         <input type="checkbox" id="is_active" name="is_active" value="1" class="mr-2" checked>
                                         <label for="is_active" class="text-sm text-gray-700">Aktif</label>
                                     </div>

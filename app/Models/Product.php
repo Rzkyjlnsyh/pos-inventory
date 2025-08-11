@@ -12,10 +12,12 @@ class Product extends Model
 
     protected $fillable = [
         'sku',
+        'barcode',
         'category_id',
         'name',
         'cost_price',
         'price',
+        'stock_qty',
         'image_path',
         'is_active',
     ];

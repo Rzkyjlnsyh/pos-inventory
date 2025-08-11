@@ -203,6 +203,19 @@
                                                 </div>
                                             </div>
                                         </div>
+
+                                        <!-- Stock Qty Card -->
+                                        <div class="stat-card bg-white rounded-lg border border-gray-100 p-6">
+                                            <div class="flex items-center">
+                                                <div class="p-3 bg-purple-100 rounded-full">
+                                                    <i class="bi bi-box-seam text-purple-600 text-xl"></i>
+                                                </div>
+                                                <div class="ml-4">
+                                                    <p class="text-sm font-medium text-gray-500">Qty Stok</p>
+                                                    <h3 class="text-lg font-semibold text-gray-800">{{ $product->stock_qty }}</h3>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <!-- Margin Analysis Section -->
