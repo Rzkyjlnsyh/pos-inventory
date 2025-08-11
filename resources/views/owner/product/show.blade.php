@@ -156,8 +156,8 @@
                             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                                 <!-- Left Column - Image -->
                                 <div class="product-image-container rounded-xl shadow-md overflow-hidden">
-                                    <img src="{{ Storage::url($product->image_path) }}" 
-                                         alt="{{ $product->name }}" 
+                                    <img src="{{ Str::startsWith($product->image_path, 'http') ? $product->image_path : (Str::startsWith($product->image_path, 'assets/') ? asset($product->image_path) : Storage::url($product->image_path)) }}" 
+                                                     alt="{{ $product->name }}"  
                                          class="w-full h-full object-cover transition-transform hover:scale-105">
                                 </div>
 

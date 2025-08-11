@@ -158,7 +158,7 @@
                                   @foreach($products as $product)
                                       <tr>
                                           <td class="px-6 py-4 whitespace-nowrap">
-                                              <img src="{{ Storage::url($product->image_path) }}" alt="{{ $product->name }}" 
+                                                                                             <img src="{{ Str::startsWith($product->image_path, 'http') ? $product->image_path : (Str::startsWith($product->image_path, 'assets/') ? asset($product->image_path) : Storage::url($product->image_path)) }}" alt="{{ $product->name }}"  
                                                   class="h-16 w-16 object-cover rounded">
                                           </td>
                                           <td class="px-6 py-4 whitespace-nowrap">{{ $product->name }}</td>

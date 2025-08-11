@@ -32,7 +32,7 @@ class ProductOwnerController extends Controller
             'cost_price' => ['required','numeric','min:0'],
             'price' => ['required','numeric','min:0'],
             'is_active' => ['sometimes','boolean'],
-            'image' => ['required','image','mimes:jpeg,png,jpg,gif','max:10240'],
+            'image' => ['nullable','image','mimes:jpeg,png,jpg,gif','max:10240'],
         ]);
 
         if ((float)$validated['price'] < (float)$validated['cost_price']) {
@@ -41,6 +41,9 @@ class ProductOwnerController extends Controller
 
         if ($request->hasFile('image')) {
             $validated['image_path'] = $request->file('image')->store('products', 'public');
+        } else {
+            // set default image path (public/assets/logo.png as placeholder)
+            $validated['image_path'] = 'assets/logo.png';
         }
 
         $validated['is_active'] = (bool) ($validated['is_active'] ?? true);

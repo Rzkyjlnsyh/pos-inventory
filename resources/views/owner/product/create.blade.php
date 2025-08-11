@@ -240,7 +240,7 @@
                                     <div class="dropzone" id="dropzone">
                                         <i class="bi bi-cloud-arrow-up text-gray-400 text-4xl mb-4"></i>
                                         <p class="text-gray-500">Drag & drop gambar di sini, atau klik untuk memilih gambar</p>
-                                        <input type="file" name="image" id="image" class="hidden" accept="image/*" required>
+                                        <input type="file" name="image" id="image" class="hidden" accept="image/*">
                                         <img id="preview" class="mt-4 max-h-40 mx-auto hidden rounded-lg">
                                     </div>
                                     @error('image')
