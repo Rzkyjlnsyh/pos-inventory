@@ -44,12 +44,12 @@
             <iframe src="{{ route('owner.inventory.stock-ins.index') }}" class="w-full min-h-[600px] border rounded"></iframe>
           </div>
 
-          <div x-show="tab==='opname'" class="text-gray-600">
-            <div class="p-6 bg-gray-50 rounded-lg border">Fitur Stock Opname akan ditambahkan (draft → approve), update stok setelah approve.</div>
+          <div x-show="tab==='opname'">
+            <iframe src="{{ url('owner/inventory/opname') }}" class="w-full min-h-[600px] border rounded"></iframe>
           </div>
 
-          <div x-show="tab==='movement'" class="text-gray-600">
-            <div class="p-6 bg-gray-50 rounded-lg border">Fitur Pergerakan Stok (log pembelian, penjualan, retur, opname) akan ditambahkan.</div>
+          <div x-show="tab==='movement'">
+            <iframe src="{{ url('owner/inventory/movements') }}" class="w-full min-h-[600px] border rounded"></iframe>
           </div>
         </div>
       </div>
