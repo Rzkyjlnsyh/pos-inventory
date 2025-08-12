@@ -202,7 +202,7 @@
                                     <label for="cost_price" class="absolute -top-2 left-2 z-10 px-1 text-xs font-medium text-gray-500 floating-label">
                                         Harga Modal
                                     </label>
-                                    <input type="number" 
+                                    <input type="number" step="0.01"
                                            name="cost_price" 
                                            id="cost_price"
                                            class="form-input block w-full px-4 py-3 text-gray-700"
@@ -220,7 +220,7 @@
                                     <label for="price" class="absolute -top-2 left-2 z-10 px-1 text-xs font-medium text-gray-500 floating-label">
                                         Harga Jual
                                     </label>
-                                    <input type="number" 
+                                    <input type="number" step="0.01"
                                            name="price" 
                                            id="price"
                                            class="form-input block w-full px-4 py-3 text-gray-700"

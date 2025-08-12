@@ -222,9 +222,9 @@
                                         </label>
                                         <div class="relative">
                                             <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">Rp</span>
-                                            <input type="number" name="cost_price" id="cost_price"
+                                            <input type="number" step="0.01" name="cost_price" id="cost_price"
                                                    class="form-input pl-10"
-                                                   value="{{ old('cost_price', $product->cost_price) }}"
+                                                   value="{{ old('cost_price', preg_replace('/\.00$/','', $product->cost_price)) }}"
                                                    placeholder="0"
                                                    required>
                                         </div>
@@ -265,9 +265,9 @@
                                         </label>
                                         <div class="relative">
                                             <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">Rp</span>
-                                            <input type="number" name="price" id="price"
+                                            <input type="number" step="0.01" name="price" id="price"
                                                    class="form-input pl-10"
-                                                   value="{{ old('price', $product->price) }}"
+                                                   value="{{ old('price', preg_replace('/\.00$/','', $product->price)) }}"
                                                    placeholder="0"
                                                    required>
                                         </div>
@@ -389,15 +389,8 @@
             handleFiles(imageInput.files);
         });
 
-        // Price formatting
-        const formatPrice = (input) => {
-            let value = input.value.replace(/\D/g, '');
-            input.value = new Intl.NumberFormat('id-ID').format(value);
-        };
-
-        document.querySelectorAll('input[type="number"]').forEach(input => {
-            input.addEventListener('input', () => formatPrice(input));
-        });
+        // Remove auto-formatting on number inputs to avoid sending formatted values
+        // If needed, formatting should be only for display, not bound to input values
 
         // Dropdown functionality
         function toggleDropdown(button) {
