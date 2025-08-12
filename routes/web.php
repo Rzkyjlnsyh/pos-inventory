@@ -167,4 +167,48 @@ Route::middleware(['auth', 'owner'])->prefix('owner')->name('owner.')->group(fun
     Route::post('contacts/suppliers', [ContactController::class, 'storeSupplier'])->name('contacts.suppliers.store');
 });
 
+// Finance Routes
+Route::middleware(['auth', 'finance'])->prefix('finance')->name('finance.')->group(function () {
+    // Dashboard
+    Route::get('dashboard', function () {
+        return view('finance.dashboard');
+    })->name('dashboard');
+    
+    // Placeholder routes - will be implemented later
+    Route::view('/', 'finance.dashboard')->name('index');
+});
+
+// Kepala Toko Routes  
+Route::middleware(['auth', 'kepala_toko'])->prefix('kepala-toko')->name('kepala_toko.')->group(function () {
+    // Dashboard
+    Route::get('dashboard', function () {
+        return view('kepala_toko.dashboard');
+    })->name('dashboard');
+    
+    // Placeholder routes - will be implemented later
+    Route::view('/', 'kepala_toko.dashboard')->name('index');
+});
+
+// Admin Routes
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    // Dashboard
+    Route::get('dashboard', function () {
+        return view('admin.dashboard');
+    })->name('dashboard');
+    
+    // Placeholder routes - will be implemented later
+    Route::view('/', 'admin.dashboard')->name('index');
+});
+
+// Editor Routes
+Route::middleware(['auth', 'editor'])->prefix('editor')->name('editor.')->group(function () {
+    // Dashboard
+    Route::get('dashboard', function () {
+        return view('editor.dashboard');
+    })->name('dashboard');
+    
+    // Placeholder routes - will be implemented later
+    Route::view('/', 'editor.dashboard')->name('index');
+});
+
 require __DIR__.'/auth.php';

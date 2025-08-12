@@ -411,7 +411,43 @@
                                                 <span class="ml-1 text-red-500">*</span>
                                             </label>
                                             
-                                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
+                                                
+                                                <div class="user-type-card" onclick="selectUserType('finance', this)">
+                                                    <div class="user-type-icon">
+                                                        <i class="bi bi-calculator text-xl"></i>
+                                                    </div>
+                                                    <h3 class="font-semibold">Finance</h3>
+                                                    <p class="text-sm text-gray-500 mt-1">Akses ke keuangan dan laporan</p>
+                                                    <input type="radio" name="usertype" value="finance" class="hidden" {{ old('usertype') == 'finance' ? 'checked' : '' }}>
+                                                </div>
+
+                                                <div class="user-type-card" onclick="selectUserType('kepala_toko', this)">
+                                                    <div class="user-type-icon">
+                                                        <i class="bi bi-person-badge text-xl"></i>
+                                                    </div>
+                                                    <h3 class="font-semibold">Kepala Toko</h3>
+                                                    <p class="text-sm text-gray-500 mt-1">Supervisory dan approval akses</p>
+                                                    <input type="radio" name="usertype" value="kepala_toko" class="hidden" {{ old('usertype') == 'kepala_toko' ? 'checked' : '' }}>
+                                                </div>
+
+                                                <div class="user-type-card" onclick="selectUserType('admin', this)">
+                                                    <div class="user-type-icon">
+                                                        <i class="bi bi-gear text-xl"></i>
+                                                    </div>
+                                                    <h3 class="font-semibold">Admin</h3>
+                                                    <p class="text-sm text-gray-500 mt-1">Akses administrasi sistem</p>
+                                                    <input type="radio" name="usertype" value="admin" class="hidden" {{ old('usertype') == 'admin' ? 'checked' : '' }}>
+                                                </div>
+
+                                                <div class="user-type-card" onclick="selectUserType('editor', this)">
+                                                    <div class="user-type-icon">
+                                                        <i class="bi bi-pencil-square text-xl"></i>
+                                                    </div>
+                                                    <h3 class="font-semibold">Editor</h3>
+                                                    <p class="text-sm text-gray-500 mt-1">Akses edit data dan konten</p>
+                                                    <input type="radio" name="usertype" value="editor" class="hidden" {{ old('usertype') == 'editor' ? 'checked' : '' }}>
+                                                </div>
                                                 
                                                 <div class="user-type-card" onclick="selectUserType('karyawan', this)">
                                                     <div class="user-type-icon">

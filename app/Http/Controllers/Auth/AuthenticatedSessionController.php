@@ -28,19 +28,17 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        if($request->user()->usertype == 'owner'){
-            return redirect('/owner/dashboard');
-        }
-
-        if($request->user()->usertype == 'karyawan'){
-            return redirect('/karyawan/cashier');
-        }
-
-        if($request->user()->usertype == 'inventaris'){
-            return redirect('/inventaris/stock');
-        }
-
-        return redirect()->intended(route('dashboard', absolute: false));
+        // Redirect berdasarkan role user
+        return match($request->user()->usertype) {
+            'owner' => redirect('/owner/dashboard'),
+            'finance' => redirect('/finance/dashboard'),
+            'kepala_toko' => redirect('/kepala-toko/dashboard'),
+            'admin' => redirect('/admin/dashboard'),
+            'editor' => redirect('/editor/dashboard'),
+            'karyawan' => redirect('/karyawan/cashier'),
+            'inventaris' => redirect('/inventaris/stock'),
+            default => redirect()->intended(route('dashboard', absolute: false))
+        };
     }
 
     /**
