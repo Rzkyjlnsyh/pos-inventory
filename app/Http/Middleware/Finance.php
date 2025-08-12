@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
-class Karyawan
+class Finance
 {
     /**
      * Handle an incoming request.
@@ -16,7 +16,7 @@ class Karyawan
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if(Auth::user()->usertype != 'karyawan')
+        if(Auth::user()->usertype != 'finance')
         {
             return redirect('/');
         }

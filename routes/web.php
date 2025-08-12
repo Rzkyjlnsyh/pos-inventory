@@ -12,14 +12,7 @@ use App\Http\Controllers\Owner\ProductOwnerController;
 use App\Http\Controllers\Owner\ProfileOwnerController;
 use App\Http\Controllers\Owner\DashboardOwnerController;
 use App\Http\Controllers\Owner\NotificationOwnerController;
-use App\Http\Controllers\Karyawan\CashierKaryawanController;
-use App\Http\Controllers\Karyawan\ProfileKaryawanController;
 use App\Http\Controllers\Owner\MenuBestSellerOwnerController;
-use App\Http\Controllers\Inventaris\StockInventarisController;
-use App\Http\Controllers\Inventaris\ProfileInventarisController;
-use App\Http\Controllers\Karyawan\NotificationKaryawanController;
-use App\Http\Controllers\Karyawan\MenuBestSellerKaryawanController;
-use App\Http\Controllers\Inventaris\NotificationInventarisController;
 use App\Http\Controllers\Owner\ContactController;
 
 Route::get('/', function () {
@@ -34,52 +27,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-});
-
-// Karyawan routes
-Route::middleware(['auth', 'karyawan'])->prefix('karyawan')->name('karyawan.')->group(function (){
-
-    // Cashier
-    Route::resource('cashier', CashierKaryawanController::class);
-
-    // Transactions
-    Route::resource('transaksitunai', TransaksiTunaiController::class);
-    Route::resource('transaksiqris', TransaksiQrisController::class);
-
-    Route::resource('menu-best-sellers', MenuBestSellerKaryawanController::class);
-
-    // Profile
-    Route::get('profile', [ProfileKaryawanController::class, 'index'])->name('profile.index');
-    Route::put('profile/update', [ProfileKaryawanController::class, 'update'])->name('profile.update');
-    Route::put('profile/password', [ProfileKaryawanController::class, 'updatePassword'])->name('profile.password');
-    Route::delete('profile/destroy', [ProfileKaryawanController::class, 'destroy'])->name('profile.destroy');
-
-    // Notifications
-    Route::resource('notification', NotificationKaryawanController::class);
-    Route::get('notifications/unread-count', [NotificationKaryawanController::class, 'unreadCount']);
-    Route::post('notifications/mark-as-read', [NotificationKaryawanController::class, 'markAsRead']);
-    Route::post('notifications/clear-all', [NotificationKaryawanController::class, 'clearAll']);
-});
-
-// Inventaris Route
-Route::middleware(['auth', 'inventaris'])->prefix('inventaris')->name('inventaris.')->group(function (){
-
-    // Stock
-    Route::resource('stock', StockInventarisController::class);
-    Route::patch('stock/increment/{id}', [StockInventarisController::class, 'incrementQty'])->name('stock.increment');
-    Route::patch('stock/decrement/{id}', [StockInventarisController::class, 'decrementQty'])->name('stock.decrement');
-
-    // Profile
-    Route::get('profile', [ProfileInventarisController::class, 'index'])->name('profile.index');
-    Route::put('profile/update', [ProfileInventarisController::class, 'update'])->name('profile.update');
-    Route::put('profile/password', [ProfileInventarisController::class, 'updatePassword'])->name('profile.password');
-    Route::delete('profile/destroy', [ProfileInventarisController::class, 'destroy'])->name('profile.destroy');
-
-    // Notifications
-    Route::resource('notification', NotificationInventarisController::class);
-    Route::get('notifications/unread-count', [NotificationInventarisController::class, 'unreadCount']);
-    Route::post('notifications/mark-as-read', [NotificationInventarisController::class, 'markAsRead']);
-    Route::post('notifications/clear-all', [NotificationInventarisController::class, 'clearAll']);
 });
 
 // Owner Routes
@@ -165,6 +112,50 @@ Route::middleware(['auth', 'owner'])->prefix('owner')->name('owner.')->group(fun
     Route::get('contacts', [ContactController::class, 'index'])->name('contacts.index');
     Route::post('contacts/customers', [ContactController::class, 'storeCustomer'])->name('contacts.customers.store');
     Route::post('contacts/suppliers', [ContactController::class, 'storeSupplier'])->name('contacts.suppliers.store');
+});
+
+// Finance Routes
+Route::middleware(['auth', 'finance'])->prefix('finance')->name('finance.')->group(function () {
+    // Dashboard
+    Route::get('dashboard', function () {
+        return view('finance.dashboard');
+    })->name('dashboard');
+    
+    // Placeholder routes - will be implemented later
+    Route::view('/', 'finance.dashboard')->name('index');
+});
+
+// Kepala Toko Routes  
+Route::middleware(['auth', 'kepala_toko'])->prefix('kepala-toko')->name('kepala_toko.')->group(function () {
+    // Dashboard
+    Route::get('dashboard', function () {
+        return view('kepala_toko.dashboard');
+    })->name('dashboard');
+    
+    // Placeholder routes - will be implemented later
+    Route::view('/', 'kepala_toko.dashboard')->name('index');
+});
+
+// Admin Routes
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    // Dashboard
+    Route::get('dashboard', function () {
+        return view('admin.dashboard');
+    })->name('dashboard');
+    
+    // Placeholder routes - will be implemented later
+    Route::view('/', 'admin.dashboard')->name('index');
+});
+
+// Editor Routes
+Route::middleware(['auth', 'editor'])->prefix('editor')->name('editor.')->group(function () {
+    // Dashboard
+    Route::get('dashboard', function () {
+        return view('editor.dashboard');
+    })->name('dashboard');
+    
+    // Placeholder routes - will be implemented later
+    Route::view('/', 'editor.dashboard')->name('index');
 });
 
 require __DIR__.'/auth.php';

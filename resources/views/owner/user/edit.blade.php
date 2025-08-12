@@ -415,33 +415,53 @@
                                                 <span class="ml-1 text-red-500">*</span>
                                             </label>
                                             
-                                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
                                                 <div class="user-type-card {{ old('usertype', $user->usertype) == 'owner' ? 'selected' : '' }}" onclick="selectUserType('owner', this)">
                                                     <div class="user-type-icon">
-                                                        <i class="bi bi-person-badge text-xl"></i>
+                                                        <i class="bi bi-crown text-xl"></i>
                                                     </div>
                                                     <h3 class="font-semibold">Owner</h3>
                                                     <p class="text-sm text-gray-500 mt-1">Akses penuh ke semua fitur sistem</p>
                                                     <input type="radio" name="usertype" value="owner" class="hidden" {{ old('usertype', $user->usertype) == 'owner' ? 'checked' : '' }}>
                                                 </div>
-                                                
-                                                <div class="user-type-card {{ old('usertype', $user->usertype) == 'karyawan' ? 'selected' : '' }}" onclick="selectUserType('karyawan', this)">
+
+                                                <div class="user-type-card {{ old('usertype', $user->usertype) == 'finance' ? 'selected' : '' }}" onclick="selectUserType('finance', this)">
                                                     <div class="user-type-icon">
-                                                        <i class="bi bi-people text-xl"></i>
+                                                        <i class="bi bi-calculator text-xl"></i>
                                                     </div>
-                                                    <h3 class="font-semibold">Karyawan</h3>
-                                                    <p class="text-sm text-gray-500 mt-1">Akses ke fitur operasional harian</p>
-                                                    <input type="radio" name="usertype" value="karyawan" class="hidden" {{ old('usertype', $user->usertype) == 'karyawan' ? 'checked' : '' }}>
+                                                    <h3 class="font-semibold">Finance</h3>
+                                                    <p class="text-sm text-gray-500 mt-1">Akses ke keuangan dan laporan</p>
+                                                    <input type="radio" name="usertype" value="finance" class="hidden" {{ old('usertype', $user->usertype) == 'finance' ? 'checked' : '' }}>
+                                                </div>
+
+                                                <div class="user-type-card {{ old('usertype', $user->usertype) == 'kepala_toko' ? 'selected' : '' }}" onclick="selectUserType('kepala_toko', this)">
+                                                    <div class="user-type-icon">
+                                                        <i class="bi bi-person-badge text-xl"></i>
+                                                    </div>
+                                                    <h3 class="font-semibold">Kepala Toko</h3>
+                                                    <p class="text-sm text-gray-500 mt-1">Supervisory dan approval akses</p>
+                                                    <input type="radio" name="usertype" value="kepala_toko" class="hidden" {{ old('usertype', $user->usertype) == 'kepala_toko' ? 'checked' : '' }}>
+                                                </div>
+
+                                                <div class="user-type-card {{ old('usertype', $user->usertype) == 'admin' ? 'selected' : '' }}" onclick="selectUserType('admin', this)">
+                                                    <div class="user-type-icon">
+                                                        <i class="bi bi-gear text-xl"></i>
+                                                    </div>
+                                                    <h3 class="font-semibold">Admin</h3>
+                                                    <p class="text-sm text-gray-500 mt-1">Akses administrasi sistem</p>
+                                                    <input type="radio" name="usertype" value="admin" class="hidden" {{ old('usertype', $user->usertype) == 'admin' ? 'checked' : '' }}>
+                                                </div>
+
+                                                <div class="user-type-card {{ old('usertype', $user->usertype) == 'editor' ? 'selected' : '' }}" onclick="selectUserType('editor', this)">
+                                                    <div class="user-type-icon">
+                                                        <i class="bi bi-pencil-square text-xl"></i>
+                                                    </div>
+                                                    <h3 class="font-semibold">Editor</h3>
+                                                    <p class="text-sm text-gray-500 mt-1">Akses edit data dan konten</p>
+                                                    <input type="radio" name="usertype" value="editor" class="hidden" {{ old('usertype', $user->usertype) == 'editor' ? 'checked' : '' }}>
                                                 </div>
                                                 
-                                                <div class="user-type-card {{ old('usertype', $user->usertype) == 'inventaris' ? 'selected' : '' }}" onclick="selectUserType('inventaris', this)">
-                                                    <div class="user-type-icon">
-                                                        <i class="bi bi-box-seam text-xl"></i>
-                                                    </div>
-                                                    <h3 class="font-semibold">Inventaris</h3>
-                                                    <p class="text-sm text-gray-500 mt-1">Akses ke pengelolaan stok barang</p>
-                                                    <input type="radio" name="usertype" value="inventaris" class="hidden" {{ old('usertype', $user->usertype) == 'inventaris' ? 'checked' : '' }}>
-                                                </div>
+
                                             </div>
                                             
                                             @error('usertype')
