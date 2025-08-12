@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Produk - Bblara</title>
+    <title>Edit Produk - Pare Custom</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -141,20 +141,7 @@
                             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                                 <!-- Left Column - Product Details -->
                                 <div class="space-y-6">
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label for="sku" class="block text-sm font-medium text-gray-700 mb-2">
-                                                <i class="bi bi-upc-scan mr-2 text-amber-500"></i>SKU (Opsional)
-                                            </label>
-                                            <input type="text" name="sku" id="sku"
-                                                   class="form-input"
-                                                   value="{{ old('sku', $product->sku) }}"
-                                                   placeholder="SKU">
-                                            @error('sku')
-                                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                            @enderror
-                                        </div>
-                                        <div>
+                                <div>
                                             <label for="name" class="block text-sm font-medium text-gray-700 mb-2">
                                                 <i class="bi bi-tag-fill mr-2 text-amber-500"></i>Nama Produk
                                             </label>
@@ -167,17 +154,52 @@
                                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                             @enderror
                                         </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                             <label for="sku" class="block text-sm font-medium text-gray-700 mb-2">
+                                                 <i class="bi bi-upc-scan mr-2 text-amber-500"></i>SKU (Opsional)
+                                             </label>
+                                             <input type="text" name="sku" id="sku"
+                                                    class="form-input"
+                                                    value="{{ old('sku', $product->sku) }}"
+                                                    placeholder="SKU">
+                                             @error('sku')
+                                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                             @enderror
+                                         </div>
+                                         <div>
+                                             <label for="barcode" class="block text-sm font-medium text-gray-700 mb-2">
+                                                 <i class="bi bi-upc mr-2 text-amber-500"></i>Barcode (Opsional)
+                                             </label>
+                                             <input type="text" name="barcode" id="barcode"
+                                                    class="form-input"
+                                                    value="{{ old('barcode', $product->barcode) }}"
+                                                    placeholder="Barcode">
+                                             @error('barcode')
+                                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                             @enderror
+                                        </div>
                                     </div>
 
-                                    <div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label for="stock_qty" class="block text-sm font-medium text-gray-700 mb-2">
+                                                <i class="bi bi-box-seam mr-2 text-purple-500"></i>Qty Stok
+                                            </label>
+                                            <input type="number" name="stock_qty" id="stock_qty" class="form-input" value="{{ old('stock_qty', $product->stock_qty) }}" min="0">
+                                            @error('stock_qty')
+                                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                            @enderror
+                                        </div>
+                                        <div>
                                         <label for="cost_price" class="block text-sm font-medium text-gray-700 mb-2">
                                             <i class="bi bi-cash mr-2 text-blue-500"></i>Harga Modal
                                         </label>
                                         <div class="relative">
                                             <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">Rp</span>
-                                            <input type="number" name="cost_price" id="cost_price"
+                                            <input type="number" step="0.01" name="cost_price" id="cost_price"
                                                    class="form-input pl-10"
-                                                   value="{{ old('cost_price', $product->cost_price) }}"
+                                                   value="{{ old('cost_price', preg_replace('/\.00$/','', $product->cost_price)) }}"
                                                    placeholder="0"
                                                    required>
                                         </div>
@@ -185,7 +207,7 @@
                                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                         @enderror
                                     </div>
-                                    
+                                    </div>
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
                                             <label for="category_id" class="block text-sm font-medium text-gray-700 mb-2">
@@ -218,9 +240,9 @@
                                         </label>
                                         <div class="relative">
                                             <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">Rp</span>
-                                            <input type="number" name="price" id="price"
+                                            <input type="number" step="0.01" name="price" id="price"
                                                    class="form-input pl-10"
-                                                   value="{{ old('price', $product->price) }}"
+                                                   value="{{ old('price', preg_replace('/\.00$/','', $product->price)) }}"
                                                    placeholder="0"
                                                    required>
                                         </div>
@@ -342,15 +364,15 @@
             handleFiles(imageInput.files);
         });
 
-        // Price formatting
-        const formatPrice = (input) => {
-            let value = input.value.replace(/\D/g, '');
-            input.value = new Intl.NumberFormat('id-ID').format(value);
-        };
+        // // Price formatting
+        // const formatPrice = (input) => {
+        //     let value = input.value.replace(/\D/g, '');
+        //     input.value = new Intl.NumberFormat('id-ID').format(value);
+        // };
 
-        document.querySelectorAll('input[type="number"]').forEach(input => {
-            input.addEventListener('input', () => formatPrice(input));
-        });
+        // document.querySelectorAll('input[type="number"]').forEach(input => {
+        //     input.addEventListener('input', () => formatPrice(input));
+        // });
 
         // Dropdown functionality
         function toggleDropdown(button) {

@@ -244,11 +244,6 @@
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Footer -->
-                        <footer class="text-gray-400 text-center py-6 mt-8">
-                            <p class="text-base">Copyright &#169; 2024 Bblaratech3. All Rights Reserved.</p>
-                        </footer>
                     </div>
                 </div>
             </div>

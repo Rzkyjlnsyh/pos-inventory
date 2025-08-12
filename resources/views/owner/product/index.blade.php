@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tabel Produk - Bblara</title>
+    <title>Tabel Produk - Pare Custom</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Bootstrap Icons CDN -->
@@ -140,14 +140,16 @@
                       </div>
                       <div class="overflow-x-auto">
                           <table class="min-w-full divide-y divide-gray-200">
-                              <thead class="bg-gray-50">
+                          <thead class="bg-gray-50">
                                   <tr>
                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gambar</th>
                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama</th>
                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
+                                       <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Barcode</th>
                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kategori</th>
                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Harga Modal</th>
                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Harga Jual</th>
+                                       <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty Stok</th>
                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                                   </tr>
@@ -161,10 +163,12 @@
                                           </td>
                                           <td class="px-6 py-4 whitespace-nowrap">{{ $product->name }}</td>
                                           <td class="px-6 py-4 whitespace-nowrap">{{ $product->sku }}</td>
-                                          <td class="px-6 py-4 whitespace-nowrap">{{ $product->category->name }}</td>
-                                          <td class="px-6 py-4 whitespace-nowrap">Rp {{ number_format($product->cost_price, 0, ',', '.') }}</td>
-                                          <td class="px-6 py-4 whitespace-nowrap">Rp {{ number_format($product->price, 0, ',', '.') }}</td>
-                                          <td class="px-6 py-4 whitespace-nowrap">{{ $product->is_active ? 'Aktif' : 'Nonaktif' }}</td>
+                                           <td class="px-6 py-4 whitespace-nowrap">{{ $product->barcode }}</td>
+                                           <td class="px-6 py-4 whitespace-nowrap">{{ $product->category?->name }}</td>
+                                           <td class="px-6 py-4 whitespace-nowrap">Rp {{ number_format($product->cost_price, 0, ',', '.') }}</td>
+                                           <td class="px-6 py-4 whitespace-nowrap">Rp {{ number_format($product->price, 0, ',', '.') }}</td>
+                                           <td class="px-6 py-4 whitespace-nowrap">{{ $product->stock_qty }}</td>
+                                           <td class="px-6 py-4 whitespace-nowrap">{{ $product->is_active ? 'Aktif' : 'Nonaktif' }}</td>
                                           <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="flex space-x-2">
                                                 {{-- Button Lihat --}}

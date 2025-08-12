@@ -141,9 +141,11 @@ Route::middleware(['auth', 'owner'])->prefix('owner')->name('owner.')->group(fun
     Route::post('purchases/{purchase}/approve', [\App\Http\Controllers\Owner\PurchaseOrderController::class, 'approve'])->name('purchases.approve');
     Route::post('purchases/{purchase}/receive', [\App\Http\Controllers\Owner\PurchaseOrderController::class, 'receive'])->name('purchases.receive');
 
-    // Inventory - Tabs page and Stock In
+    // Inventory - Tabs page and subpages
     Route::view('inventory', 'owner.inventory.index')->name('inventory.index');
     Route::get('inventory/stock-ins', [\App\Http\Controllers\Owner\StockInController::class, 'index'])->name('inventory.stock-ins.index');
+    Route::get('inventory/opname', [\App\Http\Controllers\Owner\StockOpnameController::class, 'index'])->name('inventory.opname.index');
+    Route::get('inventory/movements', [\App\Http\Controllers\Owner\StockMovementController::class, 'index'])->name('inventory.movements.index');
     
     // Notifications
     Route::resource('notification', NotificationOwnerController::class);

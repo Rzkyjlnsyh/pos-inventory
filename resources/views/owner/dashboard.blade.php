@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Beranda - Bblara</title>
+    <title>Beranda - Pare Custom</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Bootstrap Icons CDN -->
@@ -524,11 +524,6 @@
                   </span>
               </a>
           </div>
-
-          <!-- Footer -->
-          <footer class="text-gray-400 text-center py-4 mt-8">
-            <p>Copyright &#169; 2024 Bblaratech3. All Rights Reserved.</p>
-          </footer>
         </div>
       </div>
     </div>

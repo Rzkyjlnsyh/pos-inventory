@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Profile Settings - Bblara</title>
+    <title>Profile Settings - Pare Custom</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css" />
     <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600&display=swap" rel="stylesheet">
@@ -244,11 +244,6 @@
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Footer -->
-                        <footer class="text-gray-400 text-center py-6 mt-8">
-                            <p class="text-base">Copyright &#169; 2024 Bblaratech3. All Rights Reserved.</p>
-                        </footer>
                     </div>
                 </div>
             </div>
