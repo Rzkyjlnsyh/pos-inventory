@@ -461,23 +461,7 @@
                                                     <input type="radio" name="usertype" value="editor" class="hidden" {{ old('usertype', $user->usertype) == 'editor' ? 'checked' : '' }}>
                                                 </div>
                                                 
-                                                <div class="user-type-card {{ old('usertype', $user->usertype) == 'karyawan' ? 'selected' : '' }}" onclick="selectUserType('karyawan', this)">
-                                                    <div class="user-type-icon">
-                                                        <i class="bi bi-people text-xl"></i>
-                                                    </div>
-                                                    <h3 class="font-semibold">Karyawan</h3>
-                                                    <p class="text-sm text-gray-500 mt-1">Akses ke fitur operasional harian</p>
-                                                    <input type="radio" name="usertype" value="karyawan" class="hidden" {{ old('usertype', $user->usertype) == 'karyawan' ? 'checked' : '' }}>
-                                                </div>
-                                                
-                                                <div class="user-type-card {{ old('usertype', $user->usertype) == 'inventaris' ? 'selected' : '' }}" onclick="selectUserType('inventaris', this)">
-                                                    <div class="user-type-icon">
-                                                        <i class="bi bi-box-seam text-xl"></i>
-                                                    </div>
-                                                    <h3 class="font-semibold">Inventaris</h3>
-                                                    <p class="text-sm text-gray-500 mt-1">Akses ke pengelolaan stok barang</p>
-                                                    <input type="radio" name="usertype" value="inventaris" class="hidden" {{ old('usertype', $user->usertype) == 'inventaris' ? 'checked' : '' }}>
-                                                </div>
+
                                             </div>
                                             
                                             @error('usertype')

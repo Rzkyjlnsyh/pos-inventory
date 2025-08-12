@@ -18,8 +18,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'kepala_toko' => \App\Http\Middleware\KepalaToko::class,
             'admin' => \App\Http\Middleware\Admin::class,
             'editor' => \App\Http\Middleware\Editor::class,
-            'karyawan' => \App\Http\Middleware\Karyawan::class,
-            'inventaris' => \App\Http\Middleware\Inventaris::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

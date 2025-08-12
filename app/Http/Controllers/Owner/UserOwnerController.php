@@ -35,7 +35,7 @@ class UserOwnerController extends Controller
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users'],
-            'usertype' => ['required', 'string', 'in:owner,finance,kepala_toko,admin,editor,karyawan,inventaris'],
+            'usertype' => ['required', 'string', 'in:owner,finance,kepala_toko,admin,editor'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
@@ -73,7 +73,7 @@ class UserOwnerController extends Controller
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email,' . $user->id],
-            'usertype' => ['required', 'string', 'in:owner,finance,kepala_toko,admin,editor,karyawan,inventaris'],
+            'usertype' => ['required', 'string', 'in:owner,finance,kepala_toko,admin,editor'],
             'password' => ['nullable', 'confirmed', Rules\Password::defaults()],
         ]);
 

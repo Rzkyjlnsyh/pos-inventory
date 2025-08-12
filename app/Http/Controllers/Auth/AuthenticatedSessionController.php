@@ -28,15 +28,13 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        // Redirect berdasarkan role user
+        // Redirect berdasarkan role user (5 role bisnis)
         return match($request->user()->usertype) {
             'owner' => redirect('/owner/dashboard'),
             'finance' => redirect('/finance/dashboard'),
             'kepala_toko' => redirect('/kepala-toko/dashboard'),
             'admin' => redirect('/admin/dashboard'),
             'editor' => redirect('/editor/dashboard'),
-            'karyawan' => redirect('/karyawan/cashier'),
-            'inventaris' => redirect('/inventaris/stock'),
             default => redirect()->intended(route('dashboard', absolute: false))
         };
     }
