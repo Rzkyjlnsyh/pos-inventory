@@ -114,6 +114,7 @@ Route::middleware(['auth', 'owner'])->prefix('owner')->name('owner.')->group(fun
     Route::post('contacts/suppliers', [ContactController::class, 'storeSupplier'])->name('contacts.suppliers.store');
 });
 
+
 // Finance Routes
 Route::middleware(['auth', 'finance'])->prefix('finance')->name('finance.')->group(function () {
     // Dashboard
