@@ -1,27 +1,21 @@
 <?php
 
+use App\Http\Controllers\Owner\PurchaseReturnController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\TransaksiQrisController;
-use App\Http\Controllers\TransaksiTunaiController;
 use App\Http\Controllers\Owner\UserOwnerController;
-use App\Http\Controllers\Owner\StockOwnerController;
-use App\Http\Controllers\Owner\ReportOwnerController;
-use App\Http\Controllers\Owner\CashierOwnerController;
 use App\Http\Controllers\Owner\ProductOwnerController;
 use App\Http\Controllers\Owner\ProfileOwnerController;
-use App\Http\Controllers\Owner\DashboardOwnerController;
 use App\Http\Controllers\Owner\NotificationOwnerController;
-use App\Http\Controllers\Owner\MenuBestSellerOwnerController;
 use App\Http\Controllers\Owner\ContactController;
+use App\Http\Controllers\Owner\CategoryController;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+// Base and auth routes
+Route::get('/', fn() => view('welcome'));
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', fn() => view('dashboard'))
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -29,21 +23,22 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-// Owner Routes
+// Owner routes, protected by 'auth' and 'owner' middleware
 Route::middleware(['auth', 'owner'])->prefix('owner')->name('owner.')->group(function () {
-    
     // Dashboard
-    Route::resource('dashboard', DashboardOwnerController::class);
-    
-    // Cashier
-    Route::resource('cashier', CashierOwnerController::class);
-    
-    // Product (legacy UI)
-    Route::resource('product', ProductOwnerController::class);
+    Route::view('/', 'owner.dashboard')->name('index');
+    Route::get('dashboard', fn() => view('owner.dashboard'))->name('dashboard');
 
-    // Catalog (new UI)
-    Route::prefix('catalog')->name('catalog.')->group(function () {
-        Route::resource('categories', \App\Http\Controllers\Owner\CategoryController::class)->names([
+    // Products
+    Route::resource('product', ProductOwnerController::class);
+    Route::get('catalog/products/search', [ProductOwnerController::class, 'search'])->name('catalog.products.search');
+    Route::get('product/import', [ProductOwnerController::class, 'importForm'])->name('product.import.form');
+    Route::post('product/import', [ProductOwnerController::class, 'import'])->name('product.import');
+    Route::get('product/download-template', [ProductOwnerController::class, 'downloadTemplate'])->name('product.download-template');
+
+    // Categories
+    Route::resource('categories', CategoryController::class)
+        ->names([
             'index' => 'category.index',
             'create' => 'category.create',
             'store' => 'category.store',
@@ -51,34 +46,26 @@ Route::middleware(['auth', 'owner'])->prefix('owner')->name('owner.')->group(fun
             'update' => 'category.update',
             'destroy' => 'category.destroy',
         ])->except(['show']);
+    Route::get('category/import', [CategoryController::class, 'importForm'])->name('category.import');
+    Route::post('category/import', [CategoryController::class, 'import'])->name('category.import');
+    Route::get('category/download-template', [CategoryController::class, 'downloadTemplate'])->name('category.download-template');
 
-        Route::resource('products', \App\Http\Controllers\Owner\ProductCatalogController::class)->names([
-            'index' => 'products.index',
-            'create' => 'products.create',
-            'store' => 'products.store',
-            'edit' => 'products.edit',
-            'update' => 'products.update',
-            'destroy' => 'products.destroy',
-        ])->except(['show']);
-        Route::get('products-search', [\App\Http\Controllers\Owner\ProductCatalogController::class, 'search'])->name('products.search');
-    });
-    
-    // Transactions
-    Route::resource('transaksitunai', TransaksiTunaiController::class);
-    Route::resource('transaksiqris', TransaksiQrisController::class);
-    
-    // Stock
-    Route::resource('stock', StockOwnerController::class);
-    Route::patch('stock/increment/{id}', [StockOwnerController::class, 'incrementQty'])->name('stock.increment');
-    Route::patch('stock/decrement/{id}', [StockOwnerController::class, 'decrementQty'])->name('stock.decrement');
-    
-    // User
+    // User management
     Route::resource('user', UserOwnerController::class);
-    
-    // Report
-    Route::get('report/daily-income', [ReportOwnerController::class, 'dailyIncome'])->name('report.daily-income');
-    Route::get('report/export-excel', [ReportOwnerController::class, 'exportExcel'])->name('report.export-excel');
-    Route::resource('report', ReportOwnerController::class);   
+
+    // Purchase Returns
+    Route::prefix('purchase-returns')->name('purchase-returns.')->group(function () {
+        Route::get('/', [PurchaseReturnController::class, 'index'])->name('index');
+        Route::get('create/{purchase}', [PurchaseReturnController::class, 'create'])->name('create');
+        Route::post('store/{purchase}', [PurchaseReturnController::class, 'store'])->name('store');
+        Route::get('{purchaseReturn}', [PurchaseReturnController::class, 'show'])->name('show');
+        Route::post('{purchaseReturn}/confirm', [PurchaseReturnController::class, 'confirm'])->name('confirm');
+        Route::post('{purchaseReturn}/cancel', [PurchaseReturnController::class, 'cancel'])->name('cancel');
+    });
+
+    // Redirect old purchase returns tab to new route
+    Route::get('purchases/returns', fn() => redirect()->route('owner.purchase-returns.index'))
+        ->name('purchases.returns-redirect');
 
     // Purchases
     Route::resource('purchases', \App\Http\Controllers\Owner\PurchaseOrderController::class)
@@ -87,76 +74,67 @@ Route::middleware(['auth', 'owner'])->prefix('owner')->name('owner.')->group(fun
     Route::post('purchases/{purchase}/submit', [\App\Http\Controllers\Owner\PurchaseOrderController::class, 'submit'])->name('purchases.submit');
     Route::post('purchases/{purchase}/approve', [\App\Http\Controllers\Owner\PurchaseOrderController::class, 'approve'])->name('purchases.approve');
     Route::post('purchases/{purchase}/receive', [\App\Http\Controllers\Owner\PurchaseOrderController::class, 'receive'])->name('purchases.receive');
+    Route::patch('purchases/{purchase}/cancel', [\App\Http\Controllers\Owner\PurchaseOrderController::class, 'cancel'])->name('purchases.cancel');
 
-    // Inventory - Tabs page and subpages
-    Route::view('inventory', 'owner.inventory.index')->name('inventory.index');
-    Route::get('inventory/stock-ins', [\App\Http\Controllers\Owner\StockInController::class, 'index'])->name('inventory.stock-ins.index');
-    Route::get('inventory/opname', [\App\Http\Controllers\Owner\StockOpnameController::class, 'index'])->name('inventory.opname.index');
-    Route::get('inventory/movements', [\App\Http\Controllers\Owner\StockMovementController::class, 'index'])->name('inventory.movements.index');
-    
+    // Inventory routes
+    Route::prefix('inventory')->name('inventory.')->group(function () {
+        Route::view('/', 'owner.inventory.index')->name('index');
+        Route::get('stock-ins', [\App\Http\Controllers\Owner\StockInController::class, 'index'])->name('stock-ins.index');
+        Route::prefix('stock-opnames')->name('stock-opnames.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Owner\StockOpnameController::class, 'index'])->name('index');
+            Route::get('create', [\App\Http\Controllers\Owner\StockOpnameController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\Owner\StockOpnameController::class, 'store'])->name('store');
+            Route::get('{id}', [\App\Http\Controllers\Owner\StockOpnameController::class, 'show'])->name('show');
+            Route::post('{id}/approve', [\App\Http\Controllers\Owner\StockOpnameController::class, 'approve'])->name('approve');
+            Route::delete('{id}', [\App\Http\Controllers\Owner\StockOpnameController::class, 'destroy'])->name('destroy');
+        });
+        Route::get('stock-movements', [\App\Http\Controllers\Owner\StockMovementController::class, 'index'])->name('stock-movements.index');
+        Route::get('stock-movements/{productId}/{date}', [\App\Http\Controllers\Owner\StockMovementController::class, 'getProductMovements'])->name('stock-movements.details');
+    });
+
     // Notifications
     Route::resource('notification', NotificationOwnerController::class);
     Route::get('notifications/unread-count', [NotificationOwnerController::class, 'unreadCount']);
     Route::post('notifications/mark-as-read', [NotificationOwnerController::class, 'markAsRead']);
     Route::post('notifications/clear-all', [NotificationOwnerController::class, 'clearAll']);
-    
-    // Profile
-    Route::get('profile', [ProfileOwnerController::class, 'index'])->name('profile.index');
-    Route::put('profile/update', [ProfileOwnerController::class, 'update'])->name('profile.update');
-    Route::put('profile/password', [ProfileOwnerController::class, 'updatePassword'])->name('profile.password');
-    Route::delete('profile/destroy', [ProfileOwnerController::class, 'destroy'])->name('profile.destroy');
 
-    Route::resource('menu-best-sellers', MenuBestSellerOwnerController::class);
+    // Profile (owner)
+    Route::prefix('profile')->name('profile.')->group(function () {
+        Route::get('/', [ProfileOwnerController::class, 'index'])->name('index');
+        Route::put('update', [ProfileOwnerController::class, 'update'])->name('update');
+        Route::put('password', [ProfileOwnerController::class, 'updatePassword'])->name('password');
+        Route::delete('destroy', [ProfileOwnerController::class, 'destroy'])->name('destroy');
+    });
 
-    // Contacts: Customer & Supplier (single page with two tabs)
+    // Contacts (Customer & Supplier)
     Route::get('contacts', [ContactController::class, 'index'])->name('contacts.index');
     Route::post('contacts/customers', [ContactController::class, 'storeCustomer'])->name('contacts.customers.store');
     Route::post('contacts/suppliers', [ContactController::class, 'storeSupplier'])->name('contacts.suppliers.store');
 });
 
-
-// Finance Routes
+// Finance routes
 Route::middleware(['auth', 'finance'])->prefix('finance')->name('finance.')->group(function () {
-    // Dashboard
-    Route::get('dashboard', function () {
-        return view('finance.dashboard');
-    })->name('dashboard');
-    
-    // Placeholder routes - will be implemented later
     Route::view('/', 'finance.dashboard')->name('index');
+    Route::get('dashboard', fn() => view('finance.dashboard'))->name('dashboard');
 });
 
-// Kepala Toko Routes  
+// Kepala Toko routes
 Route::middleware(['auth', 'kepala_toko'])->prefix('kepala-toko')->name('kepala_toko.')->group(function () {
-    // Dashboard
-    Route::get('dashboard', function () {
-        return view('kepala_toko.dashboard');
-    })->name('dashboard');
-    
-    // Placeholder routes - will be implemented later
     Route::view('/', 'kepala_toko.dashboard')->name('index');
+    Route::get('dashboard', fn() => view('kepala_toko.dashboard'))->name('dashboard');
 });
 
-// Admin Routes
+// Admin routes
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
-    // Dashboard
-    Route::get('dashboard', function () {
-        return view('admin.dashboard');
-    })->name('dashboard');
-    
-    // Placeholder routes - will be implemented later
     Route::view('/', 'admin.dashboard')->name('index');
+    Route::get('dashboard', fn() => view('admin.dashboard'))->name('dashboard');
 });
 
-// Editor Routes
+// Editor routes
 Route::middleware(['auth', 'editor'])->prefix('editor')->name('editor.')->group(function () {
-    // Dashboard
-    Route::get('dashboard', function () {
-        return view('editor.dashboard');
-    })->name('dashboard');
-    
-    // Placeholder routes - will be implemented later
     Route::view('/', 'editor.dashboard')->name('index');
+    Route::get('dashboard', fn() => view('editor.dashboard'))->name('dashboard');
 });
 
+// Auth routes (login, registration, etc)
 require __DIR__.'/auth.php';

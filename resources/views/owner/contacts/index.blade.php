@@ -1,152 +1,370 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Customer & Supplier - Bblara</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600&display=swap" rel="stylesheet">
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <style>
-      body{ font-family: 'Raleway', sans-serif; }
-      .nav-text{ position: relative; display: inline-block; }
-      .nav-text::after{ content:''; position:absolute; width:0; height:2px; bottom:-2px; left:0; background-color:#e17f12; transition:width .2s; }
-      .hover-link:hover .nav-text::after{ width:100%; }
-    </style>
-  </head>
-  <body class="bg-gray-100">
-    <div class="flex">
-      <!-- Toggle Button for Sidebar -->
-      <button class="fixed text-white text-3xl top-5 left-4 p-2 rounded-md bg-gray-700 lg:hidden focus:outline-none z-50" onclick="toggleSidebar()">
-        <i class="bi bi-list"></i>
-      </button>
 
-      <!-- Sidebar -->
-      <x-navbar-owner></x-navbar-owner>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Customer & Supplier - Pare Custom</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Bootstrap Icons CDN -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css" />
+  {{-- Font Cdn --}}
+  <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600&display=swap" rel="stylesheet">
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    body {
+      font-family: 'Raleway', sans-serif;
+    }
 
-      <!-- Main Content -->
-      <div class="flex-1 lg:w-5/6">
-        <!-- Top Navbar -->
-        <x-navbar-top-owner></x-navbar-top-owner>
+    .nav-text {
+      position: relative;
+      display: inline-block;
+    }
 
-        <!-- Content Wrapper -->
-        <div class="p-4 lg:p-8">
-          <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
-            <div class="flex items-center justify-between">
-              <h2 class="text-xl font-semibold text-gray-700">Customer & Supplier</h2>
+    .nav-text::after {
+      content: '';
+      position: absolute;
+      width: 0;
+      height: 2px;
+      bottom: -2px;
+      left: 0;
+      background-color: #e17f12;
+      transition: width 0.2s ease-in-out;
+    }
+
+    .hover-link:hover .nav-text::after {
+      width: 100%;
+    }
+
+    /* Tambahkan di dalam tag style yang sudah ada */
+    .pagination-button {
+      @apply px-3 py-1 border rounded-lg transition-all duration-200;
+    }
+
+    .pagination-button.active {
+      @apply bg-orange-500 text-white border-orange-500;
+    }
+
+    .pagination-button:not(.active) {
+      @apply hover:bg-orange-50 text-gray-700;
+    }
+
+    /* Animation untuk row tabel */
+    tbody tr {
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Tab styling */
+    .tab-button {
+      @apply px-6 py-3 font-semibold transition-all duration-200 border-b-2 border-transparent;
+    }
+
+    .tab-button.active {
+      @apply border-orange-500 text-orange-600;
+    }
+
+    .tab-button:not(.active) {
+      @apply text-gray-500 hover:text-gray-700;
+    }
+  </style>
+</head>
+
+<body class="bg-gray-100">
+  <div class="flex">
+    <!-- Toggle Button for Sidebar -->
+    <button class="fixed text-white text-3xl top-5 left-4 p-2 rounded-md bg-gray-700 lg:hidden focus:outline-none z-50"
+      onclick="toggleSidebar()">
+      <i class="bi bi-list"></i>
+    </button>
+
+    <!-- Sidebar -->
+    <x-navbar-owner></x-navbar-owner>
+
+    <!-- Main Content -->
+    <div class="flex-1 lg:w-5/6">
+      {{-- Navbar Top --}}
+      <x-navbar-top-owner></x-navbar-top-owner>
+
+      <!-- Content Wrapper -->
+      <div class="p-4 lg:p-8">
+        <div class="p-6 bg-gray-100 min-h-screen">
+          <div class="max-w-7xl mx-auto">
+            <div class="flex justify-between items-center mb-6">
+              <h1 class="text-3xl font-bold text-gray-800">Customer & Supplier</h1>
             </div>
-          </div>
 
-          <div class="bg-white p-6 rounded-xl shadow-lg" x-data="{ tab: 'customers' }">
-            <!-- Tabs -->
-            <div class="flex border-b mb-4">
-              <button @click="tab='customers'" :class="tab==='customers' ? 'border-b-2 border-[#005281] text-[#005281]' : 'text-gray-500'" class="px-4 py-2 font-semibold">Customers</button>
-              <button @click="tab='suppliers'" :class="tab==='suppliers' ? 'border-b-2 border-[#005281] text-[#005281]' : 'text-gray-500'" class="px-4 py-2 font-semibold">Suppliers</button>
-            </div>
+            @if(session('success'))
+        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-6"
+          role="alert">
+          <span class="block sm:inline">{{ session('success') }}</span>
+        </div>
+      @endif
 
-            <!-- Customers -->
-            <div x-show="tab==='customers'">
-              <form method="POST" action="{{ route('owner.contacts.customers.store') }}" class="space-y-4 mb-6">
-                @csrf
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <input name="name" required placeholder="Customer name" class="border rounded p-2 text-gray-900 w-full" />
-                  <input name="phone" placeholder="Phone" class="border rounded p-2 text-gray-900 w-full" />
-                  <input name="email" type="email" placeholder="Email" class="border rounded p-2 text-gray-900 w-full" />
-                  <input name="address" placeholder="Address" class="border rounded p-2 text-gray-900 w-full md:col-span-3" />
-                  <input name="notes" placeholder="Notes" class="border rounded p-2 text-gray-900 w-full md:col-span-3" />
-                </div>
-                <button type="submit" class="bg-[#005281] text-white px-4 py-2 rounded-md hover:opacity-90">Tambah Customer</button>
-              </form>
-
-              <div class="overflow-x-auto">
-                <table class="min-w-full text-left text-sm">
-                  <thead>
-                    <tr class="border-b text-gray-600">
-                      <th class="px-3 py-2">Nama</th>
-                      <th class="px-3 py-2">Telepon</th>
-                      <th class="px-3 py-2">Email</th>
-                      <th class="px-3 py-2">Alamat</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @foreach($customers as $c)
-                    <tr class="border-b">
-                      <td class="px-3 py-2">{{ $c->name }}</td>
-                      <td class="px-3 py-2">{{ $c->phone }}</td>
-                      <td class="px-3 py-2">{{ $c->email }}</td>
-                      <td class="px-3 py-2">{{ $c->address }}</td>
-                    </tr>
-                    @endforeach
-                  </tbody>
-                </table>
+            <div class="bg-white rounded-lg shadow overflow-hidden" x-data="{ tab: 'customers' }">
+              <!-- Tabs -->
+              <div class="flex border-b space-x-6 py-2">
+                <button @click="tab='customers'" :class="tab==='customers' ? 'tab-button active' : 'tab-button'"
+                  class="flex items-center gap-2 px-6 py-3">
+                  <i class="bi bi-people-fill"></i> Customers
+                </button>
+                <button @click="tab='suppliers'" :class="tab==='suppliers' ? 'tab-button active' : 'tab-button'"
+                  class="flex items-center gap-2 px-6 py-3">
+                  <i class="bi bi-truck"></i> Suppliers
+                </button>
               </div>
 
-              <div class="mt-4">{{ $customers->withQueryString()->onEachSide(1)->links() }}</div>
-            </div>
+              <!-- Customers Tab -->
+              <div x-show="tab==='customers'" class="p-6">
+                <!-- Add Customer Form -->
+                <div class="bg-gray-50 p-6 rounded-lg mb-6">
+                  <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                    <i class="bi bi-person-plus mr-2"></i>Tambah Customer Baru
+                  </h3>
+                  <form method="POST" action="{{ route('owner.contacts.customers.store') }}" class="space-y-4">
+                    @csrf
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Nama *</label>
+                        <input name="name" required
+                          class="w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200"
+                          placeholder="Nama customer">
+                      </div>
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Telepon</label>
+                        <input name="phone"
+                          class="w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200"
+                          placeholder="Nomor telepon">
+                      </div>
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                        <input name="email" type="email"
+                          class="w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200"
+                          placeholder="Alamat email">
+                      </div>
+                      <div class="md:col-span-2 lg:col-span-1">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">&nbsp;</label>
+                        <button type="submit"
+                          class="w-full bg-orange-500 hover:bg-orange-600 text-white px-4 py-2.5 rounded-lg font-medium transition-all duration-200">
+                          <i class="bi bi-plus-circle mr-2"></i>Tambah Customer
+                        </button>
+                      </div>
+                    </div>
 
-            <!-- Suppliers -->
-            <div x-show="tab==='suppliers'">
-              <form method="POST" action="{{ route('owner.contacts.suppliers.store') }}" class="space-y-4 mb-6">
-                @csrf
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <input name="name" required placeholder="Supplier name" class="border rounded p-2 text-gray-900 w-full" />
-                  <input name="contact_name" placeholder="Contact person" class="border rounded p-2 text-gray-900 w-full" />
-                  <input name="phone" placeholder="Phone" class="border rounded p-2 text-gray-900 w-full" />
-                  <input name="email" type="email" placeholder="Email" class="border rounded p-2 text-gray-900 w-full" />
-                  <input name="address" placeholder="Address" class="border rounded p-2 text-gray-900 w-full md:col-span-2" />
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Alamat</label>
+                        <input name="address"
+                          class="w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200"
+                          placeholder="Alamat lengkap">
+                      </div>
+                      <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Catatan</label>
+                        <input name="notes"
+                          class="w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200"
+                          placeholder="Catatan tambahan">
+                      </div>
+                    </div>
+                  </form>
                 </div>
-                <button type="submit" class="bg-[#005281] text-white px-4 py-2 rounded-md hover:opacity-90">Tambah Supplier</button>
-              </form>
 
-              <div class="overflow-x-auto">
-                <table class="min-w-full text-left text-sm">
-                  <thead>
-                    <tr class="border-b text-gray-600">
-                      <th class="px-3 py-2">Nama</th>
-                      <th class="px-3 py-2">Kontak</th>
-                      <th class="px-3 py-2">Telepon</th>
-                      <th class="px-3 py-2">Email</th>
-                      <th class="px-3 py-2">Alamat</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @foreach($suppliers as $s)
-                    <tr class="border-b">
-                      <td class="px-3 py-2">{{ $s->name }}</td>
-                      <td class="px-3 py-2">{{ $s->contact_name }}</td>
-                      <td class="px-3 py-2">{{ $s->phone }}</td>
-                      <td class="px-3 py-2">{{ $s->email }}</td>
-                      <td class="px-3 py-2">{{ $s->address }}</td>
-                    </tr>
-                    @endforeach
-                  </tbody>
-                </table>
+                <!-- Customers Table -->
+                <div class="overflow-x-auto">
+                  <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                      <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Telepon</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Alamat</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Catatan</th>
+                      </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                      @foreach($customers as $customer)
+              <tr class="hover:bg-gray-50 transition-colors duration-200">
+              <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{{ $customer->name }}</td>
+              <td class="px-6 py-4 whitespace-nowrap">{{ $customer->phone ?? '-' }}</td>
+              <td class="px-6 py-4 whitespace-nowrap">{{ $customer->email ?? '-' }}</td>
+              <td class="px-6 py-4 whitespace-nowrap">{{ $customer->address ?? '-' }}</td>
+              <td class="px-6 py-4 whitespace-nowrap">{{ $customer->notes ?? '-' }}</td>
+              </tr>
+            @endforeach
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="mt-6 px-6 py-4 border-t border-gray-200">
+                  <div class="flex justify-between items-center">
+                    <div class="text-sm text-gray-700">
+                      Menampilkan {{ $customers->firstItem() }} sampai {{ $customers->lastItem() }} dari
+                      {{ $customers->total() }} customer
+                    </div>
+                    <div>
+                      {{ $customers->withQueryString()->onEachSide(1)->links() }}
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div class="mt-4">{{ $suppliers->withQueryString()->onEachSide(1)->links() }}</div>
+              <!-- Suppliers Tab -->
+              <div x-show="tab==='suppliers'" class="p-6">
+                <!-- Add Supplier Form -->
+                <div class="bg-gray-50 p-6 rounded-lg mb-6">
+                  <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                    <i class="bi bi-building-add mr-2"></i>Tambah Supplier Baru
+                  </h3>
+                  <form method="POST" action="{{ route('owner.contacts.suppliers.store') }}" class="space-y-4">
+                    @csrf
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Nama Supplier *</label>
+                        <input name="name" required
+                          class="w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200"
+                          placeholder="Nama supplier">
+                      </div>
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Nama Kontak</label>
+                        <input name="contact_name"
+                          class="w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200"
+                          placeholder="Nama kontak person">
+                      </div>
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Telepon</label>
+                        <input name="phone"
+                          class="w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200"
+                          placeholder="Nomor telepon">
+                      </div>
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                        <input name="email" type="email"
+                          class="w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200"
+                          placeholder="Alamat email">
+                      </div>
+                      <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Alamat</label>
+                        <input name="address"
+                          class="w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200"
+                          placeholder="Alamat lengkap">
+                      </div>
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">&nbsp;</label>
+                        <button type="submit"
+                          class="w-full bg-orange-500 hover:bg-orange-600 text-white px-4 py-2.5 rounded-lg font-medium transition-all duration-200">
+                          <i class="bi bi-plus-circle mr-2"></i>Tambah Supplier
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                </div>
+
+                <!-- Suppliers Table -->
+                <div class="overflow-x-auto">
+                  <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                      <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama
+                          Supplier</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Kontak</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Telepon</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Alamat</th>
+                      </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                      @foreach($suppliers as $supplier)
+              <tr class="hover:bg-gray-50 transition-colors duration-200">
+              <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{{ $supplier->name }}</td>
+              <td class="px-6 py-4 whitespace-nowrap">{{ $supplier->contact_name ?? '-' }}</td>
+              <td class="px-6 py-4 whitespace-nowrap">{{ $supplier->phone ?? '-' }}</td>
+              <td class="px-6 py-4 whitespace-nowrap">{{ $supplier->email ?? '-' }}</td>
+              <td class="px-6 py-4 whitespace-nowrap">{{ $supplier->address ?? '-' }}</td>
+              </tr>
+            @endforeach
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="mt-6 px-6 py-4 border-t border-gray-200">
+                  <div class="flex justify-between items-center">
+                    <div class="text-sm text-gray-700">
+                      Menampilkan {{ $suppliers->firstItem() }} sampai {{ $suppliers->lastItem() }} dari
+                      {{ $suppliers->total() }} supplier
+                    </div>
+                    <div>
+                      {{ $suppliers->withQueryString()->onEachSide(1)->links() }}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
+  </div>
 
-    <script>
-      function toggleSidebar(){
-        const el = document.getElementById('sidebar');
-        if(!el) return; el.classList.toggle('-translate-x-full');
-      }
-      function toggleDropdown(btn){
-        const menu = btn.nextElementSibling;
-        if(!menu) return;
-        if(menu.style.maxHeight && menu.style.maxHeight !== '0px'){
-          menu.style.maxHeight = '0px';
-          btn.querySelector('i.bi-chevron-down')?.classList.remove('rotate-180');
-        } else {
-          menu.style.maxHeight = menu.scrollHeight + 'px';
-          btn.querySelector('i.bi-chevron-down')?.classList.add('rotate-180');
+  <script>
+    function toggleSidebar() {
+      const sidebar = document.querySelector('#sidebar');
+      sidebar.classList.toggle('-translate-x-full');
+    }
+
+    function toggleDropdown(button) {
+      const dropdownMenus = document.querySelectorAll(".dropdown-menu");
+      const dropdownArrows = document.querySelectorAll("i.bi-chevron-down");
+
+      // Tutup semua dropdown kecuali yang dipilih
+      dropdownMenus.forEach((menu) => {
+        if (menu !== button.nextElementSibling) {
+          menu.classList.add("max-h-0");
+          menu.classList.remove("max-h-40");
         }
+      });
+
+      // Atur semua panah kecuali yang dipilih
+      dropdownArrows.forEach((arrow) => {
+        if (arrow !== button.querySelector("i.bi-chevron-down")) {
+          arrow.classList.remove("rotate-180");
+        }
+      });
+
+      // Toggle dropdown yang dipilih
+      const dropdownMenu = button.nextElementSibling;
+      const dropdownArrow = button.querySelector("i.bi-chevron-down");
+
+      if (dropdownMenu.classList.contains("max-h-0")) {
+        dropdownMenu.classList.remove("max-h-0");
+        dropdownMenu.classList.add("max-h-40");
+        dropdownArrow.classList.add("rotate-180");
+      } else {
+        dropdownMenu.classList.add("max-h-0");
+        dropdownMenu.classList.remove("max-h-40");
+        dropdownArrow.classList.remove("rotate-180");
       }
-    </script>
-  </body>
+    }
+  </script>
+</body>
+
 </html>

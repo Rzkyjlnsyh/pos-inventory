@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Inventory - Bblara</title>
+  <title>Inventory - Custom Pare</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css">
   <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600&display=swap" rel="stylesheet">
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <style>
-    body{ font-family: 'Raleway', sans-serif; }
+    body{ font-family: 'Nunito,sans-serif'; }
     .nav-text{ position: relative; display: inline-block; }
     .nav-text::after{ content:''; position:absolute; width:0; height:2px; bottom:-2px; left:0; background-color:#e17f12; transition:width .2s; }
     .hover-link:hover .nav-text::after{ width:100%; }
@@ -44,12 +44,13 @@
             <iframe src="{{ route('owner.inventory.stock-ins.index') }}" class="w-full min-h-[600px] border rounded"></iframe>
           </div>
 
-          <div x-show="tab==='opname'" class="text-gray-600">
-            <div class="p-6 bg-gray-50 rounded-lg border">Fitur Stock Opname akan ditambahkan (draft → approve), update stok setelah approve.</div>
+          <div x-show="tab==='opname'">
+            <iframe src="{{ route('owner.inventory.stock-opnames.index') }}" class="w-full min-h-[600px] border rounded"></iframe>
           </div>
 
           <div x-show="tab==='movement'" class="text-gray-600">
-            <div class="p-6 bg-gray-50 rounded-lg border">Fitur Pergerakan Stok (log pembelian, penjualan, retur, opname) akan ditambahkan.</div>
+            <!-- stock movement disini -->
+            <iframe src="{{ route('owner.inventory.stock-movements.index') }}" class="w-full min-h-[600px] border rounded"></iframe>
           </div>
         </div>
       </div>

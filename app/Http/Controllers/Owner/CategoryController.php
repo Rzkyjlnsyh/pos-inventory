@@ -8,69 +8,147 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use League\Csv\Reader;
+use Maatwebsite\Excel\Facades\Excel;
+use Maatwebsite\Excel\Concerns\FromArray;
+use Maatwebsite\Excel\Concerns\WithHeadings;
 
-class CategoryController extends Controller
+class CategoryController extends Controller implements FromArray, WithHeadings
 {
+    private function generateUniqueSlug(string $name, ?int $ignoreId = null): string
+    {
+        $slug = Str::slug($name);
+        $original = $slug;
+        $counter = 1;
+    
+        // cek apakah slug sudah ada di DB
+        while (
+            Category::where('slug', $slug)
+                ->when($ignoreId, fn($q) => $q->where('id', '!=', $ignoreId))
+                ->exists()
+        ) {
+            $slug = $original . '-' . $counter++;
+        }
+    
+        return $slug;
+    }
     public function index(Request $request): View
     {
         $q = $request->get('q');
-        $categories = Category::query()
+        $perPage = $request->get('per_page', 10);
+
+        $categories = Category::withCount('products')
             ->when($q, fn($query) => $query->where('name', 'like', "%$q%"))
             ->orderBy('name')
-            ->paginate(15);
+            ->paginate($perPage);
 
-        return view('owner.catalog.categories.index', compact('categories', 'q'));
+        return view('owner.categories.index', compact('categories', 'q'));
     }
 
     public function create(): View
     {
-        $categories = Category::orderBy('name')->get();
-        return view('owner.catalog.categories.create', compact('categories'));
+        return view('owner.categories.create');
     }
 
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'name' => ['required','string','max:255'],
-            'parent_id' => ['nullable','exists:categories,id'],
-            'description' => ['nullable','string'],
-            'is_active' => ['sometimes','boolean'],
+            'name' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'is_active' => ['sometimes', 'boolean'],
         ]);
 
-        $validated['slug'] = Str::slug($validated['name']);
+        $validated['slug'] = $this->generateUniqueSlug($validated['name']);
         $validated['is_active'] = (bool) ($validated['is_active'] ?? true);
 
         Category::create($validated);
 
-        return redirect()->route('owner.catalog.category.index')->with('success', 'Category created');
+        return redirect()->route('owner.category.index')->with('success', 'Category created');
     }
 
     public function edit(Category $category): View
     {
-        $categories = Category::where('id', '!=', $category->id)->orderBy('name')->get();
-        return view('owner.catalog.categories.edit', compact('category', 'categories'));
+        return view('owner.categories.edit', compact('category'));
     }
 
     public function update(Request $request, Category $category): RedirectResponse
     {
         $validated = $request->validate([
-            'name' => ['required','string','max:255'],
-            'parent_id' => ['nullable','exists:categories,id'],
-            'description' => ['nullable','string'],
-            'is_active' => ['sometimes','boolean'],
+            'name' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'is_active' => ['sometimes', 'boolean'],
         ]);
 
-        $validated['slug'] = Str::slug($validated['name']);
+        $validated['slug'] = $this->generateUniqueSlug($validated['name'], $category->id);
+
         $validated['is_active'] = (bool) ($validated['is_active'] ?? false);
 
         $category->update($validated);
 
-        return redirect()->route('owner.catalog.category.index')->with('success', 'Category updated');
+        return redirect()->route('owner.category.index')->with('success', 'Category updated');
     }
 
     public function destroy(Category $category): RedirectResponse
     {
         $category->delete();
-        return redirect()->route('owner.catalog.category.index')->with('success', 'Category deleted');
+        return redirect()->route('owner.category.index')->with('success', 'Category deleted');
     }
+
+    public function importForm(): View
+    {
+        return view('owner.categories.import');
+    }
+
+    public function import(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:csv,txt', 'max:10240'],
+        ]);
+
+        $file = $request->file('file');
+        $csv = Reader::createFromPath($file->getPathname(), 'r');
+        $csv->setHeaderOffset(0);
+
+        $requiredColumns = ['name', 'description', 'is_active'];
+        $header = $csv->getHeader();
+
+        if (count(array_intersect($requiredColumns, $header)) !== count($requiredColumns)) {
+            return redirect()->back()->withErrors(['file' => 'File CSV harus memiliki kolom: name, description, is_active.']);
+        }
+
+        foreach ($csv->getRecords() as $record) {
+            $validated = validator($record, [
+                'name' => ['required', 'string', 'max:255'],
+                'description' => ['nullable', 'string'],
+                'is_active' => ['required', 'in:0,1'],
+            ])->validate();
+
+            $validated['slug'] = $this->generateUniqueSlug($validated['name']);
+
+            $validated['is_active'] = (bool) $validated['is_active'];
+            Category::create($validated);
+        }
+
+        return redirect()->route('owner.category.index')->with('success', 'Kategori berhasil diimport');
+    }
+
+    public function headings(): array
+    {
+        return ['name', 'description', 'is_active'];
+    }
+
+    public function array(): array
+    {
+        return [
+            ['Kaos Polos', 'Kategori untuk kaos polos', 1],
+            ['Aksesoris', 'Kategori untuk aksesoris', 1],
+        ];
+    }
+
+    public function downloadTemplate()
+    {
+        return Excel::download($this, 'category_template.xlsx');
+    }
+
+
 }

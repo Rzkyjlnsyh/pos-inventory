@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tabel Produk - Pare Custom</title>
+    <title>Kategori - Pare Custom</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Bootstrap Icons CDN -->
@@ -90,13 +90,13 @@
           <div class="p-6 bg-gray-100 min-h-screen">
               <div class="max-w-7xl mx-auto">
               <div class="flex justify-between items-center mb-6">
-    <h1 class="text-3xl font-bold text-gray-800">Daftar Produk</h1>
+    <h1 class="text-3xl font-bold text-gray-800">Daftar Kategori</h1>
     <div class="flex space-x-2">
-        <a href="{{ route('owner.product.import.form') }}" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
+        <a href="{{ route('owner.category.import') }}" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
             <i class="bi bi-upload mr-1"></i>Import
         </a>
-        <a href="{{ route('owner.product.create') }}" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
-            Tambah Produk
+        <a href="{{ route('owner.category.create') }}" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
+            <i class="bi bi-plus-circle mr-1"></i>Tambah Kategori
         </a>
     </div>
 </div>
@@ -113,14 +113,14 @@
                             <!-- Search Box -->
                             <div class="flex-grow">
                                 <label for="searchInput" class="text-sm font-medium text-gray-600 mb-2 block">
-                                    <i class="bi bi-search mr-1"></i>Cari Produk
+                                    <i class="bi bi-search mr-1"></i>Cari Kategori
                                 </label>
                                 <div class="relative">
                                     <input
                                         type="text"
                                         id="searchInput"
                                         class="w-full pl-10 pr-4 py-2.5 border rounded-lg focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200"
-                                        placeholder="Cari berdasarkan nama produk..."
+                                        placeholder="Cari berdasarkan nama kategori..."
                                     >
                                     <div class="absolute left-3 top-3 text-gray-400">
                                         <i class="bi bi-search"></i>
@@ -147,55 +147,37 @@
                           <table class="min-w-full divide-y divide-gray-200">
                           <thead class="bg-gray-50">
                                   <tr>
-                                       <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gambar</th>
                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama</th>
-                                       <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
-                                       <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Barcode</th>
-                                       <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kategori</th>
-                                       <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Harga Modal</th>
-                                       <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Harga Jual</th>
-                                       <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty Stok</th>
                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                       <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jumlah Produk</th>
                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                                   </tr>
                               </thead>
                               <tbody class="bg-white divide-y divide-gray-200">
-                                  @foreach($products as $product)
+                                  @foreach($categories as $category)
                                       <tr>
+                                          <td class="px-6 py-4 whitespace-nowrap font-semibold">{{ $category->name }}</td>
                                           <td class="px-6 py-4 whitespace-nowrap">
-                                              <img src="{{ Storage::url($product->image_path) }}" alt="{{ $product->name }}" 
-                                                  class="h-16 w-16 object-cover rounded">
+                                            <span class="px-2 py-1 text-xs rounded-full {{ $category->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                                {{ $category->is_active ? 'Aktif' : 'Nonaktif' }}
+                                            </span>
                                           </td>
-                                          <td class="px-6 py-4 whitespace-nowrap">{{ $product->name }}</td>
-                                          <td class="px-6 py-4 whitespace-nowrap">{{ $product->sku }}</td>
-                                           <td class="px-6 py-4 whitespace-nowrap">{{ $product->barcode }}</td>
-                                           <td class="px-6 py-4 whitespace-nowrap">{{ $product->category?->name }}</td>
-                                           <td class="px-6 py-4 whitespace-nowrap">Rp {{ number_format($product->cost_price, 0, ',', '.') }}</td>
-                                           <td class="px-6 py-4 whitespace-nowrap">Rp {{ number_format($product->price, 0, ',', '.') }}</td>
-                                           <td class="px-6 py-4 whitespace-nowrap">{{ $product->stock_qty }}</td>
-                                           <td class="px-6 py-4 whitespace-nowrap">{{ $product->is_active ? 'Aktif' : 'Nonaktif' }}</td>
+                                          <td class="px-6 py-4 whitespace-nowrap">{{ $category->products_count ?? 0 }} produk</td>
                                           <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="flex space-x-2">
-                                                {{-- Button Lihat --}}
-                                                <a href="{{ route('owner.product.show', $product) }}" 
-                                                   class="inline-flex items-center px-3 py-1.5 bg-blue-500 text-white text-sm font-medium rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                                                    <i class="bi bi-eye mr-1"></i>
-                                                    Analisis
-                                                </a>
-                                        
                                                 {{-- Button Edit --}}
-                                                <a href="{{ route('owner.product.edit', $product) }}" 
+                                                <a href="{{ route('owner.category.edit', $category) }}" 
                                                    class="inline-flex items-center px-3 py-1.5 bg-yellow-500 text-white text-sm font-medium rounded-md hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500">
                                                     <i class="bi bi-pencil mr-1"></i>
                                                     Edit
                                                 </a>
                                         
                                                 {{-- Button Hapus --}}
-                                                <form action="{{ route('owner.product.destroy', $product) }}" method="POST" class="inline">
+                                                <form action="{{ route('owner.category.destroy', $category) }}" method="POST" class="inline">
                                                     @csrf
                                                     @method('DELETE')
                                                     <button type="submit" 
-                                                            onclick="return confirm('Apakah Anda yakin ingin menghapus produk ini?')"
+                                                            onclick="return confirm('Apakah Anda yakin ingin menghapus kategori ini?')"
                                                             class="inline-flex items-center px-3 py-1.5 bg-red-500 text-white text-sm font-medium rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
                                                         <i class="bi bi-trash mr-1"></i>
                                                         Hapus
@@ -216,11 +198,11 @@
                                     sampai 
                                     <span class="font-semibold text-orange-500" id="endEntry">10</span> 
                                     dari 
-                                    <span class="font-semibold text-orange-500" id="totalEntries">{{ $products->total() }}</span> 
-                                    produk
+                                    <span class="font-semibold text-orange-500" id="totalEntries">{{ $categories->total() }}</span> 
+                                    kategori
                                 </div>
                                 <div class="flex items-center space-x-2">
-                                    {{ $products->withQueryString()->links() }}
+                                    {{ $categories->withQueryString()->links() }}
                                 </div>
                             </div>
                         </div>
@@ -236,7 +218,7 @@
       <script>
         // Add toggleSidebar function
         function toggleSidebar() {
-          const sidebar = document.querySelector('.sidebar');
+          const sidebar = document.querySelector('#sidebar');
           sidebar.classList.toggle('-translate-x-full');
         }
         
@@ -273,130 +255,33 @@
             dropdownArrow.classList.remove("rotate-180");
           }
         }
-      </script>
-      <script>
-        // State untuk tabel dan pagination
-        const tableState = {
-            currentPage: 1,
-            entriesPerPage: 10,
-            allRows: [],
-            filteredData: []
-        };
 
-        // Fungsi inisialisasi tabel
-        function initializeTable() {
-            const tbody = document.querySelector('tbody');
-            tableState.allRows = Array.from(tbody.querySelectorAll('tr'));
-            tableState.filteredData = tableState.allRows;
-            
-            // Set total entries
-            document.getElementById('totalEntries').textContent = tableState.filteredData.length;
-            
-            updateTable();
-        }
-
-        // Fungsi update tabel
-        function updateTable() {
-            const tbody = document.querySelector('tbody');
-            const startIndex = (tableState.currentPage - 1) * tableState.entriesPerPage;
-            const endIndex = startIndex + tableState.entriesPerPage;
-            const paginatedData = tableState.filteredData.slice(startIndex, endIndex);
-            
-            // Simpan total row sebelum mengosongkan tbody
-            const totalRow = tbody.querySelector('tr:last-child');
-            
-            // Clear existing rows kecuali total row
-            tbody.innerHTML = '';
-            
-            // Add paginated rows
-            paginatedData.forEach(row => {
-                tbody.appendChild(row.cloneNode(true));
-            });
-            
-            updatePaginationControls();
-            updatePaginationInfo();
-        }
-
-        // Fungsi update controls pagination
-        function updatePaginationControls() {
-            const pageNumbers = document.getElementById('pageNumbers');
-            const maxPage = Math.ceil(tableState.filteredData.length / tableState.entriesPerPage);
-            
-            pageNumbers.innerHTML = '';
-            
-            for (let i = 1; i <= maxPage; i++) {
-                const button = document.createElement('button');
-                button.textContent = i;
-                button.classList.add('pagination-button');
-                
-                if (i === tableState.currentPage) {
-                    button.classList.add('active');
-                }
-                
-                button.addEventListener('click', () => handlePageChange(i));
-                pageNumbers.appendChild(button);
-            }
-            
-            document.getElementById('prevPage').disabled = tableState.currentPage === 1;
-            document.getElementById('nextPage').disabled = tableState.currentPage === maxPage;
-        }
-
-        // Fungsi update info pagination
-        function updatePaginationInfo() {
-            const startEntry = tableState.filteredData.length === 0 ? 0 : 
-                (tableState.currentPage - 1) * tableState.entriesPerPage + 1;
-            const endEntry = Math.min(tableState.currentPage * tableState.entriesPerPage, 
-                tableState.filteredData.length);
-            
-            document.getElementById('startEntry').textContent = startEntry;
-            document.getElementById('endEntry').textContent = endEntry;
-        }
-
-        // Fungsi handle perubahan halaman
-        function handlePageChange(newPage) {
-            const maxPage = Math.ceil(tableState.filteredData.length / tableState.entriesPerPage);
-            if (newPage >= 1 && newPage <= maxPage) {
-                tableState.currentPage = newPage;
-                updateTable();
-            }
-        }
-
-        // Initialize saat dokumen dimuat
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeTable();
-            
-            // Event listeners untuk tombol prev/next
-            document.getElementById('prevPage').addEventListener('click', () => {
-                handlePageChange(tableState.currentPage - 1);
-            });
-            
-            document.getElementById('nextPage').addEventListener('click', () => {
-                handlePageChange(tableState.currentPage + 1);
-            });
-
-            // Event listeners untuk search dan entries per page
-            document.getElementById('searchInput').addEventListener('input', handleSearch);
-            document.getElementById('entriesPerPage').addEventListener('change', handleEntriesChange);
-        });
-
-        // Fungsi handle search
+        // Fungsi untuk search client-side
         function handleSearch(e) {
             const searchTerm = e.target.value.toLowerCase();
-            tableState.filteredData = tableState.allRows.filter(row => {
-                const name = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
-                return name.includes(searchTerm);
-            });
+            const rows = document.querySelectorAll('tbody tr');
             
-            tableState.currentPage = 1;
-            updateTable();
+            rows.forEach(row => {
+                const name = row.querySelector('td:first-child').textContent.toLowerCase();
+                if (name.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
         }
 
-        // Fungsi handle perubahan jumlah entri
-        function handleEntriesChange(e) {
-            tableState.entriesPerPage = parseInt(e.target.value);
-            tableState.currentPage = 1;
-            updateTable();
-        }
+        document.addEventListener('DOMContentLoaded', function() {
+            // Event listener untuk search
+            document.getElementById('searchInput').addEventListener('input', handleSearch);
+            
+            // Event listener untuk entries per page (redirect dengan parameter)
+            document.getElementById('entriesPerPage').addEventListener('change', function(e) {
+                const url = new URL(window.location.href);
+                url.searchParams.set('per_page', e.target.value);
+                window.location.href = url.toString();
+            });
+        });
       </script>
     </body>
 </html>

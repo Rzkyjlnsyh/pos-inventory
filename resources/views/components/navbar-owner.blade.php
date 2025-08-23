@@ -18,37 +18,14 @@
   <!-- Menu Items -->
   <div class=" flex-1 p-4">
     <!-- Beranda -->
-    <a href="{{ route('owner.dashboard.index') }}" class="flex items-center p-3 rounded-md bg-none transition hover-link">
+    <a href="{{ route('owner.dashboard') }}" class="flex items-center p-3 rounded-md bg-none transition hover-link">
       <i class="bi bi-house-door-fill"></i>
       <span class="ml-3 nav-text font-semibold">Beranda</span>
     </a>
-
     <!-- Kasir -->
-    <a href="{{ route('owner.cashier.index') }}" class="flex items-center p-3 rounded-md bg-none transition hover-link">
-      <i class="bi bi-basket"></i>
-      <span class="ml-3 nav-text font-semibold">Kasir</span>
-    </a>
 
-    <!-- Transaksi Dropdown -->
-    <div>
-      <button
-        onclick="toggleDropdown(this)"
-        class="flex items-center justify-between w-full p-3 rounded-md bg-none transition focus:outline-none hover-link">
-        <span class="flex items-center">
-          <i class="bi bi-arrow-left-right"></i>
-          <span class="ml-3 nav-text font-semibold">Transaksi</span>
-        </span>
-        <i class="bi bi-chevron-down transition-transform"></i>
-      </button>
-      <div class="dropdown-menu space-y-2 overflow-hidden max-h-0 transition-all duration-300">
-        <a href="{{ route('owner.transaksitunai.index') }}" class="block p-3 rounded-md bg-none transition mt-2 hover-link">
-          <span class="nav-text font-semibold">Transaksi Tunai</span>
-        </a>
-        <a href="{{ route('owner.transaksiqris.index') }}" class="block p-3 rounded-md bg-none transition hover-link">
-          <span class="nav-text font-semibold">Transaksi Qris</span>
-        </a>
-      </div>
-    </div>
+
+
 
     <!-- Produk Dropdown -->
     <div>
@@ -57,13 +34,16 @@
         class="flex items-center justify-between w-full p-3 rounded-md bg-none transition focus:outline-none hover-link">
         <span class="flex items-center">
           <i class="bi bi-box-seam"></i>
-          <span class="ml-3 nav-text font-semibold">Produk</span>
+          <span class="ml-3 nav-text font-semibold">Katalog</span>
         </span>
         <i class="bi bi-chevron-down transition-transform"></i>
       </button>
       <div class="dropdown-menu space-y-2 overflow-hidden max-h-0 transition-all duration-300">
         <a href="{{ route('owner.product.index') }}" class="block p-3 rounded-md bg-none transition mt-2 hover-link">
-          <span class="nav-text font-semibold">Kelola Produk</span>
+          <span class="nav-text font-semibold">Produk</span>
+        </a>
+        <a href="{{ route('owner.category.index') }}" class="block p-3 rounded-md bg-none transition mt-2 hover-link">
+          <span class="nav-text font-semibold">Kategori</span>
         </a>
       </div>
     </div>
@@ -80,17 +60,28 @@
       <span class="ml-3 nav-text font-semibold">Inventory</span>
     </a>
 
-    <!-- Pembelian -->
-    <a href="{{ route('owner.purchases.index') }}" class="flex items-center p-3 rounded-md bg-none transition hover-link">
-      <i class="bi bi-bag-check-fill"></i>
-      <span class="ml-3 nav-text font-semibold">Pembelian</span>
-    </a>
+        <!-- Produk Dropdown -->
+        <div>
+      <button
+        onclick="toggleDropdown(this)"
+        class="flex items-center justify-between w-full p-3 rounded-md bg-none transition focus:outline-none hover-link">
+        <span class="flex items-center">
+          <i class="bi bi-box-seam"></i>
+          <span class="ml-3 nav-text font-semibold">Pembelian</span>
+        </span>
+        <i class="bi bi-chevron-down transition-transform"></i>
+      </button>
+      <div class="dropdown-menu space-y-2 overflow-hidden max-h-0 transition-all duration-300">
+        <a href="{{ route('owner.purchases.index') }}" class="block p-3 rounded-md bg-none transition mt-2 hover-link">
+          <span class="nav-text font-semibold">Purchase List</span>
+        </a>
+        <a href="{{ route('owner.purchase-returns.index') }}" class="block p-3 rounded-md bg-none transition mt-2 hover-link">
+          <span class="nav-text font-semibold">Retur Pembelian</span>
+        </a>
+      </div>
+    </div>
 
-    <!-- Laporan -->
-    <a href="{{ route('owner.report.index') }}" class="flex items-center p-3 rounded-md bg-none transition hover-link">
-      <i class="bi bi-file-earmark-fill"></i>
-      <span class="ml-3 nav-text font-semibold">Laporan</span>
-    </a>
+
     
     <!-- User -->
     <a href="{{ route('owner.user.index') }}" class="flex items-center p-3 rounded-md bg-none transition hover-link">

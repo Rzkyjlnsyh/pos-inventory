@@ -5,6 +5,10 @@ namespace App\Http\Controllers\Owner;
 use App\Http\Controllers\Controller;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
+use App\Models\PurchaseReturn;
+use App\Models\PurchaseReturnItem;
+use App\Models\Product;
+use App\Models\StockMovement;
 use App\Models\Supplier;
 use App\Models\StockIn;
 use App\Models\StockInItem;
@@ -22,7 +26,7 @@ class PurchaseOrderController extends Controller
         $q = $request->get('q');
         $status = $request->get('status');
         $group = $request->get('group');
-
+    
         $purchases = PurchaseOrder::with(['supplier','creator','approver'])
             ->when($q, function ($query) use ($q) {
                 $query->where('po_number', 'like', "%$q%")
@@ -32,15 +36,15 @@ class PurchaseOrderController extends Controller
                 return match ($group) {
                     'todo' => $query->whereIn('status', ['draft','pending']),
                     'processed' => $query->whereIn('status', ['approved','received']),
-                    'returned' => $query->where('status', 'returned'),
-                    'cancelled' => $query->where('status', 'cancelled'),
+                    'returned' => $query->where('status', 'returned'), // Filter by status returned
+                    'cancelled' => $query->where('status', 'canceled'),
                     default => $query,
                 };
             })
             ->when($status, fn($query) => $query->where('status', $status))
             ->orderByDesc('id')
             ->paginate(15);
-
+    
         return view('owner.purchases.index', compact('purchases','q','status','group'));
     }
 
@@ -124,7 +128,7 @@ class PurchaseOrderController extends Controller
 
     public function show(PurchaseOrder $purchase): View
     {
-        $purchase->load(['supplier','items','creator','approver']);
+        $purchase->load(['supplier','items','creator','approver','receiver']);
         return view('owner.purchases.show', compact('purchase'));
     }
 
@@ -137,29 +141,47 @@ class PurchaseOrderController extends Controller
         return back()->with('success', 'Pembelian diajukan untuk approval.');
     }
 
-    public function approve(PurchaseOrder $purchase): RedirectResponse
+    public function approve(Request $request, PurchaseOrder $purchase): RedirectResponse
     {
         if ($purchase->status !== 'pending') {
             return back()->withErrors(['status' => 'Hanya pending yang bisa di-approve.']);
         }
+    
+        $validated = $request->validate([
+            'invoice_file' => 'required|file|mimes:pdf,jpg,jpeg,png|max:2048',
+            'payment_proof_file' => 'required|file|mimes:pdf,jpg,jpeg,png|max:2048',
+        ]);
+    
+        // Simpan file faktur dan bukti pembayaran di storage/public/purchase_orders
+        $invoicePath = $request->file('invoice_file')->store('purchase_orders/invoices', 'public');
+        $paymentProofPath = $request->file('payment_proof_file')->store('purchase_orders/payments', 'public');
+    
         $purchase->update([
             'status' => 'approved',
             'approved_by' => Auth::id(),
             'approved_at' => Carbon::now(),
+            'invoice_file' => $invoicePath,
+            'payment_proof_file' => $paymentProofPath,
         ]);
-        return back()->with('success', 'Pembelian telah di-approve.');
+    
+        return back()->with('success', 'Pembelian telah di-approve dengan file faktur dan bukti pembayaran.');
     }
+    
 
     public function receive(PurchaseOrder $purchase): RedirectResponse
     {
         if (!in_array($purchase->status, ['approved','pending'])) {
             return back()->withErrors(['status' => 'Hanya pending/approved yang bisa diterima.']);
         }
-
+    
         DB::transaction(function () use ($purchase) {
-            // Mark as received
-            $purchase->update(['status' => 'received']);
-
+            // Mark as received dengan timestamp
+            $purchase->update([
+                'status' => 'received',
+                'received_at' => Carbon::now(), // Tambahkan ini
+                'received_by' => Auth::id(),    // Tambahkan ini
+            ]);
+    
             // Create Stock In
             $stockIn = StockIn::create([
                 'stock_in_number' => $this->generateStockInNumber(),
@@ -170,8 +192,9 @@ class PurchaseOrderController extends Controller
                 'status' => 'posted',
                 'received_by' => Auth::id(),
             ]);
-
+    
             foreach ($purchase->items as $item) {
+                // Buat Stock In Item
                 StockInItem::create([
                     'stock_in_id' => $stockIn->id,
                     'product_id' => $item->product_id,
@@ -179,11 +202,154 @@ class PurchaseOrderController extends Controller
                     'sku' => $item->sku,
                     'qty' => $item->qty,
                 ]);
+    
+                // Update stok produk
+                if ($item->product_id) {
+                    $product = $item->product;
+                    $initial = $product->stock_qty ?? 0;
+                    $product->stock_qty = $initial + $item->qty;
+                    $product->save();
+    
+                    // Catat pergerakan stok
+                    StockMovement::create([
+                        'product_id' => $product->id,
+                        'type' => 'INCOMING',
+                        'ref_code' => $stockIn->stock_in_number,
+                        'initial_qty' => $initial,
+                        'qty_in' => $item->qty,
+                        'qty_out' => 0,
+                        'final_qty' => $product->stock_qty,
+                        'user_id' => Auth::id(),
+                        'notes' => 'Pembelian diterima (PO: '.$purchase->po_number.')',
+                        'moved_at' => Carbon::now(),
+                    ]);
+                }
             }
         });
-
-        return back()->with('success', 'Barang diterima dan Stok Masuk dibuat.');
+    
+        return back()->with('success', 'Barang diterima, stok produk diperbarui, dan pergerakan stok dicatat.');
     }
+
+    public function cancel(PurchaseOrder $purchase): RedirectResponse
+{
+    if ($purchase->status === 'canceled') {
+        return back()->with('error', 'Pembelian sudah dibatalkan.');
+    }
+
+    if ($purchase->status === 'received') {
+        return back()->with('error', 'Tidak bisa membatalkan pembelian yang sudah diterima.');
+    }
+    
+    $purchase->update(['status' => 'canceled']);
+    
+    return back()->with('success', 'Pembelian berhasil dibatalkan.');
+}
+
+public function return(Request $request, PurchaseOrder $purchase): \Illuminate\Http\JsonResponse
+{
+    if ($purchase->status !== 'received') {
+        return response()->json([
+            'success' => false,
+            'message' => 'Hanya pembelian yang sudah diterima yang bisa diretur.'
+        ], 400);
+    }
+    
+    $validated = $request->validate([
+        'items' => 'required|array',
+        'items.*.product_id' => 'required|exists:products,id',
+        'items.*.quantity' => 'required|integer|min:1',
+        'reason' => 'required|string|max:500'
+    ]);
+    
+    try {
+        DB::beginTransaction();
+        
+        // Buat purchase return
+        $return = PurchaseReturn::create([
+            'purchase_order_id' => $purchase->id,
+            'supplier_id' => $purchase->supplier_id,
+            'return_date' => now(),
+            'reason' => $validated['reason'],
+            'created_by' => Auth::id(),
+        ]);
+        
+        $totalAmount = 0;
+        
+        // Process return items
+        foreach ($validated['items'] as $itemData) {
+            $purchaseItem = $purchase->items()
+                ->where('product_id', $itemData['product_id'])
+                ->first();
+                
+            if (!$purchaseItem || $itemData['quantity'] > $purchaseItem->qty) {
+                throw new \Exception('Quantity retur tidak valid untuk produk: ' . $itemData['product_id']);
+            }
+            
+            $returnItem = PurchaseReturnItem::create([
+                'purchase_return_id' => $return->id,
+                'product_id' => $itemData['product_id'],
+                'qty' => $itemData['quantity'],
+                'price' => $purchaseItem->cost_price,
+                'total' => $purchaseItem->cost_price * $itemData['quantity']
+            ]);
+            
+            $totalAmount += $returnItem->total;
+            
+            // Kurangi stok
+            $product = Product::find($itemData['product_id']);
+            $initial = $product->stock_qty;
+            $product->stock_qty -= $itemData['quantity'];
+            $product->save();
+            
+            // Catat stock movement - UBAH INI
+            StockMovement::record([
+                'product_id' => $product->id,
+                'type' => StockMovement::PURCHASE_RETURN, // GUNAKAN CONSTANT
+                'ref_code' => 'RET-' . $return->id,
+                'initial_qty' => $initial,
+                'qty_in' => 0,
+                'qty_out' => $itemData['quantity'],
+                'final_qty' => $product->stock_qty,
+                'user_id' => Auth::id(),
+                'notes' => 'Retur pembelian: ' . $purchase->po_number . ' - ' . $validated['reason'],
+                'moved_at' => now(),
+            ]);
+        }
+        
+        $purchase->update(['status' => 'returned']);
+        
+        DB::commit();
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Retur pembelian berhasil diproses'
+        ]);
+        
+    } catch (\Exception $e) {
+        DB::rollBack();
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Gagal memproses retur: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+public function getItems(PurchaseOrder $purchase)
+{
+    $items = $purchase->items->map(function ($item) {
+        return [
+            'id' => $item->id,
+            'product_id' => $item->product_id,
+            'product_name' => $item->product_name,
+            'quantity' => $item->qty,
+            'cost_price' => $item->cost_price
+        ];
+    });
+    
+    return response()->json($items);
+}
+    
 
     private function generatePoNumber(): string
     {

@@ -76,7 +76,7 @@
 
   </div>
 
-  <!-- Logout -->
+  Logout
   <form action="{{ route('logout') }}" method="POST" class="flex items-center p-3 rounded-md bg-none transition hover-link mt-auto mx-4 mb-4">
     @csrf
     <button type="submit" class="flex items-center">

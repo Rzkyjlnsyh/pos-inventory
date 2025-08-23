@@ -15,7 +15,7 @@
 
         <!-- Profil Pengguna -->
         <div class="flex items-center">
-            <span class="text-gray-700 mr-2">Hai, {{ ucfirst(auth()->user()->name) . (' - ') . ucfirst(auth()->user()->usertype) }}</span>
+            <span class="text-gray-700 mr-2">Hai, {{ ucfirst(auth()->user()->name) }}</span>
 
             <a href="{{ route('owner.profile.index') }}" class="flex items-center hover:opacity-80 transition-opacity">
                 @php

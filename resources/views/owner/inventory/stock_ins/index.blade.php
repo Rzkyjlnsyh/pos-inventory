@@ -3,12 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Stok Masuk - Bblara</title>
+    <title>Stok Masuk - Custom Pare</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css" />
     <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600&display=swap" rel="stylesheet">
     <style>
-      body{ font-family:'Raleway',sans-serif; }
+      body{ font-family:'Nunito,sans-serif'; }
       .nav-text{ position:relative; display:inline-block; }
       .nav-text::after{ content:''; position:absolute; width:0; height:2px; bottom:-2px; left:0; background-color:#e17f12; transition:width .2s; }
       .hover-link:hover .nav-text::after{ width:100%; }
