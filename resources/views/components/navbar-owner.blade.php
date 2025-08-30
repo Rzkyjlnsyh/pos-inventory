@@ -60,13 +60,13 @@
       <span class="ml-3 nav-text font-semibold">Inventory</span>
     </a>
 
-        <!-- Produk Dropdown -->
+        <!-- Pembelian -->
         <div>
       <button
         onclick="toggleDropdown(this)"
         class="flex items-center justify-between w-full p-3 rounded-md bg-none transition focus:outline-none hover-link">
         <span class="flex items-center">
-          <i class="bi bi-box-seam"></i>
+        <i class="bi bi-cart-check"></i>
           <span class="ml-3 nav-text font-semibold">Pembelian</span>
         </span>
         <i class="bi bi-chevron-down transition-transform"></i>
@@ -80,6 +80,12 @@
         </a>
       </div>
     </div>
+
+        <!-- Penjualan -->
+    <a href="{{ route('owner.sales.index') }}" class="flex items-center p-3 rounded-md bg-none transition hover-link">
+    <i class="bi bi-cash-stack"></i>
+      <span class="ml-3 nav-text font-semibold">Penjualan</span>
+    </a>
 
 
     

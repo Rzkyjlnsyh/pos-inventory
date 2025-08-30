@@ -13,6 +13,8 @@ use League\Csv\Reader;
 use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithHeadings;
+use App\Imports\ProductImport;
+use Illuminate\Support\Arr;
 
 class ProductOwnerController extends Controller implements FromArray, WithHeadings
 {
@@ -22,10 +24,16 @@ class ProductOwnerController extends Controller implements FromArray, WithHeadin
         $categoryId = $request->get('category_id');
 
         $products = Product::with('category')
-            ->when($q, fn($query) => $query->where('name', 'like', "%$q%"))
+            ->when($q, function($query) use ($q) {
+                $query->where(function($subQuery) use ($q) {
+                    $subQuery->where('name', 'like', "%$q%")
+                             ->orWhere('sku', 'like', "%$q%")
+                             ->orWhere('barcode', 'like', "%$q%");
+                });
+            })
             ->when($categoryId, fn($query) => $query->where('category_id', $categoryId))
             ->orderByDesc('id')
-            ->paginate(15);
+            ->paginate(15); // Reduced from 50 to 15 for better performance
 
         $categories = Category::orderBy('name')->get();
 
@@ -62,7 +70,7 @@ class ProductOwnerController extends Controller implements FromArray, WithHeadin
 
         Product::create($validated);
 
-        return redirect()->route('owner.product.index')->with('success', 'Product created');
+        return redirect()->route('owner.product.index')->with('success', 'Produk berhasil ditambahkan');
     }
 
     public function show(Product $product): View
@@ -104,7 +112,7 @@ class ProductOwnerController extends Controller implements FromArray, WithHeadin
 
         $product->update($validated);
 
-        return redirect()->route('owner.product.index')->with('success', 'Product updated');
+        return redirect()->route('owner.product.index')->with('success', 'Produk berhasil diperbarui');
     }
 
     public function destroy(Product $product): RedirectResponse
@@ -113,7 +121,7 @@ class ProductOwnerController extends Controller implements FromArray, WithHeadin
             Storage::disk('public')->delete($product->image_path);
         }
         $product->delete();
-        return redirect()->route('owner.product.index')->with('success', 'Product deleted');
+        return redirect()->route('owner.product.index')->with('success', 'Produk berhasil dihapus');
     }
 
     public function search(Request $request)
@@ -122,9 +130,10 @@ class ProductOwnerController extends Controller implements FromArray, WithHeadin
         $products = Product::query()
             ->where('is_active', true)
             ->when($q, function ($query) use ($q) {
-                $query->where(function ($qq) use ($q) {
-                    $qq->where('name', 'like', "%$q%")
-                       ->orWhere('sku', 'like', "%$q%");
+                $query->where(function ($subQuery) use ($q) {
+                    $subQuery->where('name', 'like', "%$q%")
+                             ->orWhere('sku', 'like', "%$q%")
+                             ->orWhere('barcode', 'like', "%$q%");
                 });
             })
             ->orderBy('name')
@@ -133,65 +142,61 @@ class ProductOwnerController extends Controller implements FromArray, WithHeadin
         return response()->json($products);
     }
 
-    public function importForm(): View
-    {
-        return view('owner.product.import');
-    }
-
     public function import(Request $request): RedirectResponse
     {
         $request->validate([
-            'file' => ['required', 'file', 'mimes:csv,txt', 'max:10240'],
+            'file' => ['required', 'file', 'mimes:csv,txt,xlsx,xls', 'max:10240'],
         ]);
 
-        $file = $request->file('file');
-        $csv = Reader::createFromPath($file->getPathname(), 'r');
-        $csv->setHeaderOffset(0);
+        try {
+            $import = new ProductImport();
+            Excel::import($import, $request->file('file'));
 
-        $requiredColumns = ['sku', 'name', 'category_id', 'cost_price', 'price', 'stock_qty', 'is_active'];
-        $header = $csv->getHeader();
+            $importedCount = $import->getRowCount();
+            $skippedCount = count($import->failures());
+            $errors = [];
 
-        if (count(array_intersect($requiredColumns, $header)) !== count($requiredColumns)) {
-            return redirect()->back()->withErrors(['file' => 'File CSV harus memiliki kolom: sku, name, category_id, cost_price, price, stock_qty, is_active.']);
-        }
-
-        foreach ($csv->getRecords() as $record) {
-            $validated = validator($record, [
-                'sku' => ['nullable', 'string', 'max:100', 'unique:products,sku'],
-                'name' => ['required', 'string', 'max:255'],
-                'category_id' => ['nullable', 'exists:categories,id'],
-                'cost_price' => ['required', 'numeric', 'min:0'],
-                'price' => ['required', 'numeric', 'min:0'],
-                'stock_qty' => ['required', 'integer', 'min:0'],
-                'is_active' => ['required', 'in:0,1'],
-            ])->validate();
-
-            if ((float)$validated['price'] < (float)$validated['cost_price']) {
-                continue; // Skip jika harga jual lebih kecil dari harga beli
+            foreach ($import->failures() as $failure) {
+                $errors[] = "Baris " . $failure->row() . ": " . implode(', ', $failure->errors());
             }
 
-            // Ubah string kosong di category_id menjadi NULL
-            if (empty($validated['category_id'])) {
-                $validated['category_id'] = null;
+            $message = "Import selesai! {$importedCount} produk berhasil diimport.";
+            if ($skippedCount > 0) {
+                $message .= " {$skippedCount} produk dilewati karena error.";
             }
 
-            $validated['is_active'] = (bool) $validated['is_active'];
-            Product::create($validated);
-        }
+            if (!empty($errors)) {
+                session()->flash('import_errors', $errors);
+            }
 
-        return redirect()->route('owner.product.index')->with('success', 'Produk berhasil diimport');
+            return redirect()->route('owner.product.index')->with('success', $message);
+
+        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+            $failures = $e->failures();
+            $errors = [];
+            foreach ($failures as $failure) {
+                $errors[] = "Baris " . $failure->row() . ": " . implode(', ', $failure->errors());
+            }
+            return redirect()->back()->withErrors(['file' => $errors]);
+        } catch (\Exception $e) {
+            \Log::error('Import error: ' . $e->getMessage());
+            return redirect()->back()->withErrors(['file' => 'Terjadi kesalahan: ' . $e->getMessage()]);
+        }
     }
 
     public function headings(): array
     {
-        return ['sku', 'name', 'category_id', 'cost_price', 'price', 'stock_qty', 'is_active'];
+        return ['sku', 'name', 'category_name', 'cost_price', 'price', 'stock_qty', 'is_active'];
     }
 
     public function array(): array
     {
         return [
             ['SKU001', 'Kaos Polos Putih', '', 100000, 150000, 50, 1],
-            ['SKU002', 'Kaos Polos Hitam', 1, 120000, 180000, 30, 1],
+            ['SKU002', 'Kaos Polos Hitam', 'Kaos', 120000, 180000, 30, 1],
+            ['SKU003', 'Kemeja Formal Navy', 'Kemeja', 200000, 300000, 25, 1],
+            ['SKU004', 'Celana Jeans Slim Fit', 'Celana', 150000, 250000, 40, 1],
+            ['SKU005', 'Dress Casual Pink', '', 180000, 280000, 15, 0],
         ];
     }
 

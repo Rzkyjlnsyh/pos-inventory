@@ -16,11 +16,9 @@ class Editor
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if(Auth::user()->usertype != 'editor')
-        {
-            return redirect('/');
-        }
-        
+        if(Auth::user()->usertype != 'editor' && Auth::user()->usertype != 'owner') {
+            return redirect('/dashboard');
+        }       
         return $next($request);
     }
 }

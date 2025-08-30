@@ -9,6 +9,7 @@ use App\Http\Controllers\Owner\ProfileOwnerController;
 use App\Http\Controllers\Owner\NotificationOwnerController;
 use App\Http\Controllers\Owner\ContactController;
 use App\Http\Controllers\Owner\CategoryController;
+use App\Http\Controllers\Owner\SalesOrderController;
 
 // Base and auth routes
 Route::get('/', fn() => view('welcome'));
@@ -32,9 +33,8 @@ Route::middleware(['auth', 'owner'])->prefix('owner')->name('owner.')->group(fun
     // Products
     Route::resource('product', ProductOwnerController::class);
     Route::get('catalog/products/search', [ProductOwnerController::class, 'search'])->name('catalog.products.search');
-    Route::get('product/import', [ProductOwnerController::class, 'importForm'])->name('product.import.form');
-    Route::post('product/import', [ProductOwnerController::class, 'import'])->name('product.import');
-    Route::get('product/download-template', [ProductOwnerController::class, 'downloadTemplate'])->name('product.download-template');
+    Route::post('owner/product/import', [ProductOwnerController::class, 'import'])->name('product.import');
+    Route::get('owner/product/download-template', [ProductOwnerController::class, 'downloadTemplate'])->name('product.download-template');
 
     // Categories
     Route::resource('categories', CategoryController::class)
@@ -76,6 +76,17 @@ Route::middleware(['auth', 'owner'])->prefix('owner')->name('owner.')->group(fun
     Route::post('purchases/{purchase}/receive', [\App\Http\Controllers\Owner\PurchaseOrderController::class, 'receive'])->name('purchases.receive');
     Route::patch('purchases/{purchase}/cancel', [\App\Http\Controllers\Owner\PurchaseOrderController::class, 'cancel'])->name('purchases.cancel');
 
+    Route::resource('sales', SalesOrderController::class)
+    ->parameters(['sales' => 'salesOrder']); // Tambah edit dan update
+    
+    // Custom routes untuk action spesifik
+    Route::post('/sales/{salesOrder}/approve', [SalesOrderController::class, 'approve'])->name('sales.approve');
+    Route::post('/sales/{salesOrder}/addPayment', [SalesOrderController::class, 'addPayment'])->name('sales.addPayment'); // Tambah payment
+    Route::post('/sales/{salesOrder}/startProcess', [SalesOrderController::class, 'startProcess'])->name('sales.startProcess'); // Baru: Mulai proses
+    Route::post('/sales/{salesOrder}/complete', [SalesOrderController::class, 'complete'])->name('sales.complete');
+    Route::get('/payments/{payment}/nota', [SalesOrderController::class, 'printNota'])
+    ->name('sales.printNota');
+
     // Inventory routes
     Route::prefix('inventory')->name('inventory.')->group(function () {
         Route::view('/', 'owner.inventory.index')->name('index');
@@ -110,6 +121,10 @@ Route::middleware(['auth', 'owner'])->prefix('owner')->name('owner.')->group(fun
     Route::get('contacts', [ContactController::class, 'index'])->name('contacts.index');
     Route::post('contacts/customers', [ContactController::class, 'storeCustomer'])->name('contacts.customers.store');
     Route::post('contacts/suppliers', [ContactController::class, 'storeSupplier'])->name('contacts.suppliers.store');
+    Route::post('contacts/customers/import', [ContactController::class, 'importCustomers'])->name('contacts.customers.import');
+    Route::post('contacts/suppliers/import', [ContactController::class, 'importSuppliers'])->name('contacts.suppliers.import');
+    Route::get('contacts/customers/template', [ContactController::class, 'downloadCustomerTemplate'])->name('contacts.customers.template');
+    Route::get('contacts/suppliers/template', [ContactController::class, 'downloadSupplierTemplate'])->name('contacts.suppliers.template');
 });
 
 // Finance routes

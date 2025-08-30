@@ -23,51 +23,9 @@
       <span class="ml-3 nav-text font-semibold">Beranda</span>
     </a>
 
-    <!-- Laporan Keuangan -->
-    <a href="#" class="flex items-center p-3 rounded-md bg-none transition hover-link">
-      <i class="bi bi-file-earmark-bar-graph"></i>
-      <span class="ml-3 nav-text font-semibold">Laporan Keuangan</span>
-    </a>
+    <!-- menu selanjutnya nyusul karena semua menu berada di owner , tinggal di bagi ke masing masing role -->
 
-    <!-- Transaksi Dropdown -->
-    <div>
-      <button
-        onclick="toggleDropdown(this)"
-        class="flex items-center justify-between w-full p-3 rounded-md bg-none transition focus:outline-none hover-link">
-        <span class="flex items-center">
-          <i class="bi bi-arrow-left-right"></i>
-          <span class="ml-3 nav-text font-semibold">Transaksi</span>
-        </span>
-        <i class="bi bi-chevron-down transition-transform"></i>
-      </button>
-      <div class="dropdown-menu space-y-2 overflow-hidden max-h-0 transition-all duration-300">
-        <a href="#" class="block p-3 rounded-md bg-none transition mt-2 hover-link">
-          <span class="nav-text font-semibold">Transaksi Tunai</span>
-        </a>
-        <a href="#" class="block p-3 rounded-md bg-none transition hover-link">
-          <span class="nav-text font-semibold">Transaksi Qris</span>
-        </a>
-      </div>
-    </div>
-
-    <!-- Pembelian Approval -->
-    <a href="#" class="flex items-center p-3 rounded-md bg-none transition hover-link">
-      <i class="bi bi-check-circle"></i>
-      <span class="ml-3 nav-text font-semibold">Approval Pembelian</span>
-    </a>
-
-    <!-- Cash Flow -->
-    <a href="#" class="flex items-center p-3 rounded-md bg-none transition hover-link">
-      <i class="bi bi-cash-stack"></i>
-      <span class="ml-3 nav-text font-semibold">Cash Flow</span>
-    </a>
-
-    <!-- Export -->
-    <a href="#" class="flex items-center p-3 rounded-md bg-none transition hover-link">
-      <i class="bi bi-download"></i>
-      <span class="ml-3 nav-text font-semibold">Export Data</span>
-    </a>
-
+    
   </div>
 
   <!-- Logout -->

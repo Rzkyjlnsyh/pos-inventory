@@ -3,11 +3,18 @@
 namespace App\Http\Controllers\Owner;
 
 use App\Http\Controllers\Controller;
+use App\Imports\CustomerImport;
+use App\Imports\SupplierImport;
+use App\Exports\CustomerTemplateExport;
+use App\Exports\SupplierTemplateExport;
 use App\Models\Customer;
 use App\Models\Supplier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ContactController extends Controller
 {
@@ -38,7 +45,7 @@ class ContactController extends Controller
 
         Customer::create($validated);
 
-        return redirect()->back()->with('success', 'Customer created');
+        return redirect()->back()->with('success', 'Pelanggan berhasil ditambahkan');
     }
 
     public function storeSupplier(Request $request): RedirectResponse
@@ -53,6 +60,46 @@ class ContactController extends Controller
 
         Supplier::create($validated);
 
-        return redirect()->back()->with('success', 'Supplier created');
+        return redirect()->back()->with('success', 'Pemasok berhasil ditambahkan');
+    }
+
+    public function importCustomers(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx,xls,csv', 'max:2048'],
+        ]);
+
+        try {
+            Excel::import(new CustomerImport, $request->file('file'));
+            return redirect()->back()->with('success', 'Pelanggan berhasil diimpor');
+        } catch (\Exception $e) {
+            Log::error('Kesalahan impor pelanggan: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Gagal mengimpor pelanggan: ' . $e->getMessage());
+        }
+    }
+
+    public function importSuppliers(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx,xls,csv', 'max:2048'],
+        ]);
+
+        try {
+            Excel::import(new SupplierImport, $request->file('file'));
+            return redirect()->back()->with('success', 'Pemasok berhasil diimpor');
+        } catch (\Exception $e) {
+            Log::error('Kesalahan impor pemasok: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Gagal mengimpor pemasok: ' . $e->getMessage());
+        }
+    }
+
+    public function downloadCustomerTemplate()
+    {
+        return Excel::download(new CustomerTemplateExport, 'template_pelanggan.xlsx');
+    }
+
+    public function downloadSupplierTemplate()
+    {
+        return Excel::download(new SupplierTemplateExport, 'template_pemasok.xlsx');
     }
 }

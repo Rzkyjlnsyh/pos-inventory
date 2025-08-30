@@ -16,11 +16,9 @@ class KepalaToko
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if(Auth::user()->usertype != 'kepala_toko')
-        {
-            return redirect('/');
-        }
-        
+        if(Auth::user()->usertype != 'kepala_toko' && Auth::user()->usertype != 'owner') {
+            return redirect('/dashboard');
+        }       
         return $next($request);
     }
 }

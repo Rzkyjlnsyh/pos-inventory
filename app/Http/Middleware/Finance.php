@@ -16,11 +16,9 @@ class Finance
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if(Auth::user()->usertype != 'finance')
-        {
-            return redirect('/');
-        }
-        
+        if(Auth::user()->usertype != 'finance' && Auth::user()->usertype != 'owner') {
+            return redirect('/dashboard');
+        }       
         return $next($request);
     }
 }
