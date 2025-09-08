@@ -16,7 +16,7 @@ return new class extends Migration
             $table->decimal('subtotal', 12, 2)->default(0);
             $table->decimal('discount_total', 12, 2)->default(0);
             $table->decimal('grand_total', 12, 2)->default(0);
-            $table->enum('status', ['draft','pending','approved','received'])->default('draft');
+            $table->enum('status', ['draft','pending','approved','received','payment','kain_diterima','printing','jahit','selesai'])->default('draft');
             $table->boolean('is_paid')->default(false);
             $table->foreignId('created_by')->constrained('users');
             $table->foreignId('approved_by')->nullable()->constrained('users');

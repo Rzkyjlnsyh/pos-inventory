@@ -140,8 +140,8 @@
                                                     <td>{{ $product->sku ?: '-' }}</td>
                                                     <td>{{ $product->barcode ?: '-' }}</td>
                                                     <td>{{ $product->category?->name ?: '-' }}</td>
-                                                    <td>Rp {{ number_format($product->cost_price, 0, ',', '.') }}</td>
-                                                    <td>Rp {{ number_format($product->price, 0, ',', '.') }}</td>
+                                                    <td>Rp {{ number_format($product->cost_price, 2, ',', '.') }}</td>
+                                                    <td>Rp {{ number_format($product->price, 2, ',', '.') }}</td>
                                                     <td>{{ $product->stock_qty ?? 0 }}</td>
                                                     <td>
                                                         <span class="badge {{ $product->is_active ? 'bg-success' : 'bg-secondary' }}">
@@ -306,13 +306,6 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        function toggleSidebar() {
-            const sidebar = document.querySelector('.sidebar');
-            if (sidebar) {
-                sidebar.classList.toggle('-translate-x-full');
-            }
-        }
-
         function confirmDelete(url, productName) {
             document.getElementById('productName').textContent = productName;
             document.getElementById('deleteForm').action = url;

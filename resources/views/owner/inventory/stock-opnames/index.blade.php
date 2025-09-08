@@ -12,7 +12,7 @@
   </style>
 </head>
 <body class="bg-gray-100">
-  <div class="flex-1 lg:w-5/6 ml-0">
+  <div class="flex-1">
     <div class="p-4 lg:p-8">
       <div class="bg-white p-6 rounded-xl shadow-lg">
         <div class="flex justify-between items-center mb-4">
@@ -52,7 +52,7 @@
     {{ ucfirst($opname->status) }}
 </span>
                 </td>
-                <td class="px-4 py-2">{{ $opname->creator->username ?? '-' }}</td>
+                <td class="px-4 py-2">{{ $opname->creator_label }}</td>
                 <td class="px-4 py-2">
                   <div class="flex space-x-2">
                     <!-- Tombol Detail -->

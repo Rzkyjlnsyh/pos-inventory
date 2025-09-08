@@ -1,280 +1,442 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Buat Sales Order - Pare Custom</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css" />
-<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600&display=swap" rel="stylesheet">
-<style>
-body { font-family: 'Raleway', sans-serif; }
-</style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Buat Sales Order - Pare Custom</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Raleway', sans-serif; }
+        .nav-text {
+            position: relative;
+            display: inline-block;
+        }
+        .nav-text::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -2px;
+            left: 0;
+            background-color: #e17f12;
+            transition: width 0.2s ease-in-out;
+        }
+        .hover-link:hover .nav-text::after {
+            width: 100%;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+        }
+    </style>
 </head>
 <body class="bg-gray-100">
 <div class="flex">
-<x-navbar-owner />
-<div class="flex-1 lg:w-5/6">
-<x-navbar-top-owner />
-<div class="p-4 lg:p-8">
-<div class="bg-white p-6 rounded-xl shadow-lg mb-6 flex justify-between items-center">
-<div>
-<h1 class="text-2xl font-semibold text-gray-800">Buat Sales Order Baru</h1>
-<p class="text-sm text-gray-500 mt-1">Lengkapi detail sales order berikut.</p>
-</div>
-<a href="{{ route('owner.sales.index') }}" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded shadow">
-<i class="bi bi-arrow-left"></i> Kembali
-</a>
-</div>
+    <x-navbar-owner />
+    <div class="flex-1 lg:w-5/6">
+        <x-navbar-top-owner />
+        <div class="p-4 lg:p-8">
+            <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
+                <h1 class="text-2xl font-semibold text-gray-800 mb-4">Buat Sales Order</h1>
+                @if (session('error'))
+                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
+                        {{ session('error') }}
+                    </div>
+                @endif
+                <form action="{{ route('owner.sales.store') }}" method="POST" id="soForm" enctype="multipart/form-data">
+                    @csrf
+                    <div class="grid md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label for="order_type" class="block font-medium mb-1">Tipe Order</label>
+                            <div class="flex items-center space-x-4">
+                                <label><input type="radio" name="order_type" value="jahit_sendiri" checked class="mr-2">Jahit Sendiri</label>
+                                <label><input type="radio" name="order_type" value="beli_jadi" class="mr-2">Langsung Beli Jadi</label>
+                            </div>
+                            @error('order_type')
+                                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <div>
+                            <label for="order_date" class="block font-medium mb-1">Tanggal Order</label>
+                            <input type="date" name="order_date" id="order_date" value="{{ old('order_date', now()->format('Y-m-d')) }}"
+                                   required class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
+                            @error('order_date')
+                                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <div>
+                            <label for="customer_id" class="block font-medium mb-1">Customer</label>
+                            <select name="customer_id" id="customer_id" class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
+                                <option value="">Guest</option>
+                                @foreach($customers as $customer)
+                                    <option value="{{ $customer->id }}" {{ old('customer_id') == $customer->id ? 'selected' : '' }}>{{ $customer->name }}</option>
+                                @endforeach
+                            </select>
+                            @error('customer_id')
+                                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <div>
+                            <label for="payment_method" class="block font-medium mb-1">Metode Pembayaran</label>
+                            <select name="payment_method" id="payment_method" required class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
+                                <option value="cash" {{ old('payment_method') == 'cash' ? 'selected' : '' }}>Cash</option>
+                                <option value="transfer" {{ old('payment_method') == 'transfer' ? 'selected' : '' }}>Transfer</option>
+                                <option value="split" {{ old('payment_method') == 'split' ? 'selected' : '' }}>Split</option>
+                            </select>
+                            @error('payment_method')
+                                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <div>
+                            <label for="payment_status" class="block font-medium mb-1">Status Pembayaran</label>
+                            <select name="payment_status" id="payment_status" class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
+                                <option value="dp" {{ old('payment_status') == 'dp' ? 'selected' : '' }}>DP</option>
+                                <option value="lunas" {{ old('payment_status') == 'lunas' ? 'selected' : '' }}>Lunas</option>
+                            </select>
+                            @error('payment_status')
+                                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
 
-@if ($errors->any())
-<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-<h4 class="font-bold">Terjadi kesalahan:</h4>
-<ul class="list-disc list-inside">
-@foreach ($errors->all() as $error)
-<li>{{ $error }}</li>
-@endforeach
-</ul>
+                    <div class="mb-6">
+                        <h2 class="text-lg font-semibold mb-4 text-gray-800">Pembayaran (Opsional)</h2>
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="payment_amount" class="block font-medium mb-1">Jumlah Pembayaran (Total)</label>
+                                <input type="number" name="payment_amount" id="payment_amount" class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" step="0.01" min="0" value="{{ old('payment_amount') }}">
+                                <p id="dp-info" class="text-sm text-gray-600 mt-1"></p>
+                                @error('payment_amount')
+                                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <div id="split-payment-fields" class="hidden md:col-span-2">
+                                <div class="grid md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label for="cash_amount" class="block font-medium mb-1">Jumlah Cash</label>
+                                        <input type="number" name="cash_amount" id="cash_amount" class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" step="0.01" min="0" value="{{ old('cash_amount') }}">
+                                        @error('cash_amount')
+                                            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+                                    <div>
+                                        <label for="transfer_amount" class="block font-medium mb-1">Jumlah Transfer</label>
+                                        <input type="number" name="transfer_amount" id="transfer_amount" class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" step="0.01" min="0" value="{{ old('transfer_amount') }}">
+                                        @error('transfer_amount')
+                                            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+                                </div>
+<!-- Bukti Transfer -->
+<div id="proof-field" class="hidden md:col-span-2">
+    <label for="proof_path" class="block font-medium mb-1">Bukti Transfer (jpg, png, pdf)</label>
+    <input type="file" name="proof_path" id="proof_path" accept=".jpg,.jpeg,.png,.pdf"
+           class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
+    <p class="text-sm text-gray-600 mt-1">Wajib untuk metode transfer atau split</p>
+    @error('proof_path')
+        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+    @enderror
 </div>
-@endif
+                            </div>
+                            <div>
+                                <label for="paid_at" class="block font-medium mb-1">Tanggal Pembayaran</label>
+                                <input type="date" name="paid_at" id="paid_at" value="{{ old('paid_at', now()->format('Y-m-d')) }}"
+                                       class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
+                                @error('paid_at')
+                                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
 
-<div class="bg-white p-6 rounded-xl shadow-lg">
-<form method="POST" action="{{ route('owner.sales.store') }}" id="salesForm">
-@csrf
+                    <div class="mb-6">
+                        <h2 class="text-lg font-semibold mb-4 text-gray-800">Item Order</h2>
+                        <div id="items-container" class="space-y-4">
+                            <div class="item-row grid md:grid-cols-5 gap-4">
+                                <div>
+                                    <label class="block font-medium mb-1">Produk</label>
+                                    <select name="items[0][product_id]" class="product-select border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
+                                        <option value="">Pilih Produk</option>
+                                        @foreach($products as $product)
+                                            <option value="{{ $product->id }}"
+                                                    data-name="{{ $product->name }}"
+                                                    data-sku="{{ $product->sku }}"
+                                                    data-price="{{ $product->price }}">{{ $product->name }}</option>
+                                        @endforeach
+                                    </select>
+                                    <input type="hidden" name="items[0][product_name]" class="product-name">
+                                    @error('items.0.product_name')
+                                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                                <div>
+                                    <label class="block font-medium mb-1">SKU</label>
+                                    <input type="text" name="items[0][sku]" class="sku border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" readonly>
+                                    @error('items.0.sku')
+                                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                                <div>
+                                    <label class="block font-medium mb-1">Harga</label>
+                                    <input type="number" name="items[0][sale_price]" class="sale-price border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" step="0.01" required>
+                                    @error('items.0.sale_price')
+                                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                                <div>
+                                    <label class="block font-medium mb-1">Qty</label>
+                                    <input type="number" name="items[0][qty]" class="qty border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" min="1" required>
+                                    @error('items.0.qty')
+                                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                                <div>
+                                    <label class="block font-medium mb-1">Diskon</label>
+                                    <input type="number" name="items[0][discount]" class="discount border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" min="0" step="0.01" value="0">
+                                    @error('items.0.discount')
+                                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" id="add-item" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow mt-4">
+                            <i class="bi bi-plus-circle"></i> Tambah Item
+                        </button>
+                    </div>
 
-<div class="grid md:grid-cols-2 gap-4">
-<div>
-<label for="order_date" class="block font-medium mb-1">Tanggal Order</label>
-<input type="date" name="order_date" id="order_date" value="{{ old('order_date', now()->toDateString()) }}" required
-class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" />
-@error('order_date')
-<p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-@enderror
-</div>
-<div>
-<label for="customer_id" class="block font-medium mb-1">Customer (opsional)</label>
-<select name="customer_id" id="customer_id" class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
-<option value="">-- Pilih Customer --</option>
-@foreach($customers as $customer)
-<option value="{{ $customer->id }}" @selected(old('customer_id') == $customer->id)>
-{{ $customer->name }}
-</option>
-@endforeach
-</select>
-@error('customer_id')
-<p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-@enderror
-</div>
-<div>
-<label for="payment_method" class="block font-medium mb-1">Metode Pembayaran</label>
-<select name="payment_method" id="payment_method" required
-class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
-<option value="cash" @selected(old('payment_method') == 'cash')>Cash</option>
-<option value="transfer" @selected(old('payment_method') == 'transfer')>Transfer</option>
-<option value="split" @selected(old('payment_method') == 'split')>Split</option>
-</select>
-@error('payment_method')
-<p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-@enderror
-</div>
-<div>
-<label for="payment_status" class="block font-medium mb-1">Status Pembayaran</label>
-<select name="payment_status" id="payment_status" required
-class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
-<option value="dp" @selected(old('payment_status') == 'dp')>DP</option>
-<option value="lunas" @selected(old('payment_status') == 'lunas')>Lunas</option>
-</select>
-@error('payment_status')
-<p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-@enderror
-</div>
-</div>
-
-<div class="mt-6">
-<h3 class="text-lg font-semibold mb-2">Item Order</h3>
-<div class="overflow-x-auto">
-<table class="w-full table-auto border border-gray-300 rounded mb-4">
-<thead class="bg-gray-100 text-sm text-gray-700">
-<tr>
-<th class="border px-2 py-1">Produk</th>
-<th class="border px-2 py-1">Harga Jual</th>
-<th class="border px-2 py-1">Qty</th>
-<th class="border px-2 py-1">Diskon</th>
-<th class="border px-2 py-1">Aksi</th>
-</tr>
-</thead>
-<tbody id="order-items-body">
-<tr class="item-row">
-<td class="border p-1">
-<select name="items[0][product_id]" class="product-select border rounded px-2 py-1 w-full" required>
-<option value="">-- Pilih Produk --</option>
-@foreach($products as $product)
-<option value="{{ $product->id }}" data-price="{{ $product->price }}"
-data-name="{{ $product->name }}" data-sku="{{ $product->sku }}">
-[{{ $product->sku }}] {{ $product->name }}
-</option>
-@endforeach
-</select>
-<input type="hidden" name="items[0][product_name]" class="product-name">
-<input type="hidden" name="items[0][sku]" class="product-sku">
-@error('items.0.product_id')
-<p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-@enderror
-</td>
-<td class="border p-1">
-<input type="number" name="items[0][sale_price]" class="sale-price border rounded px-2 py-1 w-full" min="0" step="100" required />
-@error('items.0.sale_price')
-<p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-@enderror
-</td>
-<td class="border p-1">
-<input type="number" name="items[0][qty]" class="qty border rounded px-2 py-1 w-full" min="1" value="1" required />
-@error('items.0.qty')
-<p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-@enderror
-</td>
-<td class="border p-1">
-<input type="number" name="items[0][discount]" class="discount border rounded px-2 py-1 w-full" min="0" step="100" value="0" />
-@error('items.0.discount')
-<p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-@enderror
-</td>
-<td class="border p-1 text-center">
-<button type="button" class="remove-item text-red-600 font-bold text-lg">×</button>
-</td>
-</tr>
-</tbody>
-</table>
-</div>
-<button type="button" id="add-item" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded shadow mb-6">
-<i class="bi bi-plus-circle"></i> Tambah Item
-</button>
-<div id="total-preview" class="mt-4 p-4 bg-gray-50 rounded-lg">
-<p class="text-sm text-gray-600">Subtotal: <span id="subtotal">Rp 0</span></p>
-<p class="text-sm text-gray-600">Total Diskon: <span id="discountTotal">Rp 0</span></p>
-<p class="text-sm text-gray-600 font-bold">Grand Total: <span id="grandTotal">Rp 0</span></p>
-</div>
-</div>
-
-<div class="flex justify-end mt-6">
-<button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow">
-<i class="bi bi-check-lg"></i> Simpan
-</button>
-</div>
-</form>
-</div>
-</div>
-</div>
+                    <button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded shadow">
+                        <i class="bi bi-save"></i> Simpan Sales Order
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-let itemIndex = 1;
+    let itemIndex = 1;
+    document.getElementById('add-item').addEventListener('click', function () {
+        const container = document.getElementById('items-container');
+        const newRow = document.createElement('div');
+        newRow.className = 'item-row grid md:grid-cols-5 gap-4 mt-4';
+        newRow.innerHTML = `
+            <div>
+                <label class="block font-medium mb-1">Produk</label>
+                <select name="items[${itemIndex}][product_id]" class="product-select border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
+                    <option value="">Pilih Produk</option>
+                    @foreach($products as $product)
+                        <option value="{{ $product->id }}"
+                                data-name="{{ $product->name }}"
+                                data-sku="{{ $product->sku }}"
+                                data-price="{{ $product->price }}">{{ $product->name }}</option>
+                    @endforeach
+                </select>
+                <input type="hidden" name="items[${itemIndex}][product_name]" class="product-name">
+            </div>
+            <div>
+                <label class="block font-medium mb-1">SKU</label>
+                <input type="text" name="items[${itemIndex}][sku]" class="sku border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" readonly>
+            </div>
+            <div>
+                <label class="block font-medium mb-1">Harga</label>
+                <input type="number" name="items[${itemIndex}][sale_price]" class="sale-price border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" step="0.01" required>
+            </div>
+            <div>
+                <label class="block font-medium mb-1">Qty</label>
+                <input type="number" name="items[${itemIndex}][qty]" class="qty border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" min="1" required>
+            </div>
+            <div>
+                <label class="block font-medium mb-1">Diskon</label>
+                <input type="number" name="items[${itemIndex}][discount]" class="discount border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" min="0" step="0.01" value="0">
+                <button type="button" class="remove-item text-red-600 hover:text-red-800 mt-2"><i class="bi bi-trash"></i></button>
+            </div>
+        `;
+        container.appendChild(newRow);
+        itemIndex++;
+    });
 
-function calculateTotals() {
-let subtotal = 0;
-let discountTotal = 0;
-document.querySelectorAll('.item-row').forEach(row => {
-const salePrice = parseFloat(row.querySelector('.sale-price').value) || 0;
-const qty = parseInt(row.querySelector('.qty').value) || 0;
-const discount = parseFloat(row.querySelector('.discount').value) || 0;
-subtotal += salePrice * qty;
-discountTotal += discount * qty;
+    document.getElementById('items-container').addEventListener('change', function (e) {
+        if (e.target.classList.contains('product-select')) {
+            const row = e.target.closest('.item-row');
+            const select = e.target;
+            const selectedOption = select.options[select.selectedIndex];
+            const productName = selectedOption ? selectedOption.dataset.name || '' : '';
+            const sku = selectedOption ? selectedOption.dataset.sku || '' : '';
+            const price = selectedOption && selectedOption.dataset.price ? parseFloat(selectedOption.dataset.price) : 0;
+
+            row.querySelector('.product-name').value = productName;
+            row.querySelector('.sku').value = sku;
+            row.querySelector('.sale-price').value = price > 0 ? price.toFixed(2) : '';
+
+            if (price <= 0) {
+                alert('Harga produk tidak valid atau kosong. Harap periksa data produk di database.');
+            }
+
+            updateGrandTotal();
+        }
+
+        if (e.target.classList.contains('qty') || e.target.classList.contains('sale-price') || e.target.classList.contains('discount')) {
+            updateGrandTotal();
+        }
+    });
+
+    document.getElementById('items-container').addEventListener('click', function (e) {
+        if (e.target.closest('.remove-item')) {
+            const row = e.target.closest('.item-row');
+            if (document.querySelectorAll('.item-row').length > 1) {
+                row.remove();
+                updateGrandTotal();
+            } else {
+                alert('Minimal satu item harus ada.');
+            }
+        }
+    });
+
+    let grandTotal = 0; // Variable global untuk grand total
+
+    function updateGrandTotal() {
+        const items = document.querySelectorAll('.item-row');
+        let subtotal = 0;
+        let discountTotal = 0;
+
+        items.forEach(item => {
+            const price = parseFloat(item.querySelector('.sale-price').value) || 0;
+            const qty = parseInt(item.querySelector('.qty').value) || 0;
+            const discount = parseFloat(item.querySelector('.discount').value) || 0;
+            const itemSubtotal = price * qty;
+            const itemDiscount = discount * qty; // Diskon dikalikan qty per item
+            subtotal += itemSubtotal;
+            discountTotal += itemDiscount;
+        });
+
+        grandTotal = subtotal - discountTotal;
+        const dpInfo = document.getElementById('dp-info');
+        dpInfo.textContent = grandTotal > 0 ? `DP minimal 50%: Rp ${Math.ceil(grandTotal * 0.5).toLocaleString('id-ID')}` : '';
+    }
+
+    document.getElementById('payment_method').addEventListener('change', function () {
+    const splitFields = document.getElementById('split-payment-fields');
+    const proofField = document.getElementById('proof-field');
+
+    // Tampilkan split jika pilih split
+    splitFields.classList.toggle('hidden', this.value !== 'split');
+
+    // Tampilkan bukti transfer kalau pilih transfer atau split
+    proofField.classList.toggle('hidden', !(this.value === 'transfer' || this.value === 'split'));
+
+    if (this.value !== 'split') {
+        document.getElementById('cash_amount').value = '';
+        document.getElementById('transfer_amount').value = '';
+    }
+    if (this.value !== 'transfer' && this.value !== 'split') {
+        document.getElementById('proof_path').value = '';
+    }
+
+    updatePaymentAmount();
 });
-const grandTotal = subtotal - discountTotal;
-document.getElementById('subtotal').textContent = 'Rp ' + numberFormat(subtotal);
-document.getElementById('discountTotal').textContent = 'Rp ' + numberFormat(discountTotal);
-document.getElementById('grandTotal').textContent = 'Rp ' + numberFormat(grandTotal);
-}
 
-function numberFormat(number) {
-return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-}
 
-document.getElementById('add-item').addEventListener('click', function () {
-const tbody = document.getElementById('order-items-body');
-const newRow = tbody.rows[0].cloneNode(true);
-const index = itemIndex;
+    function updatePaymentAmount() {
+        const method = document.getElementById('payment_method').value;
+        const cash = parseFloat(document.getElementById('cash_amount')?.value || 0);
+        const transfer = parseFloat(document.getElementById('transfer_amount')?.value || 0);
+        const total = method === 'split' ? cash + transfer : parseFloat(document.getElementById('payment_amount').value) || 0;
+        document.getElementById('payment_amount').value = total.toFixed(2);
+        updatePaymentStatus();
+    }
 
-newRow.querySelectorAll('select, input').forEach(el => {
-const name = el.getAttribute('name').replace(/\[\d+\]/, `[${index}]`);
-el.setAttribute('name', name);
-if (el.tagName === 'SELECT') el.selectedIndex = 0;
-else if (el.classList.contains('qty')) el.value = '1';
-else if (el.classList.contains('discount')) el.value = '0';
-else if (el.classList.contains('sale-price')) el.value = '';
-else if (el.type === 'hidden') el.value = '';
-});
+    // Fungsi baru untuk update status pembayaran otomatis
+    function updatePaymentStatus() {
+        const paymentAmount = parseFloat(document.getElementById('payment_amount').value) || 0;
+        const paymentStatusSelect = document.getElementById('payment_status');
+        if (paymentAmount >= grandTotal) {
+            paymentStatusSelect.value = 'lunas';
+        } else {
+            paymentStatusSelect.value = 'dp';
+        }
+    }
 
-tbody.appendChild(newRow);
-itemIndex++;
-calculateTotals();
-});
+    document.getElementById('payment_amount').addEventListener('input', updatePaymentStatus);
+    document.getElementById('cash_amount').addEventListener('input', updatePaymentAmount);
+    document.getElementById('transfer_amount').addEventListener('input', updatePaymentAmount);
 
-document.getElementById('order-items-body').addEventListener('click', function (e) {
-if (e.target.classList.contains('remove-item')) {
-const row = e.target.closest('tr');
-if (tbody.rows.length > 1) row.remove();
-else alert('Minimal harus ada satu item.');
-calculateTotals();
-}
-});
+    document.getElementById('soForm').addEventListener('submit', function (e) {
+        const salePriceInputs = document.querySelectorAll('.sale-price');
+        for (let input of salePriceInputs) {
+            if (!input.value || parseFloat(input.value) <= 0) {
+                e.preventDefault();
+                alert('Harga produk tidak boleh kosong atau nol. Silakan pilih produk yang valid.');
+                return;
+            }
+        }
 
-document.getElementById('order-items-body').addEventListener('change', function (e) {
-if (e.target.classList.contains('product-select')) {
-const selectedOption = e.target.options[e.target.selectedIndex];
-const row = e.target.closest('tr');
-if (selectedOption.value) {
-row.querySelector('.sale-price').value = selectedOption.getAttribute('data-price');
-row.querySelector('.product-name').value = selectedOption.getAttribute('data-name');
-row.querySelector('.product-sku').value = selectedOption.getAttribute('data-sku');
-} else {
-row.querySelector('.sale-price').value = '';
-row.querySelector('.product-name').value = '';
-row.querySelector('.product-sku').value = '';
-}
-calculateTotals();
-}
-if (e.target.classList.contains('sale-price') || e.target.classList.contains('qty') || e.target.classList.contains('discount')) {
-calculateTotals();
-}
-});
+        const paymentMethod = document.getElementById('payment_method').value;
+        const paymentStatus = document.getElementById('payment_status').value;
+        let paymentAmount = 0;
 
-document.getElementById('salesForm').addEventListener('submit', function (e) {
-let isValid = true;
-const itemRows = document.querySelectorAll('.item-row');
-itemRows.forEach((row, index) => {
-const productSelect = row.querySelector('.product-select');
-const salePrice = row.querySelector('.sale-price');
-const qty = row.querySelector('.qty');
-if (!productSelect.value) {
-alert(`Item ${index + 1}: Harap pilih produk`);
-isValid = false;
-}
-if (!salePrice.value || salePrice.value <= 0) {
-alert(`Item ${index + 1}: Harga jual harus lebih dari 0`);
-isValid = false;
-}
-if (!qty.value || qty.value <= 0) {
-alert(`Item ${index + 1}: Quantity harus lebih dari 0`);
-isValid = false;
-}
-});
-if (!isValid) e.preventDefault();
-});
+        if (paymentMethod === 'split') {
+            const cashAmount = parseFloat(document.getElementById('cash_amount').value) || 0;
+            const transferAmount = parseFloat(document.getElementById('transfer_amount').value) || 0;
+            paymentAmount = cashAmount + transferAmount;
+            if (transferAmount > 0 && !document.getElementById('proof_path').files[0]) {
+                e.preventDefault();
+                alert('Bukti pembayaran wajib untuk transfer di metode split.');
+                return;
+            }
+        } else {
+            paymentAmount = parseFloat(document.getElementById('payment_amount').value) || 0;
+        }
 
-// Hitung awal
-calculateTotals();
-});
-function toggleSidebar() {
-const sidebar = document.getElementById('sidebar');
-sidebar.classList.toggle('-translate-x-full');
-}
-function toggleDropdown(button) {
-const dropdownMenu = button.nextElementSibling;
-const chevronIcon = button.querySelector('.bi-chevron-down');
-dropdownMenu.classList.toggle('max-h-0');
-dropdownMenu.classList.toggle('max-h-40');
-chevronIcon.classList.toggle('rotate-180');
-}
+        if (paymentAmount > 0) {
+            if (paymentStatus === 'dp' && paymentAmount < grandTotal * 0.5) {
+                e.preventDefault();
+                alert(`Jumlah pembayaran kurang dari DP minimal 50%: Rp ${(grandTotal * 0.5).toLocaleString('id-ID')}`);
+                return;
+            }
+            if (paymentAmount > grandTotal) {
+                e.preventDefault();
+                alert(`Jumlah pembayaran melebihi grand total: Rp ${grandTotal.toLocaleString('id-ID')}`);
+                return;
+            }
+            if (paymentMethod === 'transfer' && !document.getElementById('proof_path').files[0]) {
+                e.preventDefault();
+                alert('Bukti pembayaran wajib untuk metode transfer.');
+                return;
+            }
+        }
+    });
+
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        sidebar.classList.toggle('-translate-x-full');
+    }
+    function toggleDropdown(button) {
+        const dropdownMenu = button.nextElementSibling;
+        const chevronIcon = button.querySelector('.bi-chevron-down');
+        dropdownMenu.classList.toggle('max-h-0');
+        dropdownMenu.classList.toggle('max-h-40');
+        chevronIcon.classList.toggle('rotate-180');
+    }
+
+    // Inisialisasi grandTotal awal
+    updateGrandTotal();
 </script>
+</body>
+</html>

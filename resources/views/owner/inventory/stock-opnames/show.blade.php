@@ -12,7 +12,7 @@
   </style>
 </head>
 <body class="bg-gray-100">
-    <div class="flex-1 lg:w-5/6 ml-0">
+    <div class="flex-1">
         <div class="p-4 lg:p-8">
             <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
                 <div class="flex items-center justify-between">
@@ -43,10 +43,10 @@
                     <div>
                         <h3 class="font-medium text-gray-700">Informasi User</h3>
                         <div class="mt-2 space-y-2">
-                            <p><span class="font-medium">Dibuat oleh:</span> {{ $stockOpname->creator->username }}</p>
-                            @if($stockOpname->status === 'approved')
-                                <p><span class="font-medium">Disetujui oleh:</span> {{ $stockOpname->approver->username }}</p>
-                            @endif
+                        <p><span class="font-medium">Dibuat oleh:</span> {{ $stockOpname->creator_label }}</p>
+                        @if($stockOpname->status === 'approved')
+  <p><span class="font-medium">Disetujui oleh:</span> {{ $stockOpname->approver_label }}</p>
+@endif
                         </div>
                     </div>
                 </div>

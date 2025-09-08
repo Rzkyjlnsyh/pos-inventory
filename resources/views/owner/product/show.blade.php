@@ -186,7 +186,7 @@
                                                 </div>
                                                 <div class="ml-4">
                                                     <p class="text-sm font-medium text-gray-500">Harga Modal</p>
-                                                    <h3 class="text-lg font-semibold text-gray-800">Rp {{ number_format($product->cost_price, 0, ',', '.') }}</h3>
+                                                    <h3 class="text-lg font-semibold text-gray-800">Rp {{ number_format($product->cost_price, 2, ',', '.') }}</h3>
                                                 </div>
                                             </div>
                                         </div>
@@ -199,7 +199,7 @@
                                                 </div>
                                                 <div class="ml-4">
                                                     <p class="text-sm font-medium text-gray-500">Harga Jual</p>
-                                                    <h3 class="text-lg font-semibold text-gray-800">Rp {{ number_format($product->price, 0, ',', '.') }}</h3>
+                                                    <h3 class="text-lg font-semibold text-gray-800">Rp {{ number_format($product->price, 2, ',', '.') }}</h3>
                                                 </div>
                                             </div>
                                         </div>

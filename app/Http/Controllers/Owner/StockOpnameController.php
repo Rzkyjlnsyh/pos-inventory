@@ -14,9 +14,11 @@ class StockOpnameController extends Controller
 {
     public function index()
     {
-        $stockOpnames = StockOpname::with(['user', 'items.product'])
-            ->latest()
-            ->paginate(10);
+        $stockOpnames = StockOpname::with([
+            'creator:id,name,email',
+            'approver:id,name,email',
+            'items.product:id,name'
+        ])->latest()->paginate(10);
 
         return view('owner.inventory.stock-opnames.index', compact('stockOpnames'));
     }
@@ -36,7 +38,11 @@ class StockOpnameController extends Controller
     {
         $validated = $request->validate([
             'document_number' => 'required|unique:stock_opnames',
-            'date' => 'required|date',
+'date' => ['required', 'date', function ($attribute, $value, $fail) {
+    if ($value !== date('Y-m-d')) {
+        $fail('Tanggal harus hari ini.');
+    }
+}],
             'notes' => 'nullable|string',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
@@ -140,21 +146,21 @@ class StockOpnameController extends Controller
     public function show($id)
 {
     $stockOpname = StockOpname::with([
-        'creator',
-        'approver',
-        'items.product'
+        'creator:id,name,email',
+        'approver:id,name,email',
+        'items.product:id,name'
     ])->findOrFail($id);
 
     return view('owner.inventory.stock-opnames.show', compact('stockOpname'));
 }
-    private function generateDocumentNumber()
+private function generateDocumentNumber()
 {
-    // Format: SO/YYYYMMDD/001
     $prefix = 'SO';
-    $datePart = date('Ymd');
-    $lastSO = StockOpname::where('document_number', 'like', $prefix.'/'.$datePart.'/%')
-                    ->orderBy('document_number', 'desc')
-                    ->first();
+    $datePart = date('Ymd'); // Misal: 20250905
+
+    $lastSO = StockOpname::where('document_number', 'like', $prefix . $datePart . '%')
+                ->orderBy('document_number', 'desc')
+                ->first();
 
     $number = 1;
     if ($lastSO) {
@@ -162,6 +168,6 @@ class StockOpnameController extends Controller
         $number = $lastNumber + 1;
     }
 
-    return $prefix.'/'.$datePart.'/'.str_pad($number, 3, '0', STR_PAD_LEFT);
+    return $prefix . $datePart . str_pad($number, 3, '0', STR_PAD_LEFT);
 }
 }

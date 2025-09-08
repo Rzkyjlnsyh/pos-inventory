@@ -1,3 +1,25 @@
+<style>
+      body{
+        font-family: 'Raleway', sans-serif;
+      }
+      .nav-text {
+        position: relative;
+        display: inline-block;
+      }
+      .nav-text::after {
+        content: '';
+        position: absolute;
+        width: 0;
+        height: 2px;
+        bottom: -2px;
+        left: 0;
+        background-color: #e17f12;
+        transition: width 0.2s ease-in-out;
+      }
+      .hover-link:hover .nav-text::after {
+        width: 100%;
+      }
+    </style>
 <div
   id="sidebar"
   class="fixed lg:sticky top-0 left-0 w-64 lg:w-1/6 bg-[#FCFCFC] h-screen flex flex-col transition-transform transform -translate-x-full lg:translate-x-0 text-[#000000] border-r-2 z-40 text-sm"
@@ -82,10 +104,25 @@
     </div>
 
         <!-- Penjualan -->
-    <a href="{{ route('owner.sales.index') }}" class="flex items-center p-3 rounded-md bg-none transition hover-link">
-    <i class="bi bi-cash-stack"></i>
-      <span class="ml-3 nav-text font-semibold">Penjualan</span>
-    </a>
+        <div>
+      <button
+        onclick="toggleDropdown(this)"
+        class="flex items-center justify-between w-full p-3 rounded-md bg-none transition focus:outline-none hover-link">
+        <span class="flex items-center">
+        <i class="bi bi-cash-stack"></i>
+          <span class="ml-3 nav-text font-semibold">Penjualan</span>
+        </span>
+        <i class="bi bi-chevron-down transition-transform"></i>
+      </button>
+      <div class="dropdown-menu space-y-2 overflow-hidden max-h-0 transition-all duration-300">
+        <a href="{{ route('owner.sales.index') }}" class="block p-3 rounded-md bg-none transition mt-2 hover-link">
+          <span class="nav-text font-semibold">Transaksi</span>
+        </a>
+        <a href="{{ route('owner.shift.dashboard') }}" class="block p-3 rounded-md bg-none transition mt-2 hover-link">
+          <span class="nav-text font-semibold">Shift</span>
+        </a>
+      </div>
+    </div>
 
 
     
@@ -106,3 +143,18 @@
     </button>
   </form>
 </div>
+<script>
+      function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        sidebar.classList.toggle('-translate-x-full');
+      }
+
+      function toggleDropdown(button) {
+        const dropdownMenu = button.nextElementSibling;
+        const chevronIcon = button.querySelector('.bi-chevron-down');
+        
+        dropdownMenu.classList.toggle('max-h-0');
+        dropdownMenu.classList.toggle('max-h-40');
+        chevronIcon.classList.toggle('rotate-180');
+      }
+    </script>

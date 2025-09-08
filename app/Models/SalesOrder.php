@@ -12,47 +12,57 @@ class SalesOrder extends Model
 use HasFactory;
 
 protected $fillable = [
-'so_number', 'order_date', 'customer_id', 'subtotal',
-'discount_total', 'grand_total', 'status', 'payment_method',
-'payment_status', 'created_by', 'approved_by', 'approved_at',
-'completed_at', 'dtf_confirmation'
+    'so_number',
+    'order_type',
+    'order_date',
+    'customer_id',
+    'subtotal',
+    'discount_total',
+    'grand_total',
+    'status',
+    'payment_method',
+    'payment_status',
+    'created_by',
+    'approved_by',
+    'approved_at',
+    'completed_at',
 ];
 
 // === RELASI ===
 public function payments()
 {
-return $this->hasMany(Payment::class);
+    return $this->hasMany(Payment::class)->orderBy('paid_at'); // Tambahkan orderBy
 }
 
-public function items(): HasMany
+public function customer()
 {
-return $this->hasMany(SalesOrderItem::class);
+    return $this->belongsTo(Customer::class);
 }
 
-public function customer(): BelongsTo
+public function items()
 {
-return $this->belongsTo(Customer::class);
+    return $this->hasMany(SalesOrderItem::class);
 }
 
-public function creator(): BelongsTo
+public function creator()
 {
-return $this->belongsTo(User::class, 'created_by');
+    return $this->belongsTo(User::class, 'created_by');
 }
 
-public function approver(): BelongsTo
+public function approver()
 {
-return $this->belongsTo(User::class, 'approved_by');
+    return $this->belongsTo(User::class, 'approved_by');
 }
 
 // === ACCESSOR ===
-public function getPaidTotalAttribute(): float
+public function getPaidTotalAttribute()
 {
-return (float) $this->payments()->sum('amount');
+    return $this->payments->sum('amount');
 }
 
-public function getRemainingAmountAttribute(): float
+public function getRemainingAmountAttribute()
 {
-return (float) max(0, $this->grand_total - $this->paid_total);
+    return $this->grand_total - $this->paid_total;
 }
 
 // === Validasi Status ===
@@ -74,6 +84,6 @@ return in_array($newStatus, $transitions[$currentStatus] ?? []);
 
 public function isEditable(): bool
 {
-return $this->status !== 'selesai';
+    return in_array($this->status, ['pending']);
 }
 }

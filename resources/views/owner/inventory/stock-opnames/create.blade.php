@@ -17,7 +17,7 @@
 </head>
 
 <body class="bg-gray-100">
-  <div class="flex-1 lg:w-5/6 ml-0">
+  <div class="flex-1">
     <div class="p-4 lg:p-8">
       <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
         <div class="flex items-center justify-between">
@@ -37,7 +37,8 @@
             </div>
             <div>
               <label class="block text-gray-700 mb-2">Tanggal</label>
-              <input type="date" name="date" class="w-full border rounded p-2" required value="{{ date('Y-m-d') }}">
+              <input type="text" class="w-full border rounded p-2 bg-gray-100" value="{{ date('Y-m-d') }}" disabled>
+              <input type="hidden" name="date" value="{{ date('Y-m-d') }}">
             </div>
           </div>
 

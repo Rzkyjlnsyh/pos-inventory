@@ -13,6 +13,11 @@
     .nav-text{ position: relative; display: inline-block; }
     .nav-text::after{ content:''; position:absolute; width:0; height:2px; bottom:-2px; left:0; background-color:#e17f12; transition:width .2s; }
     .hover-link:hover .nav-text::after{ width:100%; }
+    
+    /* Active link effect */
+    .active .nav-text::after {
+      width: 100%;
+    }
   </style>
 </head>
 <body class="bg-gray-100">
@@ -26,12 +31,8 @@
     <div class="flex-1 lg:w-5/6">
       <x-navbar-top-owner></x-navbar-top-owner>
 
-      <div class="p-4 lg:p-8" x-data="{ tab: 'stock_in' }">
-        <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
-          <div class="flex items-center justify-between">
-            <h2 class="text-xl font-semibold text-gray-700">Inventory</h2>
-          </div>
-        </div>
+      <div class="p-4" x-data="{ tab: 'stock_in' }">
+
 
         <div class="bg-white p-6 rounded-xl shadow-lg">
           <div class="flex border-b mb-4">

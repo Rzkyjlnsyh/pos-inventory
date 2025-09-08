@@ -203,11 +203,12 @@
                                         Harga Modal
                                     </label>
                                     <input type="number" 
-                                           name="cost_price" 
-                                           id="cost_price"
-                                           class="form-input block w-full px-4 py-3 text-gray-700"
-                                           value="{{ old('cost_price') }}"
-                                           required>
+       name="cost_price" 
+       id="cost_price"
+       class="form-input block w-full px-4 py-3 text-gray-700"
+       value="{{ old('cost_price') }}"
+       step="0.01"
+       required>
                                     @error('cost_price')
                                         <p class="mt-2 text-sm text-red-600">
                                             <i class="bi bi-exclamation-circle mr-1"></i>
@@ -221,11 +222,12 @@
                                         Harga Jual
                                     </label>
                                     <input type="number" 
-                                           name="price" 
-                                           id="price"
-                                           class="form-input block w-full px-4 py-3 text-gray-700"
-                                           value="{{ old('price') }}"
-                                           required>
+       name="price" 
+       id="price"
+       class="form-input block w-full px-4 py-3 text-gray-700"
+       value="{{ old('price') }}"
+       step="0.01"
+       required>
                                     @error('price')
                                         <p class="mt-2 text-sm text-red-600">
                                             <i class="bi bi-exclamation-circle mr-1"></i>

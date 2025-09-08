@@ -35,13 +35,22 @@ class StockOpname extends Model
     {
         return $this->belongsTo(User::class, 'verified_by');
     }
-
-    public function approver()
+    
+    public function approver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
     }
-    public function user()
-    {
-        return $this->belongsTo(User::class, 'user_id');
-    }
+
+    public function getCreatorLabelAttribute(): string
+{
+    $u = $this->creator;
+    return $u->name ?? $u->email ?? '-';
+}
+
+public function getApproverLabelAttribute(): string
+{
+    $u = $this->approver;
+    return $u->name ?? $u->email ?? '-';
+}
+    
 }
