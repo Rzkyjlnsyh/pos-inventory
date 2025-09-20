@@ -82,12 +82,12 @@
                                         <i class="bi bi-upload mr-2"></i>Impor Pelanggan
                                     </h3>
                                     <div class="flex items-center mb-4">
-                                        <a href="{{ route('kepala_toko.contacts.customers.template') }}"
+                                        <a href="{{ route('kepala-toko.contacts.customers.template') }}"
                                            class="bg-green-500 hover:bg-green-600 text-white px-4 py-2.5 rounded-lg font-medium transition-all duration-200">
                                             <i class="bi bi-download mr-2"></i>Unduh Template Pelanggan
                                         </a>
                                     </div>
-                                    <form method="POST" action="{{ route('kepala_toko.contacts.customers.import') }}" enctype="multipart/form-data" class="space-y-4">
+                                    <form method="POST" action="{{ route('kepala-toko.contacts.customers.import') }}" enctype="multipart/form-data" class="space-y-4">
                                         @csrf
                                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div>
@@ -111,7 +111,7 @@
                                     <h3 class="text-lg font-semibold text-gray-800 mb-4">
                                         <i class="bi bi-person-plus mr-2"></i>Tambah Pelanggan Baru
                                     </h3>
-                                    <form method="POST" action="{{ route('kepala_toko.contacts.customers.store') }}" class="space-y-4">
+                                    <form method="POST" action="{{ route('kepala-toko.contacts.customers.store') }}" class="space-y-4">
                                         @csrf
                                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                             <div>
@@ -203,12 +203,12 @@
                                         <i class="bi bi-upload mr-2"></i>Impor Pemasok
                                     </h3>
                                     <div class="flex items-center mb-4">
-                                        <a href="{{ route('kepala_toko.contacts.suppliers.template') }}"
+                                        <a href="{{ route('kepala-toko.contacts.suppliers.template') }}"
                                            class="bg-green-500 hover:bg-green-600 text-white px-4 py-2.5 rounded-lg font-medium transition-all duration-200">
                                             <i class="bi bi-download mr-2"></i>Unduh Template Pemasok
                                         </a>
                                     </div>
-                                    <form method="POST" action="{{ route('kepala_toko.contacts.suppliers.import') }}" enctype="multipart/form-data" class="space-y-4">
+                                    <form method="POST" action="{{ route('kepala-toko.contacts.suppliers.import') }}" enctype="multipart/form-data" class="space-y-4">
                                         @csrf
                                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div>
@@ -232,7 +232,7 @@
                                     <h3 class="text-lg font-semibold text-gray-800 mb-4">
                                         <i class="bi bi-building-add mr-2"></i>Tambah Pemasok Baru
                                     </h3>
-                                    <form method="POST" action="{{ route('kepala_toko.contacts.suppliers.store') }}" class="space-y-4">
+                                    <form method="POST" action="{{ route('kepala-toko.contacts.suppliers.store') }}" class="space-y-4">
                                         @csrf
                                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                             <div>

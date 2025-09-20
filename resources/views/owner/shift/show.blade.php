@@ -6,27 +6,6 @@
     <title>Detail Shift - Pare Custom</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Raleway', sans-serif; }
-        .nav-text {
-            position: relative;
-            display: inline-block;
-        }
-        .nav-text::after {
-            content: '';
-            position: absolute;
-            width: 0;
-            height: 2px;
-            bottom: -2px;
-            left: 0;
-            background-color: #e17f12;
-            transition: width 0.2s ease-in-out;
-        }
-        .hover-link:hover .nav-text::after {
-            width: 100%;
-        }
-    </style>
 </head>
 <body class="bg-gray-100">
 <div class="flex">
@@ -34,105 +13,282 @@
     <div class="flex-1 lg:w-5/6">
         <x-navbar-top-owner />
         <div class="p-4 lg:p-8">
-            <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
+            <div class="bg-white p-6 rounded-xl shadow-lg">
                 <h1 class="text-2xl font-semibold text-gray-800 mb-4">Detail Shift</h1>
-                <div class="mb-4">
-                    <a href="{{ route('owner.shift.history') }}" class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded shadow inline-block">
-                        <i class="bi bi-arrow-left"></i> Kembali ke Riwayat
+                
+                <div class="flex flex-wrap gap-4 mb-6">
+                    <a href="{{ route('owner.shift.history') }}" class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded shadow inline-flex items-center">
+                        <i class="bi bi-arrow-left mr-2"></i> Kembali
                     </a>
-                    <a href="{{ route('owner.shift.export-detail', $shift) }}" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow inline-block ml-2">
-                        <i class="bi bi-download"></i> Export ke Excel
+                    <a href="{{ route('owner.shift.export-detail', $shift) }}" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow inline-flex items-center">
+                        <i class="bi bi-file-earmark-excel mr-2"></i> Export Excel
                     </a>
-                    <a href="{{ route('owner.shift.export-detail-pdf', $shift) }}" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded shadow inline-block ml-2">
-                        <i class="bi bi-file-earmark-pdf"></i> Export ke PDF
+                    <a href="{{ route('owner.shift.export-detail-pdf', $shift) }}" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded shadow inline-flex items-center">
+                        <i class="bi bi-file-earmark-pdf mr-2"></i> Export PDF
                     </a>
-                </div>
-                <div class="mb-6">
-                    <h2 class="text-lg font-semibold text-gray-800 mb-2">Informasi Shift</h2>
-                    <p><strong>Pengguna:</strong> {{ $shift->user->name }}</p>
-                    <p><strong>Waktu Mulai:</strong> {{ \Carbon\Carbon::parse($shift->start_time)->format('d/m/Y H:i') }}</p>
-                    <p><strong>Waktu Selesai:</strong> {{ $shift->end_time ? \Carbon\Carbon::parse($shift->end_time)->format('d/m/Y H:i') : '-' }}</p>
-                    <p><strong>Kas Awal:</strong> Rp {{ number_format($shift->initial_cash, 0, ',', '.') }}</p>
-                    <p><strong>Total Kas:</strong> Rp {{ number_format($shift->cash_total, 0, ',', '.') }}</p>
-                    <p><strong>Total Pengeluaran:</strong> Rp {{ number_format($shift->expense_total, 0, ',', '.') }}</p>
-                    <p><strong>Kas Akhir:</strong> {{ $shift->final_cash ? 'Rp ' . number_format($shift->final_cash, 0, ',', '.') : '-' }}</p>
-                    <p><strong>Selisih:</strong> {{ $shift->discrepancy ? 'Rp ' . number_format($shift->discrepancy, 0, ',', '.') : '-' }}</p>
-                    <p><strong>Catatan:</strong> {{ $shift->notes ?? '-' }}</p>
-                    <p><strong>Status:</strong> {{ ucfirst($shift->status) }}</p>
                 </div>
 
+                <!-- Informasi Shift -->
+                <div class="bg-gray-50 p-6 rounded-lg mb-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">📊 Informasi Shift</h2>
+                    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div>
+                            <p class="text-sm text-gray-600">Kasir</p>
+                            <p class="font-medium">{{ $shift->user->name }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Waktu Mulai</p>
+                            <p class="font-medium">{{ $shift->start_time->format('d/m/Y H:i') }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Waktu Selesai</p>
+                            <p class="font-medium">{{ $shift->end_time ? $shift->end_time->format('d/m/Y H:i') : '-' }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Kas Awal</p>
+                            <p class="font-medium">Rp {{ number_format($shift->initial_cash, 0, ',', '.') }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Total Kas</p>
+                            <p class="font-medium text-green-600">Rp {{ number_format($shift->cash_total, 0, ',', '.') }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Pengeluaran</p>
+                            <p class="font-medium text-red-600">Rp {{ number_format($shift->expense_total, 0, ',', '.') }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Pemasukan Manual</p>
+                            <p class="font-medium text-blue-600">Rp {{ number_format($shift->income_total, 0, ',', '.') }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Kas Akhir</p>
+                            <p class="font-medium">{{ $shift->final_cash ? 'Rp ' . number_format($shift->final_cash, 0, ',', '.') : '-' }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Selisih</p>
+                            <p class="font-medium {{ $shift->discrepancy < 0 ? 'text-red-600' : 'text-green-600' }}">
+                                {{ $shift->discrepancy ? 'Rp ' . number_format($shift->discrepancy, 0, ',', '.') : '-' }}
+                            </p>
+                        </div>
+                        <div class="md:col-span-2">
+                            <p class="text-sm text-gray-600">Catatan</p>
+                            <p class="font-medium">{{ $shift->notes ?? 'Tidak ada catatan' }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Status</p>
+                            <span class="px-3 py-1 rounded-full text-xs font-medium
+                                {{ $shift->status == 'open' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800' }}">
+                                {{ $shift->status == 'open' ? 'Aktif' : 'Selesai' }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pemasukan Manual -->
                 <div class="mb-6">
-                    <h2 class="text-lg font-semibold text-gray-800 mb-2">Penjualan</h2>
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">💰 Pemasukan Manual</h2>
+                    @if($incomes->isEmpty())
+                        <p class="text-gray-500 bg-gray-50 p-4 rounded-lg">Tidak ada pemasukan manual pada shift ini.</p>
+                    @else
+                        <div class="overflow-x-auto">
+                            <table class="w-full table-auto border-collapse">
+                                <thead>
+                                    <tr class="bg-blue-100">
+                                        <th class="px-4 py-2 text-left">Keterangan</th>
+                                        <th class="px-4 py-2 text-right">Jumlah</th>
+                                        <th class="px-4 py-2 text-left">Waktu</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($incomes as $income)
+                                        <tr class="border-b hover:bg-blue-50">
+                                            <td class="px-4 py-2">{{ $income->description }}</td>
+                                            <td class="px-4 py-2 text-right text-green-600 font-medium">
+                                                Rp {{ number_format($income->amount, 0, ',', '.') }}
+                                            </td>
+                                            <td class="px-4 py-2 text-sm text-gray-600">
+                                                {{ $income->created_at->format('d/m/Y H:i') }}
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                    <tr class="bg-blue-50 font-semibold">
+                                        <td class="px-4 py-2">Total Pemasukan Manual</td>
+                                        <td class="px-4 py-2 text-right text-green-600">
+                                            Rp {{ number_format($incomes->sum('amount'), 0, ',', '.') }}
+                                        </td>
+                                        <td></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
+                </div>
+
+                <!-- Penjualan -->
+                <div class="mb-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">🛒 Penjualan</h2>
                     @if($salesOrders->isEmpty())
-                        <p class="text-gray-500">Tidak ada penjualan pada shift ini.</p>
+                        <p class="text-gray-500 bg-gray-50 p-4 rounded-lg">Tidak ada penjualan pada shift ini.</p>
                     @else
-                        <table class="w-full table-auto border-collapse">
-                            <thead>
-                                <tr class="bg-gray-200">
-                                    <th class="px-4 py-2">ID Order</th>
-                                    <th class="px-4 py-2">Pelanggan</th>
-                                    <th class="px-4 py-2">Total</th>
-                                    <th class="px-4 py-2">Metode Pembayaran</th>
-                                    <th class="px-4 py-2">Jumlah Pembayaran</th>
-                                    <th class="px-4 py-2">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($salesOrders as $order)
-                                    <tr>
-                                        <td class="border px-4 py-2">{{ $order->id }}</td>
-                                        <td class="border px-4 py-2">{{ $order->customer->name ?? '-' }}</td>
-                                        <td class="border px-4 py-2">Rp {{ number_format($order->total, 0, ',', '.') }}</td>
-                                        <td class="border px-4 py-2">{{ $order->payments->first()->method ?? '-' }}</td>
-                                        <td class="border px-4 py-2">Rp {{ number_format($order->payments->sum('amount'), 0, ',', '.') }}</td>
-                                        <td class="border px-4 py-2">{{ ucfirst($order->status) }}</td>
+                        @php
+                            $totalPenjualan = $salesOrders->sum('total');
+                            $totalDibayar = $salesOrders->sum(function($order) {
+                                return $order->payments->sum('amount');
+                            });
+                        @endphp
+                        <div class="overflow-x-auto">
+                            <table class="w-full table-auto border-collapse">
+                                <thead>
+                                    <tr class="bg-green-100">
+                                        <th class="px-4 py-2">Order ID</th>
+                                        <th class="px-4 py-2">Pelanggan</th>
+                                        <th class="px-4 py-2 text-right">Total</th>
+                                        <th class="px-4 py-2 text-right">Dibayar</th>
+                                        <th class="px-4 py-2">Metode</th>
+                                        <th class="px-4 py-2">Status</th>
                                     </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    @foreach($salesOrders as $order)
+                                        <tr class="border-b hover:bg-green-50">
+                                            <td class="px-4 py-2">#{{ $order->id }}</td>
+                                            <td class="px-4 py-2">{{ $order->customer->name ?? 'Umum' }}</td>
+                                            <td class="px-4 py-2 text-right">Rp {{ number_format($order->total, 0, ',', '.') }}</td>
+                                            <td class="px-4 py-2 text-right">Rp {{ number_format($order->payments->sum('amount'), 0, ',', '.') }}</td>
+                                            <td class="px-4 py-2">
+                                                @if($order->payments->isNotEmpty())
+                                                    {{ $order->payments->first()->method }}
+                                                    @if($order->payments->count() > 1)
+                                                        <span class="text-xs text-gray-500">(+{{ $order->payments->count() - 1 }})</span>
+                                                    @endif
+                                                @else
+                                                    -
+                                                @endif
+                                            </td>
+                                            <td class="px-4 py-2">
+                                                <span class="px-2 py-1 rounded text-xs
+                                                    {{ $order->status == 'completed' ? 'bg-green-100 text-green-800' : 
+                                                       ($order->status == 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800') }}">
+                                                    {{ $order->status }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                    <tr class="bg-green-50 font-semibold">
+                                        <td colspan="2" class="px-4 py-2">Total Penjualan</td>
+                                        <td class="px-4 py-2 text-right">Rp {{ number_format($totalPenjualan, 0, ',', '.') }}</td>
+                                        <td class="px-4 py-2 text-right">Rp {{ number_format($totalDibayar, 0, ',', '.') }}</td>
+                                        <td colspan="2"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     @endif
                 </div>
 
+                <!-- Pengeluaran -->
                 <div class="mb-6">
-                    <h2 class="text-lg font-semibold text-gray-800 mb-2">Pengeluaran</h2>
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">💸 Pengeluaran</h2>
                     @if($expenses->isEmpty())
-                        <p class="text-gray-500">Tidak ada pengeluaran pada shift ini.</p>
+                        <p class="text-gray-500 bg-gray-50 p-4 rounded-lg">Tidak ada pengeluaran pada shift ini.</p>
                     @else
-                        <table class="w-full table-auto border-collapse">
-                            <thead>
-                                <tr class="bg-gray-200">
-                                    <th class="px-4 py-2">Deskripsi</th>
-                                    <th class="px-4 py-2">Jumlah</th>
-                                    <th class="px-4 py-2">Tanggal</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($expenses as $expense)
-                                    <tr>
-                                        <td class="border px-4 py-2">{{ $expense->description }}</td>
-                                        <td class="border px-4 py-2">Rp {{ number_format($expense->amount, 0, ',', '.') }}</td>
-                                        <td class="border px-4 py-2">{{ \Carbon\Carbon::parse($expense->created_at)->format('d/m/Y H:i') }}</td>
+                        <div class="overflow-x-auto">
+                            <table class="w-full table-auto border-collapse">
+                                <thead>
+                                    <tr class="bg-red-100">
+                                        <th class="px-4 py-2 text-left">Keterangan</th>
+                                        <th class="px-4 py-2 text-right">Jumlah</th>
+                                        <th class="px-4 py-2 text-left">Waktu</th>
                                     </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    @foreach($expenses as $expense)
+                                        <tr class="border-b hover:bg-red-50">
+                                            <td class="px-4 py-2">{{ $expense->description }}</td>
+                                            <td class="px-4 py-2 text-right text-red-600 font-medium">
+                                                Rp {{ number_format($expense->amount, 0, ',', '.') }}
+                                            </td>
+                                            <td class="px-4 py-2 text-sm text-gray-600">
+                                                {{ $expense->created_at->format('d/m/Y H:i') }}
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                    <tr class="bg-red-50 font-semibold">
+                                        <td class="px-4 py-2">Total Pengeluaran</td>
+                                        <td class="px-4 py-2 text-right text-red-600">
+                                            Rp {{ number_format($expenses->sum('amount'), 0, ',', '.') }}
+                                        </td>
+                                        <td></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     @endif
+                </div>
+
+                <!-- Summary -->
+                <div class="bg-yellow-50 p-6 rounded-lg">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">🧮 Summary Kas</h2>
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <table class="w-full table-auto">
+                                <tbody>
+                                    <tr class="border-b">
+                                        <td class="px-4 py-2 font-medium">Kas Awal</td>
+                                        <td class="px-4 py-2 text-right">Rp {{ number_format($shift->initial_cash, 0, ',', '.') }}</td>
+                                    </tr>
+                                    <tr class="border-b">
+                                        <td class="px-4 py-2 font-medium">Kas dari Penjualan</td>
+                                        <td class="px-4 py-2 text-right text-green-600">+ Rp {{ number_format($shift->cash_total - $shift->income_total, 0, ',', '.') }}</td>
+                                    </tr>
+                                    <tr class="border-b">
+                                        <td class="px-4 py-2 font-medium">Pemasukan Manual</td>
+                                        <td class="px-4 py-2 text-right text-blue-600">+ Rp {{ number_format($shift->income_total, 0, ',', '.') }}</td>
+                                    </tr>
+                                    <tr class="border-b">
+                                        <td class="px-4 py-2 font-medium">Pengeluaran</td>
+                                        <td class="px-4 py-2 text-right text-red-600">- Rp {{ number_format($shift->expense_total, 0, ',', '.') }}</td>
+                                    </tr>
+                                    <tr class="bg-gray-100 font-semibold">
+                                        <td class="px-4 py-2">Total Diharapkan</td>
+                                        <td class="px-4 py-2 text-right">
+                                            Rp {{ number_format($shift->initial_cash + $shift->cash_total - $shift->expense_total, 0, ',', '.') }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div>
+                            <table class="w-full table-auto">
+                                <tbody>
+                                    <tr class="border-b">
+                                        <td class="px-4 py-2 font-medium">Kas Aktual</td>
+                                        <td class="px-4 py-2 text-right">
+                                            {{ $shift->final_cash ? 'Rp ' . number_format($shift->final_cash, 0, ',', '.') : '-' }}
+                                        </td>
+                                    </tr>
+                                    <tr class="border-b">
+                                        <td class="px-4 py-2 font-medium">Selisih</td>
+                                        <td class="px-4 py-2 text-right {{ $shift->discrepancy < 0 ? 'text-red-600' : 'text-green-600' }}">
+                                            {{ $shift->discrepancy ? 'Rp ' . number_format($shift->discrepancy, 0, ',', '.') : '-' }}
+                                        </td>
+                                    </tr>
+                                    @if($shift->discrepancy)
+                                    <tr>
+                                        <td colspan="2" class="px-4 py-2 text-sm text-gray-600">
+                                            {{ $shift->discrepancy < 0 ? '❌ Kurang' : '✅ Lebih' }} 
+                                            {{ abs($shift->discrepancy) }} dari yang seharusnya
+                                        </td>
+                                    </tr>
+                                    @endif
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
-<script>
-    function toggleSidebar() { 
-        document.getElementById('sidebar').classList.toggle('-translate-x-full'); 
-    }
-    function toggleDropdown(button) {
-        const dropdown = button.nextElementSibling;
-        const chevron = button.querySelector('.bi-chevron-down');
-        dropdown.classList.toggle('max-h-0');
-        dropdown.classList.toggle('max-h-40');
-        chevron.classList.toggle('rotate-180');
-    }
-</script>
 </body>
 </html>

@@ -18,7 +18,18 @@ class StockInController extends Controller
             ->orderByDesc('id')
             ->paginate(15);
 
-        return view('owner.inventory.stock_ins.index', compact('stockIns','q'));
+            $prefix = $this->getViewPrefix();
+            $view = "{$prefix}.inventory.stock_ins.index";
+            return view($view, compact('stockIns','q'));
+    }
+
+    protected function getViewPrefix()
+    {
+        if (request()->is('admin/*')) return 'admin';
+        if (request()->is('finance/*')) return 'finance';
+        if (request()->is('kepala-toko/*')) return 'kepala-toko';
+        if (request()->is('editor/*')) return 'editor';
+        return 'owner';
     }
 
     public function store(Request $request)

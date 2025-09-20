@@ -295,25 +295,22 @@
                                         </button>
                                     </form>
                                 @endif
+                                @if($purchase->status === 'approved')
+    <button onclick="openModal('payment-modal')" class="w-full px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors">
+        <i class="bi bi-cash mr-2"></i>Payment
+    </button>
+@endif
 
-                                @if($purchase->status === 'pending')
-                                    <button onclick="openModal('approve-modal')" class="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors">
-                                        <i class="bi bi-check-circle mr-2"></i>Approve
-                                    </button>
-                                @endif
+@if($purchase->status === 'pending')
+    <form method="POST" action="{{ route('owner.purchases.approve', $purchase) }}">
+        @csrf
+        <button class="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors">
+            <i class="bi bi-check-circle mr-2"></i>Approve
+        </button>
+    </form>
+@endif
 
-                                @if(count($availableStatuses) > 0 && !in_array($purchase->status, ['draft', 'pending']))
-                                    @foreach($availableStatuses as $nextStatus)
-                                        <form method="POST" action="{{ route('owner.purchases.update-status', $purchase) }}">
-                                            @csrf
-                                            <input type="hidden" name="new_status" value="{{ $nextStatus }}">
-                                            <button class="w-full px-4 py-2 bg-[#005281] text-white rounded hover:opacity-90 transition-colors" 
-                                                    onclick="return confirm('Update status ke {{ ucfirst(str_replace('_', ' ', $nextStatus)) }}?')">
-                                                <i class="bi bi-arrow-right-circle mr-2"></i>{{ ucfirst(str_replace('_', ' ', $nextStatus)) }}
-                                            </button>
-                                        </form>
-                                    @endforeach
-                                @endif
+
 
                                 @if(!in_array($purchase->status, ['selesai', 'cancelled']) && !in_array($purchase->status, ['payment', 'kain_diterima', 'printing', 'jahit']))
                                     <form method="POST" action="{{ route('owner.purchases.cancel', $purchase) }}">
@@ -332,29 +329,29 @@
         </div>
     </div>
 
-    <!-- Approve Modal -->
-    @if($purchase->status === 'pending')
-    <div id="approve-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
-        <div class="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 class="text-lg font-semibold text-gray-700 mb-4">Approve Pembelian {{ $purchase->po_number }}</h3>
-            <form action="{{ route('owner.purchases.approve', $purchase->id) }}" method="POST" enctype="multipart/form-data">
-                @csrf
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Upload Faktur (PDF/JPG/PNG)</label>
-                    <input type="file" name="invoice_file" accept=".pdf,.jpg,.jpeg,.png" required class="w-full border rounded p-2 text-gray-900" />
-                </div>
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Upload Bukti Pembayaran (PDF/JPG/PNG)</label>
-                    <input type="file" name="payment_proof_file" accept=".pdf,.jpg,.jpeg,.png" required class="w-full border rounded p-2 text-gray-900" />
-                </div>
-                <div class="flex justify-end space-x-2">
-                    <button type="button" onclick="closeModal('approve-modal')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Batal</button>
-                    <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded hover:opacity-90">Submit</button>
-                </div>
-            </form>
-        </div>
+<!-- Payment Modal -->
+@if($purchase->status === 'approved')
+<div id="payment-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-lg p-6 w-full max-w-md">
+        <h3 class="text-lg font-semibold text-gray-700 mb-4">Proses Pembayaran {{ $purchase->po_number }}</h3>
+        <form action="{{ route('owner.purchases.payment', $purchase->id) }}" method="POST" enctype="multipart/form-data">
+            @csrf
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Upload Faktur (PDF/JPG/PNG)</label>
+                <input type="file" name="invoice_file" accept=".pdf,.jpg,.jpeg,.png" required class="w-full border rounded p-2 text-gray-900" />
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Upload Bukti Pembayaran (PDF/JPG/PNG)</label>
+                <input type="file" name="payment_proof_file" accept=".pdf,.jpg,.jpeg,.png" required class="w-full border rounded p-2 text-gray-900" />
+            </div>
+            <div class="flex justify-end space-x-2">
+                <button type="button" onclick="closeModal('payment-modal')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Batal</button>
+                <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded hover:opacity-90">Submit</button>
+            </div>
+        </form>
     </div>
-    @endif
+</div>
+@endif
 
     <script>
         function toggleSidebar() {

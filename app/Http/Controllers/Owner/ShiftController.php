@@ -6,11 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\Shift;
 use App\Models\Payment;
 use App\Models\SalesOrder;
-use App\Models\Expense; // Asumsi tabel expenses sudah ada
+use App\Models\Expense;
+use App\Models\Income;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Response;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\ShiftHistoryExport;
 use App\Exports\ShiftDetailExport;
@@ -24,28 +26,88 @@ class ShiftController extends Controller
         $validated = $request->validate([
             'initial_cash' => ['required', 'numeric', 'min:0'],
         ]);
-
-        $existingShift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
+    
+        // CEK APAKAH SUDAH ADA SHIFT AKTIF DI TOKO INI
+        // Asumsi: semua user bekerja di toko yang sama, atau tambahkan field store_id jika multi-toko
+        $existingShift = Shift::whereNull('end_time')->first();
+        
         if ($existingShift) {
+            return back()->withErrors([
+                'error' => 'Tidak bisa mulai shift. Shift aktif sedang berjalan oleh ' . 
+                          $existingShift->user->name . 
+                          ' sejak ' . $existingShift->start_time->format('H:i')
+            ]);
+        }
+    
+        // CEK APAKAH USER INI SUDAH PUNYA SHIFT AKTIF
+        $userActiveShift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
+        if ($userActiveShift) {
             return back()->withErrors(['error' => 'Anda sudah memiliki shift aktif. Akhiri shift sebelumnya terlebih dahulu.']);
         }
-
+    
         Shift::create([
             'user_id' => Auth::id(),
             'initial_cash' => $validated['initial_cash'],
             'start_time' => now(),
             'status' => 'open',
         ]);
-
-        // Ubah redirect: Kembali ke dashboard shift, bukan ke create sales
+    
         return redirect()->route('owner.shift.dashboard')->with('success', 'Shift dimulai dengan kas awal Rp ' . number_format($validated['initial_cash'], 0, ',', '.'));
     }
+public function end(Request $request): Response|RedirectResponse
+{
+    $validated = $request->validate([
+        'final_cash' => ['required', 'numeric', 'min:0'],
+        'notes' => ['nullable', 'string'],
+        'print_summary' => ['nullable', 'boolean'], // Checkbox untuk opsi print
+    ]);
 
-    public function end(Request $request): RedirectResponse
+    $shift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
+    if (!$shift) {
+        return back()->withErrors(['error' => 'Anda tidak memiliki shift aktif. Mulai shift terlebih dahulu.']);
+    }
+
+    $expectedCash = $shift->initial_cash + $shift->cash_total - $shift->expense_total;
+    $discrepancy = $validated['final_cash'] - $expectedCash;
+
+    $shift->update([
+        'final_cash' => $validated['final_cash'],
+        'discrepancy' => $discrepancy,
+        'end_time' => now(),
+        'notes' => $validated['notes'] ?? null,
+        'status' => 'closed',
+    ]);
+
+    // Jika user memilih untuk print summary
+    if ($request->has('print_summary')) {
+        return $this->printShiftSummary($shift);
+    }
+
+    return redirect()->route('owner.shift.history')->with('success', 'Shift diakhiri. Kas diharapkan: Rp ' . number_format($expectedCash, 0, ',', '.') . ', Selisih: Rp ' . number_format($discrepancy, 0, ',', '.'));
+}
+
+/**
+ * Cetak summary shift
+ */
+private function printShiftSummary(Shift $shift)
+{
+    $salesOrders = SalesOrder::where('created_by', $shift->user_id)
+        ->whereBetween('created_at', [$shift->start_time, $shift->end_time ?? now()])
+        ->with('payments')
+        ->get();
+
+    $expenses = Expense::where('shift_id', $shift->id)->get();
+    $incomes = Income::where('shift_id', $shift->id)->get();
+
+    $pdf = Pdf::loadView('owner.shift.closing_summary', compact('shift', 'salesOrders', 'expenses', 'incomes'));
+    
+    return $pdf->download('closing_summary_' . $shift->id . '_' . date('Ymd_His') . '.pdf');
+}
+    public function income(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'final_cash' => ['required', 'numeric', 'min:0'],
-            'notes' => ['nullable', 'string'],
+            'income_amount' => ['required', 'numeric', 'min:0.01'],
+            'income_description' => ['required', 'string', 'max:255'],
         ]);
 
         $shift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
@@ -53,18 +115,19 @@ class ShiftController extends Controller
             return back()->withErrors(['error' => 'Anda tidak memiliki shift aktif. Mulai shift terlebih dahulu.']);
         }
 
-        $expectedCash = $shift->initial_cash + $shift->cash_total - $shift->expense_total;
-        $discrepancy = $validated['final_cash'] - $expectedCash;
-
-        $shift->update([
-            'final_cash' => $validated['final_cash'],
-            'discrepancy' => $discrepancy,
-            'end_time' => now(),
-            'notes' => $validated['notes'] ?? null,
-            'status' => 'closed',
+        // Simpan pemasukan ke tabel incomes
+        Income::create([
+            'shift_id' => $shift->id,
+            'amount' => $validated['income_amount'],
+            'description' => $validated['income_description'],
         ]);
 
-        return redirect()->route('owner.shift.history')->with('success', 'Shift diakhiri. Kas diharapkan: Rp ' . number_format($expectedCash, 0, ',', '.') . ', Selisih: Rp ' . number_format($discrepancy, 0, ',', '.'));
+        $shift->increment('income_total', $validated['income_amount']);
+        $shift->increment('cash_total', $validated['income_amount']); // Juga tambahkan ke total kas
+
+        \Log::info('Pemasukan ditambahkan: ' . $validated['income_description'] . ' - Rp ' . number_format($validated['income_amount'], 0, ',', '.'));
+
+        return back()->with('success', 'Pemasukan berhasil ditambahkan.');
     }
 
     public function expense(Request $request): RedirectResponse
@@ -105,6 +168,7 @@ class ShiftController extends Controller
         $transferDp = 0;
         $transferPelunasan = 0;
         $pengeluaran = 0;
+        $pemasukanManual = 0; // <-- VARIABLE BARU
         $tunaiDiLaci = 0;
         $awalLaci = 0;
         $totalDiharapkan = 0;
@@ -112,15 +176,8 @@ class ShiftController extends Controller
         if ($shift) {
             $awalLaci = $shift->initial_cash;
             $pengeluaran = $shift->expense_total;
-            
-            // Hitung tunai di laci
-            $tunaiDiLaci = $shift->initial_cash + $shift->cash_total - $shift->expense_total;
-            $totalDiharapkan = $shift->initial_cash + $shift->cash_total - $shift->expense_total;
-    
-            \Log::info('Shift cash_total: ' . $shift->cash_total);
-            \Log::info('Shift initial_cash: ' . $shift->initial_cash);
-            \Log::info('Shift expense_total: ' . $shift->expense_total);
-    
+            $pemasukanManual = $shift->income_total; // <-- AMBIL DATA INCOME MANUAL
+
             // Ambil semua sales order yang dibuat selama shift ini dengan payments
             $salesOrders = SalesOrder::where('created_by', Auth::id())
                 ->where('created_at', '>=', $shift->start_time)
@@ -128,86 +185,69 @@ class ShiftController extends Controller
                     $query->orderBy('paid_at');
                 }])
                 ->get();
-    
-            \Log::info('Jumlah sales orders: ' . $salesOrders->count());
-    
+
             foreach ($salesOrders as $salesOrder) {
-                \Log::info('SO: ' . $salesOrder->so_number . ', Payments: ' . $salesOrder->payments->count());
-                
                 $paymentCount = $salesOrder->payments->count();
-                
                 foreach ($salesOrder->payments as $index => $payment) {
-                    \Log::info('Payment ' . ($index + 1) . ': ' . $payment->method . ', Amount: ' . $payment->amount . ', Cash Amount: ' . $payment->cash_amount . ', Transfer Amount: ' . $payment->transfer_amount);
-                    
                     $isFirstPayment = $index === 0;
-                    
-                    // Hitung total pembayaran sampai payment ini
                     $paidSoFar = 0;
                     for ($i = 0; $i <= $index; $i++) {
                         $paidSoFar += $salesOrder->payments[$i]->amount;
                     }
-                    
                     $isLunasPayment = $paidSoFar >= $salesOrder->grand_total;
-    
-                    \Log::info('Paid so far: ' . $paidSoFar . ', Grand total: ' . $salesOrder->grand_total . ', Is lunas: ' . ($isLunasPayment ? 'Yes' : 'No'));
-    
-                    // PERBAIKAN DI SINI: Gunakan amount yang sesuai dengan method
+
                     if ($payment->method === 'cash') {
-                        $amountToAdd = $payment->amount; // Untuk cash, gunakan amount
+                        $amountToAdd = $payment->amount;
                         if ($isLunasPayment && $isFirstPayment) {
                             $cashLunas += $amountToAdd;
-                            \Log::info('Added to cashLunas: ' . $amountToAdd);
                         } else if ($isFirstPayment) {
                             $cashDp += $amountToAdd;
-                            \Log::info('Added to cashDp: ' . $amountToAdd);
                         } else {
                             $cashPelunasan += $amountToAdd;
-                            \Log::info('Added to cashPelunasan: ' . $amountToAdd);
                         }
                     } else if ($payment->method === 'transfer') {
-                        $amountToAdd = $payment->amount; // Untuk transfer, gunakan amount
+                        $amountToAdd = $payment->amount;
                         if ($isLunasPayment && $isFirstPayment) {
                             $transferLunas += $amountToAdd;
-                            \Log::info('Added to transferLunas: ' . $amountToAdd);
                         } else if ($isFirstPayment) {
                             $transferDp += $amountToAdd;
-                            \Log::info('Added to transferDp: ' . $amountToAdd);
                         } else {
                             $transferPelunasan += $amountToAdd;
-                            \Log::info('Added to transferPelunasan: ' . $amountToAdd);
                         }
                     } else if ($payment->method === 'split') {
-                        // Untuk split, pisahkan cash dan transfer
                         if ($isLunasPayment && $isFirstPayment) {
                             $cashLunas += $payment->cash_amount;
                             $transferLunas += $payment->transfer_amount;
-                            \Log::info('Added split to cashLunas: ' . $payment->cash_amount . ', transferLunas: ' . $payment->transfer_amount);
                         } else if ($isFirstPayment) {
                             $cashDp += $payment->cash_amount;
                             $transferDp += $payment->transfer_amount;
-                            \Log::info('Added split to cashDp: ' . $payment->cash_amount . ', transferDp: ' . $payment->transfer_amount);
                         } else {
                             $cashPelunasan += $payment->cash_amount;
                             $transferPelunasan += $payment->transfer_amount;
-                            \Log::info('Added split to cashPelunasan: ' . $payment->cash_amount . ', transferPelunasan: ' . $payment->transfer_amount);
                         }
                     }
                 }
             }
-    
-            \Log::info('Final totals - CashLunas: ' . $cashLunas . ', CashDp: ' . $cashDp . ', CashPelunasan: ' . $cashPelunasan);
-            \Log::info('Final totals - TransferLunas: ' . $transferLunas . ', TransferDp: . ' . $transferDp . ', TransferPelunasan: ' . $transferPelunasan);
+
+            // Hitung total cash dari pembayaran + pemasukan manual
+            $totalCashFromPayments = $cashLunas + $cashDp + $cashPelunasan;
+            $totalCashFromAllSources = $totalCashFromPayments + $pemasukanManual; // <-- TAMBAH INCOME MANUAL
+            
+            // Hitung tunai di laci
+            $tunaiDiLaci = $shift->initial_cash + $totalCashFromAllSources - $shift->expense_total;
+            $totalDiharapkan = $shift->initial_cash + $totalCashFromAllSources - $shift->expense_total;
         }
     
         return view('owner.shift.dashboard', compact(
-            'shift', 
-            'cashLunas', 
-            'cashDp', 
-            'cashPelunasan', 
-            'transferLunas', 
-            'transferDp', 
-            'transferPelunasan', 
+            'shift',
+            'cashLunas',
+            'cashDp',
+            'cashPelunasan',
+            'transferLunas',
+            'transferDp',
+            'transferPelunasan',
             'pengeluaran',
+            'pemasukanManual', // <-- PASS KE VIEW
             'tunaiDiLaci',
             'awalLaci',
             'totalDiharapkan'
@@ -228,8 +268,9 @@ class ShiftController extends Controller
             ->get();
 
         $expenses = Expense::where('shift_id', $shift->id)->get();
+        $incomes = Income::where('shift_id', $shift->id)->get(); // <-- TAMBAH INI
 
-        return view('owner.shift.show', compact('shift', 'salesOrders', 'expenses'));
+        return view('owner.shift.show', compact('shift', 'salesOrders', 'expenses', 'incomes'));
     }
 
     public function export()
@@ -248,10 +289,18 @@ class ShiftController extends Controller
             ->whereBetween('created_at', [$shift->start_time, $shift->end_time ?? now()])
             ->with('payments')
             ->get();
-
+    
         $expenses = Expense::where('shift_id', $shift->id)->get();
-
-        $pdf = Pdf::loadView('owner.shift.detail_pdf', compact('shift', 'salesOrders', 'expenses'));
+        $incomes = Income::where('shift_id', $shift->id)->get(); // Pastikan ini ada
+    
+        $pdf = Pdf::loadView('owner.shift.detail_pdf', compact('shift', 'salesOrders', 'expenses', 'incomes'));
         return $pdf->download('shift_detail_' . $shift->id . '_' . date('Ymd_His') . '.pdf');
     }
+    public function exportPdf()
+{
+    $shifts = Shift::with('user')->orderBy('start_time', 'desc')->get();
+    
+    $pdf = Pdf::loadView('owner.shift.pdf', compact('shifts'));
+    return $pdf->download('laporan_shift_' . date('Ymd_His') . '.pdf');
+}
 }

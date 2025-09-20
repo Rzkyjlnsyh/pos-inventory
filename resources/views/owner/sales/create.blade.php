@@ -75,8 +75,7 @@
                         </div>
                         <div>
                             <label for="order_date" class="block font-medium mb-1">Tanggal Order</label>
-                            <input type="date" name="order_date" id="order_date" value="{{ old('order_date', now()->format('Y-m-d')) }}"
-                                   required class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
+                            <input type="datetime-local" name="order_date" id="order_date" value="{{ old('order_date', now()->format('Y-m-d\TH:i')) }}" required class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
                             @error('order_date')
                                 <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                             @enderror
@@ -157,8 +156,7 @@
                             </div>
                             <div>
                                 <label for="paid_at" class="block font-medium mb-1">Tanggal Pembayaran</label>
-                                <input type="date" name="paid_at" id="paid_at" value="{{ old('paid_at', now()->format('Y-m-d')) }}"
-                                       class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
+                                <input type="datetime-local" name="paid_at" id="paid_at" value="{{ old('paid_at', now()->format('Y-m-d\TH:i')) }}" class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
                                 @error('paid_at')
                                     <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                                 @enderror

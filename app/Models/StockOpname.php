@@ -19,14 +19,22 @@ class StockOpname extends Model
         'user_id',
         'verified_by',
         'approved_by',
+        'approved_at',
     ];
+    
+    protected $casts = [
+        'date' => 'date',
+        'approved_at' => 'datetime',
+    ];
+
+    protected $appends = ['creator_label', 'approver_label'];
 
     public function items(): HasMany
     {
         return $this->hasMany(StockOpnameItem::class);
     }
 
-    public function creator()
+    public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
     }
@@ -42,15 +50,22 @@ class StockOpname extends Model
     }
 
     public function getCreatorLabelAttribute(): string
-{
-    $u = $this->creator;
-    return $u->name ?? $u->email ?? '-';
-}
+    {
+        if (!$this->creator) return '-';
+        return $this->creator->name ?? $this->creator->email;
+    }
 
-public function getApproverLabelAttribute(): string
+    public function getApproverLabelAttribute(): string
+    {
+        if (!$this->approver) return '-';
+        return $this->approver->name ?? $this->approver->email;
+    }
+    public function purchaseOrder()
 {
-    $u = $this->approver;
-    return $u->name ?? $u->email ?? '-';
+    return $this->belongsTo(PurchaseOrder::class);
 }
-    
+public function product()
+{
+    return $this->belongsTo(Product::class);
+}
 }

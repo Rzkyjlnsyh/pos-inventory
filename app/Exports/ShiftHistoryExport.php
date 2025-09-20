@@ -11,17 +11,23 @@ class ShiftHistoryExport implements FromCollection, WithHeadings
     public function collection()
     {
         return Shift::with('user')->get()->map(function ($shift) {
+            $kasPenjualan = $shift->cash_total - $shift->income_total;
+            
             return [
-                'User' => $shift->user->name,
-                'Start Time' => \Carbon\Carbon::parse($shift->start_time)->format('d/m/Y H:i'),
-                'End Time' => $shift->end_time ? \Carbon\Carbon::parse($shift->end_time)->format('d/m/Y H:i') : '-',
-                'Initial Cash' => 'Rp ' . number_format((float) $shift->initial_cash, 0, ',', '.'),
-                'Cash Total' => 'Rp ' . number_format((float) $shift->cash_total, 0, ',', '.'),
-                'Expense Total' => 'Rp ' . number_format((float) $shift->expense_total, 0, ',', '.'),
-                'Final Cash' => $shift->final_cash !== null ? 'Rp ' . number_format((float) $shift->final_cash, 0, ',', '.') : '-',
-                'Discrepancy' => $shift->discrepancy !== null ? 'Rp ' . number_format((float) $shift->discrepancy, 0, ',', '.') : '-',
-                'Notes' => $shift->notes ?? '-',
+                'Kasir' => $shift->user->name,
+                'Tanggal' => $shift->start_time->format('d/m/Y'),
+                'Waktu Mulai' => $shift->start_time->format('H:i'),
+                'Waktu Selesai' => $shift->end_time ? $shift->end_time->format('H:i') : '-',
+                'Kas Awal' => $shift->initial_cash,
+                'Kas dari Penjualan' => $kasPenjualan,
+                'Pemasukan Manual' => $shift->income_total,
+                'Total Kas Masuk' => $shift->cash_total,
+                'Total Pengeluaran' => $shift->expense_total,
+                'Kas Diharapkan' => $shift->initial_cash + $shift->cash_total - $shift->expense_total,
+                'Kas Aktual' => $shift->final_cash ?? 0,
+                'Selisih' => $shift->discrepancy ?? 0,
                 'Status' => ucfirst($shift->status),
+                'Catatan' => $shift->notes ?? '-',
             ];
         });
     }
@@ -29,16 +35,20 @@ class ShiftHistoryExport implements FromCollection, WithHeadings
     public function headings(): array
     {
         return [
-            'User',
-            'Start Time',
-            'End Time',
-            'Initial Cash',
-            'Cash Total',
-            'Expense Total',
-            'Final Cash',
-            'Discrepancy',
-            'Notes',
+            'Kasir',
+            'Tanggal',
+            'Waktu Mulai',
+            'Waktu Selesai',
+            'Kas Awal (Rp)',
+            'Kas dari Penjualan (Rp)',
+            'Pemasukan Manual (Rp)',
+            'Total Kas Masuk (Rp)',
+            'Total Pengeluaran (Rp)',
+            'Kas Diharapkan (Rp)',
+            'Kas Aktual (Rp)',
+            'Selisih (Rp)',
             'Status',
+            'Catatan',
         ];
     }
 }

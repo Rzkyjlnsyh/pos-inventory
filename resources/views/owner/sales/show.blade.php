@@ -297,62 +297,112 @@
                 </div>
             @endif
 
-            <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
-                <h2 class="text-lg font-semibold mb-4 text-gray-800">Daftar Pembayaran</h2>
-                <div class="overflow-x-auto">
-                    <table class="w-full table-auto border-collapse">
-                        <thead>
-                            <tr class="bg-gray-50 text-left text-sm font-semibold text-gray-600">
-                                <th class="px-4 py-2 border">Jumlah</th>
-                                <th class="px-4 py-2 border">Detail Pembayaran</th>
-                                <th class="px-4 py-2 border">Tanggal</th>
-                                <th class="px-4 py-2 border">Referensi</th>
-                                <th class="px-4 py-2 border">Bukti</th>
-                                <th class="px-4 py-2 border">Catatan</th>
-                                <th class="px-4 py-2 border text-center">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($salesOrder->payments as $payment)
-                                <tr class="border-b hover:bg-gray-50">
-                                    <td class="px-4 py-2 border">Rp {{ number_format($payment->amount, 0, ',', '.') }}</td>
-                                    <td class="px-4 py-2 border">
-                                        @if($payment->method === 'split')
-                                            Cash: Rp {{ number_format($payment->cash_amount, 0, ',', '.') }} <br>
-                                            Transfer: Rp {{ number_format($payment->transfer_amount, 0, ',', '.') }}
-                                        @else
-                                            {{ ucfirst($payment->method) }}
-                                        @endif
-                                    </td>
-                                    <td class="px-4 py-2 border">{{ \Carbon\Carbon::parse($payment->paid_at)->format('d/m/Y H:i') }}</td>
-                                    <td class="px-4 py-2 border">{{ $payment->reference ?? '-' }}</td>
-                                    <td class="px-4 py-2 border">
-                                        @if($payment->proof_path)
-                                            <a href="{{ Storage::url($payment->proof_path) }}" target="_blank">Lihat Bukti</a>
-                                        @else -
-                                        @endif
-                                    </td>
-                                    <td class="px-4 py-2 border">{{ $payment->note ?? '-' }}</td>
-                                    <td class="px-4 py-2 border text-center">
-                                        <div class="flex justify-center gap-2">
-                                            <a href="{{ route('owner.sales.printNotaDirect', $payment) }}" class="text-green-600 hover:underline">
-                                                <i class="bi bi-printer"></i> Print Langsung
-                                            </a>
-                                            <a href="{{ route('owner.sales.printNota', $payment) }}" class="text-blue-600 hover:underline">
-                                                <i class="bi bi-download"></i> Download PDF
-                                            </a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="7" class="text-center text-gray-500 px-4 py-4">Belum ada pembayaran</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
+<!-- resources/views/owner/sales/show.blade.php -->
+<div class="bg-white p-6 rounded-xl shadow-lg mb-6">
+    <h2 class="text-lg font-semibold mb-4 text-gray-800">Riwayat Pembayaran</h2>
+    <div class="overflow-x-auto">
+        <table class="w-full table-auto border-collapse">
+            <thead>
+                <tr class="bg-gray-50 text-left text-sm font-semibold text-gray-600">
+                    <th class="px-4 py-2 border">Tanggal</th>
+                    <th class="px-4 py-2 border">Metode</th>
+                    <th class="px-4 py-2 border text-right">Jumlah</th>
+                    <!-- TAMBAHKAN KOLOM BARU INI -->
+                    <th class="px-4 py-2 border">Operator</th>
+                    <th class="px-4 py-2 border">Keterangan</th>
+                    <th class="px-4 py-2 border text-center">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                @php
+                    $cumulativePayment = 0;
+                @endphp
+                @forelse($salesOrder->payments as $payment)
+                    @php
+                        $cumulativePayment += $payment->amount;
+                    @endphp
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="px-4 py-2 border">{{ \Carbon\Carbon::parse($payment->paid_at)->format('d/m/Y H:i') }}</td>
+                        <td class="px-4 py-2 border">
+                            <span class="capitalize">{{ $payment->method }}</span>
+                            @if($payment->method === 'split')
+                                <br>
+                                <small class="text-gray-500">
+                                    (Cash: Rp {{ number_format($payment->cash_amount, 0, ',', '.') }},
+                                    Transfer: Rp {{ number_format($payment->transfer_amount, 0, ',', '.') }})
+                                </small>
+                            @endif
+                        </td>
+                        <td class="px-4 py-2 border text-right font-medium text-green-600">
+                            Rp {{ number_format($payment->amount, 0, ',', '.') }}
+                            <br>
+                            <small class="text-gray-500 text-xs">
+                                Total: Rp {{ number_format($cumulativePayment, 0, ',', '.') }}
+                            </small>
+                        </td>
+                        <!-- TAMBAHKAN DATA OPERATOR/BUAT PEMBAYARAN DI KOLOM BARU INI -->
+                        <td class="px-4 py-2 border">
+                            {{ $payment->creator->name ?? 'System' }}
+                            <br>
+                            <small class="text-gray-500 text-xs">
+                                #{{ $payment->created_by }}
+                            </small>
+                        </td>
+                        <td class="px-4 py-2 border">
+                            {{ $payment->note ?? '-' }}
+                            @if($payment->reference)
+                                <br><small class="text-gray-500">Ref: {{ $payment->reference }}</small>
+                            @endif
+                            @if($payment->proof_path)
+                                <br><a href="{{ Storage::url($payment->proof_path) }}" target="_blank" class="text-blue-500 text-xs">Lihat Bukti</a>
+                            @endif
+                        </td>
+                        <td class="px-4 py-2 border text-center">
+                            <div class="flex justify-center gap-2">
+                                <a href="{{ route('owner.sales.printNotaDirect', $payment) }}" class="text-green-600 hover:underline" title="Print Langsung">
+                                    <i class="bi bi-printer"></i>
+                                </a>
+                                <a href="{{ route('owner.sales.printNota', $payment) }}" class="text-blue-600 hover:underline" title="Download PDF">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <!-- Tambahkan colspan menjadi 6 karena ada tambahan 1 kolom -->
+                        <td colspan="6" class="text-center text-gray-500 px-4 py-4">Belum ada pembayaran</td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Tampilkan Summary Pembayaran -->
+    @if($salesOrder->payments->isNotEmpty())
+    <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+        <div class="grid grid-cols-2 gap-2 text-sm">
+            <div class="font-semibold">Total yang harus dibayar:</div>
+            <div class="text-right">Rp {{ number_format($salesOrder->grand_total, 0, ',', '.') }}</div>
+
+            <div class="font-semibold">Total sudah dibayar:</div>
+            <div class="text-right text-green-600 font-medium">Rp {{ number_format($salesOrder->paid_total, 0, ',', '.') }}</div>
+
+            <div class="font-semibold">Sisa pembayaran:</div>
+            <div class="text-right @if($salesOrder->remaining_amount > 0) text-red-600 @else text-green-600 @endif font-medium">
+                Rp {{ number_format($salesOrder->remaining_amount, 0, ',', '.') }}
             </div>
+
+            <div class="font-semibold">Status Pembayaran:</div>
+            <div class="text-right">
+                <span class="px-2 py-1 rounded-full text-xs font-medium @if($salesOrder->payment_status === 'lunas') bg-green-100 text-green-600 @else bg-yellow-100 text-yellow-600 @endif">
+                    {{ ucfirst($salesOrder->payment_status) }}
+                </span>
+            </div>
+        </div>
+    </div>
+    @endif
+</div>
 
             <div class="bg-white p-6 rounded-xl shadow-lg">
                 <h2 class="text-lg font-semibold mb-4 text-gray-800">Item Order</h2>

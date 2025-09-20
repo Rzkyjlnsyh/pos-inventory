@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers\KepalaToko;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
@@ -13,7 +13,7 @@ use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 
-class CategoryAdminController extends Controller implements FromArray, WithHeadings
+class CategoryKeptokController extends Controller implements FromArray, WithHeadings
 {
     private function generateUniqueSlug(string $name, ?int $ignoreId = null): string
     {
@@ -42,12 +42,12 @@ class CategoryAdminController extends Controller implements FromArray, WithHeadi
             ->orderBy('name')
             ->paginate($perPage);
 
-        return view('admin.categories.index', compact('categories', 'q'));
+        return view('kepala-toko.categories.index', compact('categories', 'q'));
     }
 
     public function create(): View
     {
-        return view('admin.categories.create');
+        return view('kepala-toko.categories.create');
     }
 
     public function store(Request $request): RedirectResponse
@@ -63,12 +63,12 @@ class CategoryAdminController extends Controller implements FromArray, WithHeadi
 
         Category::create($validated);
 
-        return redirect()->route('admin.category.index')->with('success', 'Category created');
+        return redirect()->route('kepala-toko.category.index')->with('success', 'Category created');
     }
 
     public function edit(Category $category): View
     {
-        return view('admin.categories.edit', compact('category'));
+        return view('kepala-toko.categories.edit', compact('category'));
     }
 
     public function update(Request $request, Category $category): RedirectResponse
@@ -85,18 +85,18 @@ class CategoryAdminController extends Controller implements FromArray, WithHeadi
 
         $category->update($validated);
 
-        return redirect()->route('admin.category.index')->with('success', 'Category updated');
+        return redirect()->route('kepala-toko.category.index')->with('success', 'Category updated');
     }
 
     public function destroy(Category $category): RedirectResponse
     {
         $category->delete();
-        return redirect()->route('admin.category.index')->with('success', 'Category deleted');
+        return redirect()->route('kepala-toko.category.index')->with('success', 'Category deleted');
     }
 
     public function importForm(): View
     {
-        return view('admin.categories.import');
+        return view('kepala-toko.categories.import');
     }
 
     public function import(Request $request): RedirectResponse
@@ -129,7 +129,7 @@ class CategoryAdminController extends Controller implements FromArray, WithHeadi
             Category::create($validated);
         }
 
-        return redirect()->route('admin.category.index')->with('success', 'Kategori berhasil diimport');
+        return redirect()->route('kepala-toko.category.index')->with('success', 'Kategori berhasil diimport');
     }
 
     public function headings(): array

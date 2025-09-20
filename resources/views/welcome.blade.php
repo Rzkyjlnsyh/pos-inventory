@@ -95,16 +95,24 @@
       <div class="text-center mb-6">
         <p class="text-lg font-medium text-gray-700">You are already logged in.</p>
         @if(Auth::user()->usertype == 'owner')
-          <a href="{{ route('owner.dashboard.index') }}" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#005281] hover:bg-[#153c53] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+          <a href="{{ route('owner.dashboard') }}" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#005281] hover:bg-[#153c53] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
             Go to Dashboard
           </a>
         @elseif(Auth::user()->usertype == 'admin')
-          <a href="{{ route('admin.dashboard.index') }}" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#005281] hover:bg-[#153c53] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+          <a href="{{ route('admin.dashboard') }}" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#005281] hover:bg-[#153c53] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
             Go to Dashboard
           </a>
-        @elseif(Auth::user()->usertype == 'inventaris')
-          <a href="{{ route('inventaris.stock.index') }}" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#005281] hover:bg-[#153c53] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-            Go to Stock Management
+        @elseif(Auth::user()->usertype == 'editor')
+          <a href="{{ route('editor.dashboard') }}" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#005281] hover:bg-[#153c53] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            Go to Dashboard
+          </a>
+        @elseif(Auth::user()->usertype == 'kepala_toko')
+          <a href="{{ route('kepala-toko.dashboard') }}" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#005281] hover:bg-[#153c53] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            Go to Dashboard
+          </a>
+        @elseif(Auth::user()->usertype == 'finance')
+          <a href="{{ route('finance-toko.dashboard') }}" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#005281] hover:bg-[#153c53] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            Go to Dashboard
           </a>
         @endif
       </div>

@@ -35,7 +35,18 @@ class StockMovementController extends Controller
             ->orderBy('product_id')
             ->paginate(15);
 
-        return view('owner.inventory.stock_movements.index', compact('stockMovements', 'from', 'to'));
+            $prefix = $this->getViewPrefix();
+            $view = "{$prefix}.inventory.stock_movements.index";
+            return view($view, compact('stockMovements'));
+    }
+
+    protected function getViewPrefix()
+    {
+        if (request()->is('admin/*')) return 'admin';
+        if (request()->is('finance/*')) return 'finance';
+        if (request()->is('kepala-toko/*')) return 'kepala-toko';
+        if (request()->is('editor/*')) return 'editor';
+        return 'owner';
     }
 
     public function getProductMovements($productId, $date)

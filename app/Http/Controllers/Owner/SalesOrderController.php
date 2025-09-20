@@ -89,7 +89,7 @@ class SalesOrderController extends Controller
             'paid_at' => ['nullable', 'date'],
             'proof_path' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:2048'],
         ]);
-
+    
         // Validasi harga produk
         foreach ($request->items as $index => $item) {
             if (!empty($item['product_id'])) {
@@ -99,7 +99,7 @@ class SalesOrderController extends Controller
                 }
             }
         }
-
+    
         // Hitung subtotal, discount total, dan grand total sebelum transaksi
         $subtotal = collect($validated['items'])->reduce(function ($carry, $item) {
             return $carry + ((float)$item['sale_price'] * (int)$item['qty']);
@@ -108,18 +108,18 @@ class SalesOrderController extends Controller
             return (float)($item['discount'] ?? 0) * (int)$item['qty']; // Diskon dikalikan qty
         });
         $grandTotal = $subtotal - $discountTotal;
-
+    
         $cashAmount = $validated['payment_method'] === 'split' ? ($validated['cash_amount'] ?? 0) : ($validated['payment_method'] === 'cash' ? ($validated['payment_amount'] ?? 0) : 0);
         $transferAmount = $validated['payment_method'] === 'split' ? ($validated['transfer_amount'] ?? 0) : ($validated['payment_method'] === 'transfer' ? ($validated['payment_amount'] ?? 0) : 0);
         $paymentAmount = $cashAmount + $transferAmount;
-
-        // Deteksi payment_status otomatis
-        $paymentStatus = $paymentAmount >= $grandTotal ? 'lunas' : 'dp';
-        if ($validated['payment_status'] !== $paymentStatus) {
-            \Log::warning('User input payment_status (' . $validated['payment_status'] . ') tidak sesuai dengan perhitungan (' . $paymentStatus . '). Menggunakan perhitungan.');
-            $validated['payment_status'] = $paymentStatus;
-        }
-
+    
+        // MODIFIKASI: HAPUS deteksi payment_status otomatis di sini. HORMATI INPUT USER.
+        // $paymentStatus = $paymentAmount >= $grandTotal ? 'lunas' : 'dp';
+        // if ($validated['payment_status'] !== $paymentStatus) {
+        //     \Log::warning('User input payment_status (' . $validated['payment_status'] . ') tidak sesuai dengan perhitungan (' . $paymentStatus . '). Menggunakan perhitungan.');
+        //     $validated['payment_status'] = $paymentStatus;
+        // }
+    
         if ($paymentAmount > 0) {
             if ($validated['payment_status'] === 'dp' && $paymentAmount < $grandTotal * 0.5) {
                 return back()->withErrors(['payment_amount' => 'DP minimal 50%: Rp ' . number_format($grandTotal * 0.5, 0, ',', '.')])->withInput();
@@ -131,13 +131,14 @@ class SalesOrderController extends Controller
                 return back()->withErrors(['proof_path' => 'Bukti wajib untuk transfer.'])->withInput();
             }
         }
-
-        $status = 'pending';
-
-        try {
-            $salesOrder = DB::transaction(function () use ($validated, $request, $cashAmount, $transferAmount, $paymentAmount, $grandTotal, $activeShift, $status, $subtotal, $discountTotal, $paymentStatus) {
-                $soNumber = $this->generateSoNumber();
     
+        $status = 'pending';
+    
+        try {
+            $salesOrder = DB::transaction(function () use ($validated, $request, $cashAmount, $transferAmount, $paymentAmount, $grandTotal, $activeShift, $status, $subtotal, $discountTotal) {
+                // MODIFIKASI: Hapus variabel $paymentStatus yang sudah tidak digunakan
+                $soNumber = $this->generateSoNumber();
+        
                 $salesOrder = SalesOrder::create([
                     'so_number' => $soNumber,
                     'order_type' => $validated['order_type'],
@@ -148,10 +149,11 @@ class SalesOrderController extends Controller
                     'grand_total' => $grandTotal,
                     'status' => $status,
                     'payment_method' => $validated['payment_method'],
-                    'payment_status' => $paymentStatus,
+                    // MODIFIKASI: Langsung pakai payment_status dari input user
+                    'payment_status' => $validated['payment_status'],
                     'created_by' => Auth::id(),
                 ]);
-    
+        
                 foreach ($validated['items'] as $item) {
                     $lineTotal = ((float)$item['sale_price'] * (int)$item['qty']) - ((float)($item['discount'] ?? 0) * (int)$item['qty']);
                     SalesOrderItem::create([
@@ -165,16 +167,17 @@ class SalesOrderController extends Controller
                         'line_total' => $lineTotal,
                     ]);
                 }
-    
+        
                 if ($paymentAmount > 0) {
                     $proofPath = $request->hasFile('proof_path')
                         ? $request->file('proof_path')->store('payment-proofs', 'public')
                         : null;
-    
+        
                     Payment::create([
                         'sales_order_id' => $salesOrder->id,
                         'method' => $validated['payment_method'],
-                        'status' => $paymentStatus,
+                        // MODIFIKASI: Status pembayaran individual juga pakai input user
+                        'status' => $validated['payment_status'],
                         'amount' => $paymentAmount,
                         'cash_amount' => $cashAmount,
                         'transfer_amount' => $transferAmount,
@@ -182,23 +185,25 @@ class SalesOrderController extends Controller
                         'proof_path' => $proofPath,
                         'created_by' => Auth::id(),
                     ]);
-    
+        
                     if ($cashAmount > 0 && $activeShift) {
                         \Log::info('Before increment - Shift cash_total: ' . $activeShift->cash_total);
                         \Log::info('Adding cash to shift: ' . $cashAmount . ', Shift ID: ' . $activeShift->id);
                         $activeShift->increment('cash_total', $cashAmount);
                         \Log::info('After increment - Shift cash_total: ' . $activeShift->cash_total);
                     }
-    
-                    $newPaymentStatus = $paymentAmount >= $grandTotal ? 'lunas' : 'dp';
-                    $salesOrder->update(['payment_status' => $newPaymentStatus]);
+        
+                    // MODIFIKASI: HAPUS update payment_status sales order di sini.
+                    // Biarkan sales order payment_status sesuai input user ('dp')
+                    // $newPaymentStatus = $paymentAmount >= $grandTotal ? 'lunas' : 'dp';
+                    // $salesOrder->update(['payment_status' => $newPaymentStatus]);
                 }
-    
+        
                 return $salesOrder;
             });
-    
+        
             \Log::info('Sales order berhasil disimpan: ' . $salesOrder->so_number);
-    
+        
             // Jika ada pembayaran, render nota untuk print otomatis
             if ($paymentAmount > 0) {
                 $salesOrder->load('payments'); // Load relasi payments
@@ -209,7 +214,7 @@ class SalesOrderController extends Controller
                     'autoPrint' => true, // Flag untuk trigger print di view
                 ]);
             }
-    
+        
             // Jika tidak ada pembayaran, redirect ke show
             return redirect()->route('owner.sales.show', $salesOrder)->with('success', 'Sales order dibuat.');
         } catch (\Exception $e) {
@@ -221,7 +226,7 @@ class SalesOrderController extends Controller
     public function show(SalesOrder $salesOrder): View
     {
         // No check shift, izinkan lihat-lihat
-        $salesOrder->load(['customer', 'items', 'creator', 'approver', 'payments']);
+        $salesOrder->load(['customer', 'items', 'creator', 'approver', 'payments.creator']);
 
         $payment = $salesOrder->payments->first() ?? new Payment();
 
@@ -355,11 +360,12 @@ class SalesOrderController extends Controller
         if ($shiftCheck !== true) {
             return $shiftCheck;
         }
-    
+        
         \Log::info('Starting addPayment for SO: ' . $salesOrder->so_number . ', Input: ' . json_encode($request->all()));
-    
+        
         $validated = $request->validate([
             'payment_amount' => ['required', 'numeric', 'min:0', function ($attribute, $value, $fail) use ($salesOrder) {
+                // MODIFIKASI: Validasi DP minimal 50% hanya jika belum ada pembayaran sama sekali (paid_total == 0)
                 if ($salesOrder->paid_total == 0 && $value < $salesOrder->grand_total * 0.5) {
                     $fail('DP minimal 50% dari grand total: Rp ' . number_format($salesOrder->grand_total * 0.5, 0, ',', '.'));
                 }
@@ -375,21 +381,21 @@ class SalesOrderController extends Controller
             'reference' => ['nullable', 'string', 'max:100'],
             'note' => ['nullable', 'string', 'max:255'],
         ]);
-    
+        
         // Validasi custom untuk split: total == cash + transfer
         if ($validated['payment_method'] === 'split' && $validated['payment_amount'] != ($validated['cash_amount'] ?? 0) + ($validated['transfer_amount'] ?? 0)) {
             return back()->withErrors(['payment_amount' => 'Jumlah total harus sama dengan jumlah cash + transfer.'])->withInput();
         }
-    
+        
         try {
             DB::transaction(function () use ($salesOrder, $validated, $request) {
                 $proofPath = $request->hasFile('proof_path')
                     ? $request->file('proof_path')->store('payment-proofs', 'public')
                     : null;
-    
+        
                 $cashAmount = $validated['cash_amount'] ?? 0;
                 $transferAmount = $validated['transfer_amount'] ?? 0;
-    
+        
                 $payment = Payment::create([
                     'sales_order_id' => $salesOrder->id,
                     'method' => $validated['payment_method'],
@@ -402,11 +408,13 @@ class SalesOrderController extends Controller
                     'note' => $validated['note'] ?? null,
                     'created_by' => Auth::id(),
                 ]);
-    
-                $newPaidTotal = $salesOrder->paid_total + $validated['payment_amount'];
+        
+                // MODIFIKASI: Hitung ULANG total pembayaran dari semua record
+                $newPaidTotal = $salesOrder->payments()->sum('amount'); // Query langsung ke database
+                // Tentukan status pembayaran TERBARU berdasarkan total yang dibayar
                 $newPaymentStatus = $newPaidTotal >= $salesOrder->grand_total ? 'lunas' : 'dp';
                 $salesOrder->update(['payment_status' => $newPaymentStatus]);
-    
+        
                 // Increment cash_total shift jika ada cash
                 $activeShift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
                 if ($activeShift && $cashAmount > 0) {
@@ -415,10 +423,10 @@ class SalesOrderController extends Controller
                     $activeShift->increment('cash_total', $cashAmount);
                     \Log::info('After increment payment - Shift cash_total: ' . $activeShift->cash_total);
                 }
-    
+        
                 \Log::info('Payment added for SO: ' . $salesOrder->so_number . ', Amount: ' . $validated['payment_amount'] . ', New Paid Total: ' . $newPaidTotal . ', New Payment Status: ' . $newPaymentStatus . ', Proof Path: ' . ($proofPath ?? 'None'));
             });
-    
+        
             return back()->with('success', 'Pembayaran ditambahkan.');
         } catch (\Exception $e) {
             \Log::error('Error adding payment for SO ' . $salesOrder->so_number . ': ' . $e->getMessage());

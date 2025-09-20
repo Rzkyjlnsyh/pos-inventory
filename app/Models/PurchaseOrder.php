@@ -15,7 +15,7 @@ class PurchaseOrder extends Model
     const STATUS_DRAFT = 'draft';
     const STATUS_PENDING = 'pending';
     const STATUS_APPROVED = 'approved';
-    const STATUS_CANCELLED = 'cancelled';
+    const STATUS_CANCELLED = 'canceled';
     
     // Status untuk production workflow - Kain
     const STATUS_PAYMENT = 'payment';

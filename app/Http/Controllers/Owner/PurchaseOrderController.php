@@ -40,7 +40,7 @@ class PurchaseOrderController extends Controller
                     'approved' => $query->where('status', 'approved'),
                     'in_progress' => $query->whereIn('status', ['payment', 'kain_diterima', 'printing', 'jahit']),
                     'completed' => $query->where('status', 'selesai'),
-                    'cancelled' => $query->where('status', 'cancelled'),
+                    'cancelled' => $query->where('status', 'canceled'),
                     default => $query,
                 };
             })
@@ -156,24 +156,38 @@ class PurchaseOrderController extends Controller
         if ($purchase->status !== PurchaseOrder::STATUS_PENDING) {
             return back()->withErrors(['status' => 'Hanya pending yang bisa di-approve.']);
         }
-
-        $validated = $request->validate([
-            'invoice_file' => 'required|file|mimes:pdf,jpg,jpeg,png|max:2048',
-            'payment_proof_file' => 'required|file|mimes:pdf,jpg,jpeg,png|max:2048',
-        ]);
-
-        $invoicePath = $request->file('invoice_file')->store('purchase_orders/invoices', 'public');
-        $paymentProofPath = $request->file('payment_proof_file')->store('purchase_orders/payments', 'public');
-
+    
         $purchase->update([
             'status' => PurchaseOrder::STATUS_APPROVED,
             'approved_by' => Auth::id(),
             'approved_at' => Carbon::now(),
+        ]);
+    
+        return back()->with('success', 'Pembelian telah di-approve.');
+    }
+    public function payment(Request $request, PurchaseOrder $purchase): RedirectResponse
+    {
+        if ($purchase->status !== PurchaseOrder::STATUS_APPROVED) {
+            return back()->withErrors(['status' => 'Hanya approved yang bisa diproses pembayaran.']);
+        }
+    
+        $validated = $request->validate([
+            'invoice_file' => 'required|file|mimes:pdf,jpg,jpeg,png|max:2048',
+            'payment_proof_file' => 'required|file|mimes:pdf,jpg,jpeg,png|max:2048',
+        ]);
+    
+        $invoicePath = $request->file('invoice_file')->store('purchase_orders/invoices', 'public');
+        $paymentProofPath = $request->file('payment_proof_file')->store('purchase_orders/payments', 'public');
+    
+        $purchase->update([
+            'status' => PurchaseOrder::STATUS_PAYMENT,
+            'payment_by' => Auth::id(),
+            'payment_at' => Carbon::now(),
             'invoice_file' => $invoicePath,
             'payment_proof_file' => $paymentProofPath,
         ]);
-
-        return back()->with('success', 'Pembelian telah di-approve dengan file faktur dan bukti pembayaran.');
+    
+        return back()->with('success', 'Pembayaran telah diproses dengan file faktur dan bukti pembayaran.');
     }
 
     // Method baru untuk update status workflow

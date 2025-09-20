@@ -3,6 +3,10 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use App\Http\Middleware\Admin;
+use App\Http\Middleware\KepalaToko;
+use App\Http\Middleware\CheckActiveShift;
+
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -15,9 +19,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'owner' => \App\Http\Middleware\Owner::class,
             'finance' => \App\Http\Middleware\Finance::class,
-            'kepala_toko' => \App\Http\Middleware\KepalaToko::class,
-            'admin' => \App\Http\Middleware\Admin::class,
+            'kepala_toko' => KepalaToko::class,
+            'admin' => Admin::class,
             'editor' => \App\Http\Middleware\Editor::class,
+            'check.shift' => CheckActiveShift::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

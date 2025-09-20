@@ -24,6 +24,12 @@
         <h3>Detail Customer</h3>
         <p>Nama: {{ $salesOrder->customer->name ?? 'Guest' }}</p>
     </div>
+    @if(isset($payment) && $payment->creator)
+<div class="flex justify-between text-sm">
+    <span> Kasir :</span>
+    <span>{{ $payment->creator->name }}</span>
+</div>
+@endif
 
     <h3>Item Order</h3>
     <table>

@@ -40,34 +40,82 @@
     <!-- Menu Items -->
     <div class="flex-1 p-4">
         <!-- Beranda -->
-        <a href="{{ route('kepala_toko.dashboard') }}" class="flex items-center p-3 rounded-md bg-none transition hover-link">
+        <a href="{{ route('kepala-toko.dashboard') }}" class="flex items-center p-3 rounded-md bg-none transition hover-link">
             <i class="bi bi-house-door-fill"></i>
             <span class="ml-3 nav-text font-semibold">Beranda</span>
         </a>
         <!-- Produk Dropdown -->
+        <div>
+            <button
+                onclick="toggleDropdown(this)"
+                class="flex items-center justify-between w-full p-3 rounded-md bg-none transition focus:outline-none hover-link">
+                <span class="flex items-center">
+                    <i class="bi bi-box-seam"></i>
+                    <span class="ml-3 nav-text font-semibold">Katalog</span>
+                </span>
+                <i class="bi bi-chevron-down transition-transform"></i>
+            </button>
+            <div class="dropdown-menu space-y-2 overflow-hidden max-h-0 transition-all duration-300">
+                <a href="#" class="block p-3 rounded-md bg-none transition mt-2 hover-link">
+                    <span class="nav-text font-semibold">Produk</span>
+                </a>
+                <a href="{{ route('kepala-toko.category.index') }}" class="block p-3 rounded-md bg-none transition mt-2 hover-link">
+                    <span class="nav-text font-semibold">Kategori</span>
+                </a>
+            </div>
+        </div>
 
 
         <!-- Customer & Supplier -->
-        <a href="{{ route('kepala_toko.contacts.index') }}" class="flex items-center p-3 rounded-md bg-none transition hover-link">
+        <a href="{{ route('kepala-toko.contacts.index') }}" class="flex items-center p-3 rounded-md bg-none transition hover-link">
             <i class="bi bi-people-fill"></i>
             <span class="ml-3 nav-text font-semibold">Customer & Supplier</span>
         </a>
 
-        <!-- Placeholder for other menus -->
-        <a href="{{ route('kepala_toko.dashboard') }}" class="flex items-center p-3 rounded-md bg-none transition hover-link">
-            <i class="bi bi-clipboard-data"></i>
-            <span class="ml-3 nav-text font-semibold">Inventory</span>
-        </a>
+    <!-- Inventory -->
+    <a href="{{ url('kepala-toko/inventory') }}" class="flex items-center p-3 rounded-md bg-none transition hover-link">
+      <i class="bi bi-clipboard-data"></i>
+      <span class="ml-3 nav-text font-semibold">Inventory</span>
+    </a>
 
-        <a href="{{ route('kepala_toko.dashboard') }}" class="flex items-center p-3 rounded-md bg-none transition hover-link">
-            <i class="bi bi-cash-stack"></i>
-            <span class="ml-3 nav-text font-semibold">Penjualan</span>
+        <!-- Penjualan -->
+        <div>
+      <button
+        onclick="toggleDropdown(this)"
+        class="flex items-center justify-between w-full p-3 rounded-md bg-none transition focus:outline-none hover-link">
+        <span class="flex items-center">
+        <i class="bi bi-cash-stack"></i>
+          <span class="ml-3 nav-text font-semibold">Penjualan</span>
+        </span>
+        <i class="bi bi-chevron-down transition-transform"></i>
+      </button>
+      <div class="dropdown-menu space-y-2 overflow-hidden max-h-0 transition-all duration-300">
+        <a href="{{ route('kepala-toko.dashboard') }}" class="block p-3 rounded-md bg-none transition mt-2 hover-link">
+          <span class="nav-text font-semibold">Transaksi</span>
         </a>
+        <a href="{{ route('kepala-toko.shift.dashboard') }}" class="block p-3 rounded-md bg-none transition mt-2 hover-link">
+          <span class="nav-text font-semibold">Shift</span>
+        </a>
+      </div>
+    </div>
 
-        <a href="{{ route('kepala_toko.dashboard') }}" class="flex items-center p-3 rounded-md bg-none transition hover-link">
-            <i class="bi bi-cart-check"></i>
-            <span class="ml-3 nav-text font-semibold">Pembelian</span>
+        <!-- Pembelian -->
+        <div>
+      <button
+        onclick="toggleDropdown(this)"
+        class="flex items-center justify-between w-full p-3 rounded-md bg-none transition focus:outline-none hover-link">
+        <span class="flex items-center">
+        <i class="bi bi-cart-check"></i>
+          <span class="ml-3 nav-text font-semibold">Pembelian</span>
+        </span>
+        <i class="bi bi-chevron-down transition-transform"></i>
+      </button>
+      <div class="dropdown-menu space-y-2 overflow-hidden max-h-0 transition-all duration-300">
+        <a href="{{ route('kepala-toko.purchases.index') }}" class="block p-3 rounded-md bg-none transition mt-2 hover-link">
+          <span class="nav-text font-semibold">Purchase List</span>
         </a>
+      </div>
+    </div>
     </div>
 
     <form action="{{ route('logout') }}" method="POST" class="flex items-center p-3 rounded-md bg-none transition hover-link mt-auto mx-4 mb-4">
