@@ -16,6 +16,11 @@
             border-bottom: 2px solid #333;
             padding-bottom: 10px;
         }
+        .header img {
+            max-width: 150px;
+            height: auto;
+            margin-bottom: 10px;
+        }
         .header h1 {
             margin: 0;
             font-size: 16px;
@@ -82,6 +87,7 @@
 </head>
 <body>
     <div class="header">
+    <img src="{{ asset('assets/logo.png') }}" alt="Pare Custom Logo">
         <h1>LAPORAN RIWAYAT SHIFT</h1>
         <p>Pare Custom - {{ date('d/m/Y H:i') }}</p>
         <p>Dicetak oleh: {{ Auth::user()->name }}</p>
@@ -152,6 +158,91 @@
                 @endforeach
             </tbody>
         </table>
+
+        <!-- Detail Pembayaran -->
+        <div class="summary">
+            <h3>💸 Detail Pembayaran</h3>
+            @foreach ($shifts as $shift)
+                @php
+                    $payments = \App\Models\Payment::where('created_by', $shift->user_id)
+                        ->where('created_at', '>=', $shift->start_time)
+                        ->where('created_at', '<=', $shift->end_time ?? now())
+                        ->with('salesOrder')
+                        ->get();
+                    $cashLunas = $cashDp = $cashPelunasan = $transferLunas = $transferDp = $transferPelunasan = 0;
+                    foreach ($payments as $payment) {
+                        $so = $payment->salesOrder;
+                        $isLunasSekaliBayar = ($payment->category === 'pelunasan' && $so->payments->count() === 1);
+                        if ($payment->method === 'cash') {
+                            if ($isLunasSekaliBayar) {
+                                $cashLunas += $payment->amount;
+                            } elseif ($payment->category === 'dp') {
+                                $cashDp += $payment->amount;
+                            } else {
+                                $cashPelunasan += $payment->amount;
+                            }
+                        } elseif ($payment->method === 'transfer') {
+                            if ($isLunasSekaliBayar) {
+                                $transferLunas += $payment->amount;
+                            } elseif ($payment->category === 'dp') {
+                                $transferDp += $payment->amount;
+                            } else {
+                                $transferPelunasan += $payment->amount;
+                            }
+                        } elseif ($payment->method === 'split') {
+                            if ($isLunasSekaliBayar) {
+                                $cashLunas += $payment->cash_amount;
+                                $transferLunas += $payment->transfer_amount;
+                            } elseif ($payment->category === 'dp') {
+                                $cashDp += $payment->cash_amount;
+                                $transferDp += $payment->transfer_amount;
+                            } else {
+                                $cashPelunasan += $payment->cash_amount;
+                                $transferPelunasan += $payment->transfer_amount;
+                            }
+                        }
+                    }
+                    $totalPendapatan = $cashLunas + $cashDp + $cashPelunasan + $transferLunas + $transferDp + $transferPelunasan;
+                @endphp
+                <div style="margin-bottom: 15px;">
+                    <h4 style="margin: 0 0 8px 0;">Shift #{{ $shift->id }} - {{ $shift->start_time->format('d/m/Y H:i') }}</h4>
+                    <table>
+                        <tr>
+                            <th width="60%">Kategori</th>
+                            <th width="40%" class="text-right">Jumlah</th>
+                        </tr>
+                        <tr>
+                            <td>Cash Lunas</td>
+                            <td class="text-right positive">Rp {{ number_format($cashLunas, 0, ',', '.') }}</td>
+                        </tr>
+                        <tr>
+                            <td>Cash DP</td>
+                            <td class="text-right positive">Rp {{ number_format($cashDp, 0, ',', '.') }}</td>
+                        </tr>
+                        <tr>
+                            <td>Cash Pelunasan</td>
+                            <td class="text-right positive">Rp {{ number_format($cashPelunasan, 0, ',', '.') }}</td>
+                        </tr>
+                        <tr>
+                            <td>Transfer Lunas</td>
+                            <td class="text-right positive">Rp {{ number_format($transferLunas, 0, ',', '.') }}</td>
+                        </tr>
+                        <tr>
+                            <td>Transfer DP</td>
+                            <td class="text-right positive">Rp {{ number_format($transferDp, 0, ',', '.') }}</td>
+                        </tr>
+                        <tr>
+                            <td>Transfer Pelunasan</td>
+                            <td class="text-right positive">Rp {{ number_format($transferPelunasan, 0, ',', '.') }}</td>
+                        </tr>
+                        <tr>
+                            <th>Total Pendapatan Penjualan</th>
+                            <th class="text-right positive">Rp {{ number_format($totalPendapatan, 0, ',', '.') }}</th>
+                        </tr>
+                    </table>
+                </div>
+            @endforeach
+        </div>
 
         <!-- Summary Section -->
         <div class="summary">

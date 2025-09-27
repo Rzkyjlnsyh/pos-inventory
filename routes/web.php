@@ -35,6 +35,18 @@ Route::middleware(['auth', 'owner'])->prefix('owner')->name('owner.')->group(fun
     Route::view('/', 'owner.dashboard')->name('index');
     Route::get('dashboard', fn() => view('owner.dashboard'))->name('dashboard');
 
+    Route::get('shift/test-closing-summary', function () {
+        $shift = \App\Models\Shift::latest()->first();
+        $incomes = \App\Models\Income::where('shift_id', $shift->id)->get();
+        $expenses = \App\Models\Expense::where('shift_id', $shift->id)->get();
+        $salesOrders = \App\Models\SalesOrder::whereHas('payments', function ($query) use ($shift) {
+            $query->where('created_by', $shift->user_id)
+                  ->where('created_at', '>=', $shift->start_time)
+                  ->where('created_at', '<=', $shift->end_time ?? now());
+        })->with(['customer', 'payments'])->get();
+        return view('owner.shift.closing_summary', compact('shift', 'incomes', 'expenses', 'salesOrders'));
+    })->name('shift.test-closing-summary');
+
     // Products
     Route::resource('product', ProductOwnerController::class);
     Route::get('catalog/products/search', [ProductOwnerController::class, 'search'])->name('catalog.products.search');

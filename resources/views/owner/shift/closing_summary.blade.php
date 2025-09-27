@@ -16,6 +16,11 @@
             border-bottom: 2px solid #333;
             padding-bottom: 10px;
         }
+        .header img {
+            max-width: 150px;
+            height: auto;
+            margin-bottom: 10px;
+        }
         .header h1 {
             margin: 0;
             font-size: 18px;
@@ -83,6 +88,7 @@
 </head>
 <body>
     <div class="header">
+        <img src="{{ asset('assets/logo.png') }}" alt="Pare Custom Logo">
         <h1>CLOSING SUMMARY SHIFT</h1>
         <p>Pare Custom - {{ date('d/m/Y H:i') }}</p>
         <p>Shift #{{ $shift->id }} | Dicetak otomatis saat tutup shift</p>
@@ -111,6 +117,86 @@
         </table>
     </div>
 
+    <!-- Detail Pembayaran -->
+    @php
+        $payments = \App\Models\Payment::where('created_by', $shift->user_id)
+            ->where('created_at', '>=', $shift->start_time)
+            ->where('created_at', '<=', $shift->end_time ?? now())
+            ->with('salesOrder')
+            ->get();
+        $cashLunas = $cashDp = $cashPelunasan = $transferLunas = $transferDp = $transferPelunasan = 0;
+        foreach ($payments as $payment) {
+            $so = $payment->salesOrder;
+            $isLunasSekaliBayar = ($payment->category === 'pelunasan' && $so->payments->count() === 1);
+            if ($payment->method === 'cash') {
+                if ($isLunasSekaliBayar) {
+                    $cashLunas += $payment->amount;
+                } elseif ($payment->category === 'dp') {
+                    $cashDp += $payment->amount;
+                } else {
+                    $cashPelunasan += $payment->amount;
+                }
+            } elseif ($payment->method === 'transfer') {
+                if ($isLunasSekaliBayar) {
+                    $transferLunas += $payment->amount;
+                } elseif ($payment->category === 'dp') {
+                    $transferDp += $payment->amount;
+                } else {
+                    $transferPelunasan += $payment->amount;
+                }
+            } elseif ($payment->method === 'split') {
+                if ($isLunasSekaliBayar) {
+                    $cashLunas += $payment->cash_amount;
+                    $transferLunas += $payment->transfer_amount;
+                } elseif ($payment->category === 'dp') {
+                    $cashDp += $payment->cash_amount;
+                    $transferDp += $payment->transfer_amount;
+                } else {
+                    $cashPelunasan += $payment->cash_amount;
+                    $transferPelunasan += $payment->transfer_amount;
+                }
+            }
+        }
+        $totalPendapatan = $cashLunas + $cashDp + $cashPelunasan + $transferLunas + $transferDp + $transferPelunasan;
+    @endphp
+    <div class="section">
+        <h2>💸 DETAIL PEMBAYARAN</h2>
+        <table>
+            <tr>
+                <th width="60%">Kategori</th>
+                <th width="40%" class="text-right">Jumlah</th>
+            </tr>
+            <tr>
+                <td>Cash Lunas</td>
+                <td class="text-right positive">Rp {{ number_format($cashLunas, 0, ',', '.') }}</td>
+            </tr>
+            <tr>
+                <td>Cash DP</td>
+                <td class="text-right positive">Rp {{ number_format($cashDp, 0, ',', '.') }}</td>
+            </tr>
+            <tr>
+                <td>Cash Pelunasan</td>
+                <td class="text-right positive">Rp {{ number_format($cashPelunasan, 0, ',', '.') }}</td>
+            </tr>
+            <tr>
+                <td>Transfer Lunas</td>
+                <td class="text-right positive">Rp {{ number_format($transferLunas, 0, ',', '.') }}</td>
+            </tr>
+            <tr>
+                <td>Transfer DP</td>
+                <td class="text-right positive">Rp {{ number_format($transferDp, 0, ',', '.') }}</td>
+            </tr>
+            <tr>
+                <td>Transfer Pelunasan</td>
+                <td class="text-right positive">Rp {{ number_format($transferPelunasan, 0, ',', '.') }}</td>
+            </tr>
+            <tr>
+                <th>Total Pendapatan Penjualan</th>
+                <th class="text-right positive">Rp {{ number_format($totalPendapatan, 0, ',', '.') }}</th>
+            </tr>
+        </table>
+    </div>
+
     <!-- Summary Kas -->
     <div class="summary-box">
         <h3 style="margin: 0 0 8px 0; color: #333;">🧮 RINGKASAN KAS</h3>
@@ -124,7 +210,7 @@
             <tr>
                 <td>+ Kas dari Penjualan</td>
                 <td class="text-right">Rp</td>
-                <td class="text-right positive">+ {{ number_format($shift->cash_total - $shift->income_total, 0, ',', '.') }}</td>
+                <td class="text-right positive">+ {{ number_format($cashLunas + $cashDp + $cashPelunasan, 0, ',', '.') }}</td>
                 <td></td>
             </tr>
             <tr>
@@ -142,7 +228,7 @@
             <tr style="border-top: 2px solid #333;">
                 <td><strong>Total Diharapkan</strong></td>
                 <td class="text-right"><strong>Rp</strong></td>
-                <td class="text-right"><strong>{{ number_format($shift->initial_cash + $shift->cash_total - $shift->expense_total, 0, ',', '.') }}</strong></td>
+                <td class="text-right"><strong>{{ number_format($shift->initial_cash + $cashLunas + $cashDp + $cashPelunasan + $shift->income_total - $shift->expense_total, 0, ',', '.') }}</strong></td>
                 <td></td>
             </tr>
             <tr>
@@ -161,6 +247,72 @@
         </div>
     </div>
 
+    <!-- Penjualan -->
+    <div class="section">
+        <h2>🛒 Penjualan ({{ $salesOrders->count() }} transaksi)</h2>
+        @if($salesOrders->isEmpty())
+            <p style="text-align: center; color: #666; font-style: italic; padding: 20px;">
+                Tidak ada penjualan pada shift ini
+            </p>
+        @else
+            <table>
+                <thead>
+                    <tr>
+                        <th width="10%">Order ID</th>
+                        <th width="25%">Pelanggan</th>
+                        <th width="15%" class="text-right">Total</th>
+                        <th width="15%" class="text-right">Dibayar (Shift Ini)</th>
+                        <th width="15%">Metode</th>
+                        <th width="10%">Status</th>
+                        <th width="10%">Waktu Order</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($salesOrders as $order)
+                        @php
+                            $shiftPayments = $order->payments->where('created_at', '>=', $shift->start_time)->where('created_at', '<=', $shift->end_time ?? now());
+                        @endphp
+                        <tr>
+                            <td class="text-center">#{{ $order->id }}</td>
+                            <td>{{ $order->customer->name ?? 'Umum' }}</td>
+                            <td class="text-right">Rp {{ number_format($order->grand_total, 0, ',', '.') }}</td>
+                            <td class="text-right">Rp {{ number_format($shiftPayments->sum('amount'), 0, ',', '.') }}</td>
+                            <td class="text-center">
+                                @if($shiftPayments->isNotEmpty())
+                                    {{ $shiftPayments->first()->method }}
+                                    @if($shiftPayments->count() > 1)
+                                        <br><small>(+{{ $shiftPayments->count() - 1 }} pembayaran)</small>
+                                    @endif
+                                @else
+                                    -
+                                @endif
+                            </td>
+                            <td class="text-center">
+                                <span style="display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 9px;
+                                    {{ $order->status == 'completed' ? 'background-color: #d4edda; color: #155724;' : 
+                                       ($order->status == 'pending' ? 'background-color: #fff3cd; color: #856404;' : 
+                                       'background-color: #f8d7da; color: #721c24;') }}">
+                                    {{ $order->status }}
+                                </span>
+                            </td>
+                            <td class="text-center">{{ $order->created_at->format('d/m/Y H:i') }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <th colspan="2">Total Penjualan</th>
+                        <th class="text-right">Rp {{ number_format($salesOrders->sum('grand_total'), 0, ',', '.') }}</th>
+                        <th class="text-right">Rp {{ number_format($salesOrders->sum(function($o) use ($shift) { 
+                            return $o->payments->where('created_at', '>=', $shift->start_time)->where('created_at', '<=', $shift->end_time ?? now())->sum('amount'); 
+                        }), 0, ',', '.') }}</th>
+                        <th colspan="3"></th>
+                    </tr>
+                </tfoot>
+            </table>
+        @endif
+    </div>
+
     <!-- Statistik -->
     <div class="section">
         <h2>📈 STATISTIK</h2>
@@ -168,7 +320,7 @@
             <tr>
                 <th>Total Penjualan</th>
                 <td>{{ $salesOrders->count() }} transaksi</td>
-                <td class="text-right">Rp {{ number_format($salesOrders->sum('total'), 0, ',', '.') }}</td>
+                <td class="text-right">Rp {{ number_format($salesOrders->sum('grand_total'), 0, ',', '.') }}</td>
             </tr>
             <tr>
                 <th>Pemasukan Manual</th>
@@ -183,7 +335,7 @@
             <tr>
                 <th>Rata-rata Transaksi</th>
                 <td colspan="2" class="text-right">
-                    Rp {{ number_format($salesOrders->avg('total') ?? 0, 0, ',', '.') }}
+                    Rp {{ number_format($salesOrders->avg('grand_total') ?? 0, 0, ',', '.') }}
                 </td>
             </tr>
         </table>

@@ -27,6 +27,14 @@ protected $fillable = [
     'approved_at',
     'completed_at',
 ];
+protected $casts = [
+    'subtotal' => 'decimal:2',
+    'discount_total' => 'decimal:2',
+    'grand_total' => 'decimal:2',
+    'order_date' => 'date',
+    'approved_at' => 'datetime',
+    'completed_at' => 'datetime',
+];
 
 // === RELASI ===
 public function payments()

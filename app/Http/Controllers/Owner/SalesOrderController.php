@@ -172,12 +172,21 @@ class SalesOrderController extends Controller
                     $proofPath = $request->hasFile('proof_path')
                         ? $request->file('proof_path')->store('payment-proofs', 'public')
                         : null;
-        
+                
+                    // Tentukan kategori pembayaran
+                    $paymentCategory = ($paymentAmount >= $grandTotal) ? 'pelunasan' : 'dp';
+                
+                    // Pastikan cash_amount dan transfer_amount diisi dengan benar
+                    $cashAmount = $validated['payment_method'] === 'cash' ? $paymentAmount : ($validated['payment_method'] === 'split' ? ($validated['cash_amount'] ?? 0) : 0);
+                    $transferAmount = $validated['payment_method'] === 'transfer' ? $paymentAmount : ($validated['payment_method'] === 'split' ? ($validated['transfer_amount'] ?? 0) : 0);
+                
+                    \Log::info('Creating payment for SO: ' . $salesOrder->so_number . ', Category: ' . $paymentCategory . ', Amount: ' . $paymentAmount . ', Cash Amount: ' . $cashAmount . ', Transfer Amount: ' . $transferAmount);
+                
                     Payment::create([
                         'sales_order_id' => $salesOrder->id,
                         'method' => $validated['payment_method'],
-                        // MODIFIKASI: Status pembayaran individual juga pakai input user
                         'status' => $validated['payment_status'],
+                        'category' => $paymentCategory,
                         'amount' => $paymentAmount,
                         'cash_amount' => $cashAmount,
                         'transfer_amount' => $transferAmount,
@@ -185,18 +194,13 @@ class SalesOrderController extends Controller
                         'proof_path' => $proofPath,
                         'created_by' => Auth::id(),
                     ]);
-        
+                
                     if ($cashAmount > 0 && $activeShift) {
                         \Log::info('Before increment - Shift cash_total: ' . $activeShift->cash_total);
                         \Log::info('Adding cash to shift: ' . $cashAmount . ', Shift ID: ' . $activeShift->id);
                         $activeShift->increment('cash_total', $cashAmount);
                         \Log::info('After increment - Shift cash_total: ' . $activeShift->cash_total);
                     }
-        
-                    // MODIFIKASI: HAPUS update payment_status sales order di sini.
-                    // Biarkan sales order payment_status sesuai input user ('dp')
-                    // $newPaymentStatus = $paymentAmount >= $grandTotal ? 'lunas' : 'dp';
-                    // $salesOrder->update(['payment_status' => $newPaymentStatus]);
                 }
         
                 return $salesOrder;
@@ -393,12 +397,22 @@ class SalesOrderController extends Controller
                     ? $request->file('proof_path')->store('payment-proofs', 'public')
                     : null;
         
-                $cashAmount = $validated['cash_amount'] ?? 0;
-                $transferAmount = $validated['transfer_amount'] ?? 0;
+                // Pastikan cash_amount dan transfer_amount diisi dengan benar
+                $cashAmount = $validated['payment_method'] === 'cash' ? $validated['payment_amount'] : ($validated['payment_method'] === 'split' ? ($validated['cash_amount'] ?? 0) : 0);
+                $transferAmount = $validated['payment_method'] === 'transfer' ? $validated['payment_amount'] : ($validated['payment_method'] === 'split' ? ($validated['transfer_amount'] ?? 0) : 0);
+        
+                // Hitung total pembayaran sebelumnya
+                $paidBefore = $salesOrder->payments()->sum('amount');
+                $newPaidTotal = $paidBefore + $validated['payment_amount'];
+                $paymentCategory = ($newPaidTotal >= $salesOrder->grand_total) ? 'pelunasan' : 'dp';
+        
+                \Log::info('Creating payment for SO: ' . $salesOrder->so_number . ', Category: ' . $paymentCategory . ', Amount: ' . $validated['payment_amount'] . ', Cash Amount: ' . $cashAmount . ', Transfer Amount: ' . $transferAmount);
         
                 $payment = Payment::create([
                     'sales_order_id' => $salesOrder->id,
                     'method' => $validated['payment_method'],
+                    'status' => ($newPaidTotal >= $salesOrder->grand_total) ? 'lunas' : 'dp',
+                    'category' => $paymentCategory,
                     'amount' => $validated['payment_amount'],
                     'cash_amount' => $cashAmount,
                     'transfer_amount' => $transferAmount,
@@ -409,9 +423,7 @@ class SalesOrderController extends Controller
                     'created_by' => Auth::id(),
                 ]);
         
-                // MODIFIKASI: Hitung ULANG total pembayaran dari semua record
-                $newPaidTotal = $salesOrder->payments()->sum('amount'); // Query langsung ke database
-                // Tentukan status pembayaran TERBARU berdasarkan total yang dibayar
+                // Update payment_status SalesOrder
                 $newPaymentStatus = $newPaidTotal >= $salesOrder->grand_total ? 'lunas' : 'dp';
                 $salesOrder->update(['payment_status' => $newPaymentStatus]);
         
@@ -424,7 +436,7 @@ class SalesOrderController extends Controller
                     \Log::info('After increment payment - Shift cash_total: ' . $activeShift->cash_total);
                 }
         
-                \Log::info('Payment added for SO: ' . $salesOrder->so_number . ', Amount: ' . $validated['payment_amount'] . ', New Paid Total: ' . $newPaidTotal . ', New Payment Status: ' . $newPaymentStatus . ', Proof Path: ' . ($proofPath ?? 'None'));
+                \Log::info('Payment added for SO: ' . $salesOrder->so_number . ', Amount: ' . $validated['payment_amount'] . ', New Paid Total: ' . $newPaidTotal . ', New Payment Status: ' . $newPaymentStatus . ', Category: ' . $paymentCategory . ', Proof Path: ' . ($proofPath ?? 'None'));
             });
         
             return back()->with('success', 'Pembayaran ditambahkan.');

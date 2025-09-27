@@ -36,4 +36,10 @@ class Shift extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    // Hapus ini jika migration payments tidak punya shift_id
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
+    }
 }

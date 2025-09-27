@@ -13,6 +13,7 @@ class Payment extends Model
         'sales_order_id',
         'method',
         'status',
+        'category', // Tambahkan ini
         'amount',
         'cash_amount',
         'transfer_amount',
