@@ -303,14 +303,12 @@ class ShiftController extends Controller
         $incomes = Income::where('shift_id', $shift->id)->get();
         $expenses = Expense::where('shift_id', $shift->id)->get();
     
-        // Query sales orders yang punya pembayaran di shift ini
         $salesOrders = SalesOrder::whereHas('payments', function ($query) use ($shift) {
             $query->where('created_by', $shift->user_id)
                   ->where('created_at', '>=', $shift->start_time)
                   ->where('created_at', '<=', $shift->end_time ?? now());
         })->with(['customer', 'payments'])->get();
     
-        // Hitung pembayaran
         $payments = Payment::where('created_by', $shift->user_id)
             ->where('created_at', '>=', $shift->start_time)
             ->where('created_at', '<=', $shift->end_time ?? now())
@@ -352,7 +350,9 @@ class ShiftController extends Controller
             }
         }
     
-        return view('owner.shift.show', compact('shift', 'incomes', 'expenses', 'salesOrders', 'cashLunas', 'cashDp', 'cashPelunasan', 'transferLunas', 'transferDp', 'transferPelunasan'));
+        $totalPendapatan = $cashLunas + $cashDp + $cashPelunasan + $transferLunas + $transferDp + $transferPelunasan;
+    
+        return view('owner.shift.show', compact('shift', 'incomes', 'expenses', 'salesOrders', 'cashLunas', 'cashDp', 'cashPelunasan', 'transferLunas', 'transferDp', 'transferPelunasan', 'totalPendapatan'));
     }
 
     public function export()
