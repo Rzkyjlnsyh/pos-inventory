@@ -55,8 +55,17 @@
         <div class="p-4 lg:p-8">
             <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
                 <h1 class="text-2xl font-semibold text-gray-800 mb-4">Buat Sales Order</h1>
+                @if ($errors->any())
+                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                        <ul class="list-disc list-inside">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
                 @if (session('error'))
-                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
+                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
                         {{ session('error') }}
                     </div>
                 @endif
@@ -116,53 +125,51 @@
                     </div>
 
                     <div class="mb-6">
-                        <h2 class="text-lg font-semibold mb-4 text-gray-800">Pembayaran (Opsional)</h2>
-                        <div class="grid md:grid-cols-2 gap-4">
-                            <div>
-                                <label for="payment_amount" class="block font-medium mb-1">Jumlah Pembayaran (Total)</label>
-                                <input type="number" name="payment_amount" id="payment_amount" class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" step="0.01" min="0" value="{{ old('payment_amount') }}">
-                                <p id="dp-info" class="text-sm text-gray-600 mt-1"></p>
-                                @error('payment_amount')
-                                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                                @enderror
-                            </div>
-                            <div id="split-payment-fields" class="hidden md:col-span-2">
-                                <div class="grid md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label for="cash_amount" class="block font-medium mb-1">Jumlah Cash</label>
-                                        <input type="number" name="cash_amount" id="cash_amount" class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" step="0.01" min="0" value="{{ old('cash_amount') }}">
-                                        @error('cash_amount')
-                                            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                                        @enderror
-                                    </div>
-                                    <div>
-                                        <label for="transfer_amount" class="block font-medium mb-1">Jumlah Transfer</label>
-                                        <input type="number" name="transfer_amount" id="transfer_amount" class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" step="0.01" min="0" value="{{ old('transfer_amount') }}">
-                                        @error('transfer_amount')
-                                            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                                        @enderror
-                                    </div>
-                                </div>
-<!-- Bukti Transfer -->
-<div id="proof-field" class="hidden md:col-span-2">
-    <label for="proof_path" class="block font-medium mb-1">Bukti Transfer (jpg, png, pdf)</label>
-    <input type="file" name="proof_path" id="proof_path" accept=".jpg,.jpeg,.png,.pdf"
-           class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
-    <p class="text-sm text-gray-600 mt-1">Wajib untuk metode transfer atau split</p>
-    @error('proof_path')
-        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-    @enderror
+    <h2 class="text-lg font-semibold mb-4 text-gray-800">Pembayaran (Opsional)</h2>
+    <div class="grid md:grid-cols-2 gap-4">
+        <div>
+            <label for="payment_amount" class="block font-medium mb-1">Jumlah Pembayaran (Total)</label>
+            <input type="number" name="payment_amount" id="payment_amount" class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" step="0.01" min="0" value="{{ old('payment_amount') }}">
+            <p id="dp-info" class="text-sm text-gray-600 mt-1"></p>
+            @error('payment_amount')
+                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+            @enderror
+        </div>
+        <div id="split-payment-fields" class="hidden md:col-span-2">
+            <div class="grid md:grid-cols-2 gap-4">
+                <div>
+                    <label for="cash_amount" class="block font-medium mb-1">Jumlah Cash</label>
+                    <input type="number" name="cash_amount" id="cash_amount" class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" step="0.01" min="0" value="{{ old('cash_amount') }}">
+                    @error('cash_amount')
+                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div>
+                    <label for="transfer_amount" class="block font-medium mb-1">Jumlah Transfer</label>
+                    <input type="number" name="transfer_amount" id="transfer_amount" class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" step="0.01" min="0" value="{{ old('transfer_amount') }}">
+                    @error('transfer_amount')
+                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+            </div>
+        </div>
+        <div id="proof-field" class="mt-4 hidden md:col-span-2">
+            <label for="proof_path" class="block font-medium mb-1">Bukti Transfer (jpg, png, pdf, opsional)</label>
+            <input type="file" name="proof_path" id="proof_path" accept=".jpg,.jpeg,.png,.pdf" class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
+            <p class="text-sm text-gray-600 mt-1">Opsional untuk metode transfer atau split</p>
+            @error('proof_path')
+                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+            @enderror
+        </div>
+        <div>
+            <label for="paid_at" class="block font-medium mb-1">Tanggal Pembayaran</label>
+            <input type="datetime-local" name="paid_at" id="paid_at" value="{{ old('paid_at', now()->format('Y-m-d\TH:i')) }}" class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
+            @error('paid_at')
+                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+            @enderror
+        </div>
+    </div>
 </div>
-                            </div>
-                            <div>
-                                <label for="paid_at" class="block font-medium mb-1">Tanggal Pembayaran</label>
-                                <input type="datetime-local" name="paid_at" id="paid_at" value="{{ old('paid_at', now()->format('Y-m-d\TH:i')) }}" class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
-                                @error('paid_at')
-                                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                                @enderror
-                            </div>
-                        </div>
-                    </div>
 
                     <div class="mb-6">
                         <h2 class="text-lg font-semibold mb-4 text-gray-800">Item Order</h2>
@@ -307,7 +314,7 @@
         }
     });
 
-    let grandTotal = 0; // Variable global untuk grand total
+    let grandTotal = 0;
 
     function updateGrandTotal() {
         const items = document.querySelectorAll('.item-row');
@@ -319,7 +326,7 @@
             const qty = parseInt(item.querySelector('.qty').value) || 0;
             const discount = parseFloat(item.querySelector('.discount').value) || 0;
             const itemSubtotal = price * qty;
-            const itemDiscount = discount * qty; // Diskon dikalikan qty per item
+            const itemDiscount = discount * qty;
             subtotal += itemSubtotal;
             discountTotal += itemDiscount;
         });
@@ -332,13 +339,8 @@
     document.getElementById('payment_method').addEventListener('change', function () {
     const splitFields = document.getElementById('split-payment-fields');
     const proofField = document.getElementById('proof-field');
-
-    // Tampilkan split jika pilih split
     splitFields.classList.toggle('hidden', this.value !== 'split');
-
-    // Tampilkan bukti transfer kalau pilih transfer atau split
-    proofField.classList.toggle('hidden', !(this.value === 'transfer' || this.value === 'split'));
-
+    proofField.classList.toggle('hidden', !(this.value === 'transfer' || this.value === 'split')); // Munculkan proof_field untuk transfer juga
     if (this.value !== 'split') {
         document.getElementById('cash_amount').value = '';
         document.getElementById('transfer_amount').value = '';
@@ -346,25 +348,27 @@
     if (this.value !== 'transfer' && this.value !== 'split') {
         document.getElementById('proof_path').value = '';
     }
-
     updatePaymentAmount();
+    updateProofRequired(this.value); // Tambah ini untuk set required
 });
 
+function updatePaymentAmount() {
+    const method = document.getElementById('payment_method').value;
+    const cash = parseFloat(document.getElementById('cash_amount')?.value || 0);
+    const transfer = parseFloat(document.getElementById('transfer_amount')?.value || 0);
+    const total = method === 'split' ? cash + transfer : parseFloat(document.getElementById('payment_amount').value) || 0;
+    document.getElementById('payment_amount').value = total.toFixed(2);
+    updatePaymentStatus();
+}
+function updateProofRequired(method) {
+    const proofInput = document.getElementById('proof_path');
+    proofInput.required = (method === 'transfer' || method === 'split'); // Set required untuk transfer/split
+}
 
-    function updatePaymentAmount() {
-        const method = document.getElementById('payment_method').value;
-        const cash = parseFloat(document.getElementById('cash_amount')?.value || 0);
-        const transfer = parseFloat(document.getElementById('transfer_amount')?.value || 0);
-        const total = method === 'split' ? cash + transfer : parseFloat(document.getElementById('payment_amount').value) || 0;
-        document.getElementById('payment_amount').value = total.toFixed(2);
-        updatePaymentStatus();
-    }
-
-    // Fungsi baru untuk update status pembayaran otomatis
     function updatePaymentStatus() {
         const paymentAmount = parseFloat(document.getElementById('payment_amount').value) || 0;
         const paymentStatusSelect = document.getElementById('payment_status');
-        if (paymentAmount >= grandTotal) {
+        if (paymentAmount >= grandTotal && grandTotal > 0) {
             paymentStatusSelect.value = 'lunas';
         } else {
             paymentStatusSelect.value = 'dp';
@@ -372,59 +376,69 @@
     }
 
     document.getElementById('payment_amount').addEventListener('input', updatePaymentStatus);
-    document.getElementById('cash_amount').addEventListener('input', updatePaymentAmount);
-    document.getElementById('transfer_amount').addEventListener('input', updatePaymentAmount);
+    document.getElementById('cash_amount')?.addEventListener('input', updatePaymentAmount);
+    document.getElementById('transfer_amount')?.addEventListener('input', updatePaymentAmount);
 
     document.getElementById('soForm').addEventListener('submit', function (e) {
-        const salePriceInputs = document.querySelectorAll('.sale-price');
-        for (let input of salePriceInputs) {
-            if (!input.value || parseFloat(input.value) <= 0) {
-                e.preventDefault();
-                alert('Harga produk tidak boleh kosong atau nol. Silakan pilih produk yang valid.');
-                return;
-            }
+    console.log('Form submitted, validating...');
+    const salePriceInputs = document.querySelectorAll('.sale-price');
+    for (let input of salePriceInputs) {
+        if (!input.value || parseFloat(input.value) <= 0) {
+            e.preventDefault();
+            alert('Harga produk tidak boleh kosong atau nol. Silakan pilih produk yang valid.');
+            console.log('Validation failed: Invalid sale price');
+            return;
         }
+    }
 
-        const paymentMethod = document.getElementById('payment_method').value;
-        const paymentStatus = document.getElementById('payment_status').value;
-        let paymentAmount = 0;
+    const paymentMethod = document.getElementById('payment_method').value;
+    const paymentStatus = document.getElementById('payment_status').value;
+    let paymentAmount = 0;
 
-        if (paymentMethod === 'split') {
-            const cashAmount = parseFloat(document.getElementById('cash_amount').value) || 0;
-            const transferAmount = parseFloat(document.getElementById('transfer_amount').value) || 0;
-            paymentAmount = cashAmount + transferAmount;
-            if (transferAmount > 0 && !document.getElementById('proof_path').files[0]) {
-                e.preventDefault();
-                alert('Bukti pembayaran wajib untuk transfer di metode split.');
-                return;
-            }
-        } else {
-            paymentAmount = parseFloat(document.getElementById('payment_amount').value) || 0;
+    if (paymentMethod === 'split') {
+        const cashAmount = parseFloat(document.getElementById('cash_amount').value) || 0;
+        const transferAmount = parseFloat(document.getElementById('transfer_amount').value) || 0;
+        paymentAmount = cashAmount + transferAmount;
+        if (transferAmount > 0 && !document.getElementById('proof_path').files[0]) {
+            e.preventDefault();
+            alert('Bukti pembayaran wajib untuk transfer di metode split.');
+            console.log('Validation failed: Missing proof for split transfer');
+            return;
         }
-
-        if (paymentAmount > 0) {
-            if (paymentStatus === 'dp' && paymentAmount < grandTotal * 0.5) {
-                e.preventDefault();
-                alert(`Jumlah pembayaran kurang dari DP minimal 50%: Rp ${(grandTotal * 0.5).toLocaleString('id-ID')}`);
-                return;
-            }
-            if (paymentAmount > grandTotal) {
-                e.preventDefault();
-                alert(`Jumlah pembayaran melebihi grand total: Rp ${grandTotal.toLocaleString('id-ID')}`);
-                return;
-            }
-            if (paymentMethod === 'transfer' && !document.getElementById('proof_path').files[0]) {
-                e.preventDefault();
-                alert('Bukti pembayaran wajib untuk metode transfer.');
-                return;
-            }
+    } else if (paymentMethod === 'transfer') {
+        paymentAmount = parseFloat(document.getElementById('payment_amount').value) || 0;
+        if (paymentAmount > 0 && !document.getElementById('proof_path').files[0]) {
+            e.preventDefault();
+            alert('Bukti pembayaran wajib untuk metode transfer.');
+            console.log('Validation failed: Missing proof for transfer');
+            return;
         }
-    });
+    } else {
+        paymentAmount = parseFloat(document.getElementById('payment_amount').value) || 0;
+    }
+
+    if (paymentAmount > 0) {
+        if (paymentStatus === 'dp' && paymentAmount < grandTotal * 0.5) {
+            e.preventDefault();
+            alert(`Jumlah pembayaran kurang dari DP minimal 50%: Rp ${(grandTotal * 0.5).toLocaleString('id-ID')}`);
+            console.log('Validation failed: Payment amount below 50% DP');
+            return;
+        }
+        if (paymentAmount > grandTotal) {
+            e.preventDefault();
+            alert(`Jumlah pembayaran melebihi grand total: Rp ${grandTotal.toLocaleString('id-ID')}`);
+            console.log('Validation failed: Payment amount exceeds grand total');
+            return;
+        }
+    }
+    console.log('Validation passed, submitting form...');
+});
 
     function toggleSidebar() {
         const sidebar = document.getElementById('sidebar');
         sidebar.classList.toggle('-translate-x-full');
     }
+
     function toggleDropdown(button) {
         const dropdownMenu = button.nextElementSibling;
         const chevronIcon = button.querySelector('.bi-chevron-down');
@@ -433,8 +447,192 @@
         chevronIcon.classList.toggle('rotate-180');
     }
 
-    // Inisialisasi grandTotal awal
+    updateGrandTotal();    let itemIndex = {{ count(old('items', [])) }};
+    let grandTotal = 0;
+
+    function updateGrandTotal() {
+        const items = document.querySelectorAll('.item-row');
+        let subtotal = 0;
+        items.forEach(row => {
+            const qty = parseInt(row.querySelector('.qty').value) || 0;
+            const salePrice = parseFloat(row.querySelector('.sale-price').value) || 0;
+            const discount = parseFloat(row.querySelector('.discount').value) || 0;
+            subtotal += (salePrice * qty) - (discount * qty);
+        });
+        grandTotal = subtotal;
+        document.getElementById('grand_total').value = grandTotal.toFixed(2);
+        updatePaymentStatus();
+    }
+
+    function updatePaymentAmount() {
+        const paymentMethod = document.getElementById('payment_method').value;
+        const paymentAmountInput = document.getElementById('payment_amount');
+        let paymentAmount = parseFloat(paymentAmountInput.value) || 0;
+        if (paymentMethod === 'split') {
+            const cashAmount = parseFloat(document.getElementById('cash_amount').value) || 0;
+            const transferAmount = parseFloat(document.getElementById('transfer_amount').value) || 0;
+            paymentAmount = cashAmount + transferAmount;
+            paymentAmountInput.value = paymentAmount.toFixed(2);
+        }
+        updatePaymentStatus();
+    }
+
+    function updatePaymentStatus() {
+        const paymentAmount = parseFloat(document.getElementById('payment_amount').value) || 0;
+        const paymentStatus = document.getElementById('payment_status').value;
+        const dpInfo = document.getElementById('dp-info');
+        if (paymentStatus === 'dp' && paymentAmount > 0) {
+            const minDp = grandTotal * 0.5;
+            dpInfo.textContent = `Minimal DP 50%: Rp ${minDp.toLocaleString('id-ID')}`;
+        } else {
+            dpInfo.textContent = '';
+        }
+    }
+
+    function updateProofRequired(method) {
+        const proofField = document.getElementById('proof-field');
+        proofField.classList.toggle('hidden', !(method === 'transfer' || method === 'split'));
+    }
+
+    document.getElementById('add-item').addEventListener('click', function () {
+        const itemContainer = document.getElementById('items-container');
+        const newItem = document.createElement('div');
+        newItem.classList.add('item-row', 'grid', 'md:grid-cols-5', 'gap-4', 'mb-4');
+        newItem.innerHTML = `
+            <div>
+                <label class="block font-medium mb-1">Produk</label>
+                <select name="items[${itemIndex}][product_id]" class="product-select border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
+                    <option value="">Pilih Produk</option>
+                    @foreach ($products as $product)
+                        <option value="{{ $product->id }}" data-price="{{ $product->price }}" data-sku="{{ $product->sku }}">{{ $product->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label class="block font-medium mb-1">Nama Produk</label>
+                <input type="text" name="items[${itemIndex}][product_name]" class="product-name border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" required>
+            </div>
+            <div>
+                <label class="block font-medium mb-1">SKU</label>
+                <input type="text" name="items[${itemIndex}][sku]" class="sku border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
+            </div>
+            <div>
+                <label class="block font-medium mb-1">Harga</label>
+                <input type="number" name="items[${itemIndex}][sale_price]" class="sale-price border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" step="0.01" min="0" required>
+            </div>
+            <div>
+                <label class="block font-medium mb-1">Qty</label>
+                <input type="number" name="items[${itemIndex}][qty]" class="qty border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" min="1" required>
+            </div>
+            <div>
+                <label class="block font-medium mb-1">Diskon (opsional)</label>
+                <input type="number" name="items[${itemIndex}][discount]" class="discount border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" step="0.01" min="0">
+            </div>
+            <div>
+                <button type="button" class="remove-item text-red-500 hover:text-red-700 mt-6">Hapus</button>
+            </div>
+        `;
+        itemContainer.appendChild(newItem);
+        itemIndex++;
+        updateGrandTotal();
+    });
+
+    document.getElementById('items-container').addEventListener('click', function (e) {
+        if (e.target.classList.contains('remove-item')) {
+            e.target.closest('.item-row').remove();
+            updateGrandTotal();
+        }
+    });
+
+    document.getElementById('items-container').addEventListener('change', function (e) {
+        if (e.target.classList.contains('product-select')) {
+            const row = e.target.closest('.item-row');
+            const selectedOption = e.target.options[e.target.selectedIndex];
+            const price = selectedOption.getAttribute('data-price') || 0;
+            const sku = selectedOption.getAttribute('data-sku') || '';
+            const productName = selectedOption.text || '';
+            row.querySelector('.sale-price').value = parseFloat(price).toFixed(2);
+            row.querySelector('.sku').value = sku;
+            row.querySelector('.product-name').value = productName;
+            updateGrandTotal();
+        }
+        if (e.target.classList.contains('qty') || e.target.classList.contains('sale-price') || e.target.classList.contains('discount')) {
+            updateGrandTotal();
+        }
+    });
+
+    document.getElementById('payment_method').addEventListener('change', function () {
+        const splitFields = document.getElementById('split-payment-fields');
+        const proofField = document.getElementById('proof-field');
+        splitFields.classList.toggle('hidden', this.value !== 'split');
+        proofField.classList.toggle('hidden', !(this.value === 'transfer' || this.value === 'split'));
+        if (this.value !== 'split') {
+            document.getElementById('cash_amount').value = '';
+            document.getElementById('transfer_amount').value = '';
+        }
+        if (this.value !== 'transfer' && this.value !== 'split') {
+            document.getElementById('proof_path').value = '';
+        }
+        updatePaymentAmount();
+        updateProofRequired(this.value);
+    });
+
+    document.getElementById('payment_amount').addEventListener('input', updatePaymentStatus);
+    document.getElementById('payment_status').addEventListener('change', updatePaymentStatus);
+    document.getElementById('cash_amount').addEventListener('input', updatePaymentAmount);
+    document.getElementById('transfer_amount').addEventListener('input', updatePaymentAmount);
+
+    document.getElementById('soForm').addEventListener('submit', function (e) {
+        console.log('Form submitted, validating...');
+        const salePriceInputs = document.querySelectorAll('.sale-price');
+        for (let input of salePriceInputs) {
+            if (!input.value || parseFloat(input.value) <= 0) {
+                e.preventDefault();
+                alert('Harga produk tidak boleh kosong atau nol. Silakan pilih produk yang valid.');
+                console.log('Validation failed: Invalid sale price');
+                return;
+            }
+        }
+
+        const paymentMethod = document.getElementById('payment_method').value;
+        const paymentStatus = document.getElementById('payment_status').value;
+        const paymentAmountInput = document.getElementById('payment_amount');
+        let paymentAmount = parseFloat(paymentAmountInput ? paymentAmountInput.value : 0) || 0;
+
+        console.log('Payment amount:', paymentAmount, 'Method:', paymentMethod);
+
+        if (paymentAmount > 0) {
+            if (paymentMethod === 'split') {
+                const cashAmount = parseFloat(document.getElementById('cash_amount').value) || 0;
+                const transferAmount = parseFloat(document.getElementById('transfer_amount').value) || 0;
+                if (paymentAmount != cashAmount + transferAmount) {
+                    e.preventDefault();
+                    alert('Jumlah total harus sama dengan cash + transfer.');
+                    console.log('Validation failed: Split amount mismatch');
+                    return;
+                }
+            }
+
+            if (paymentStatus === 'dp' && paymentAmount < grandTotal * 0.5) {
+                e.preventDefault();
+                alert(`Jumlah pembayaran kurang dari DP minimal 50%: Rp ${(grandTotal * 0.5).toLocaleString('id-ID')}`);
+                console.log('Validation failed: Payment amount below 50% DP');
+                return;
+            }
+            if (paymentAmount > grandTotal) {
+                e.preventDefault();
+                alert(`Jumlah pembayaran melebihi grand total: Rp ${grandTotal.toLocaleString('id-ID')}`);
+                console.log('Validation failed: Payment amount exceeds grand total');
+                return;
+            }
+        } else {
+            console.log('No payment amount, skipping payment validation');
+        }
+        console.log('Validation passed, submitting form...');
+    });
+
     updateGrandTotal();
+    document.getElementById('payment_method').dispatchEvent(new Event('change'));
 </script>
 </body>
 </html>

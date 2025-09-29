@@ -17,9 +17,19 @@
     <div class="flex-1 lg:w-5/6">
         <x-navbar-top-owner />
         <div class="p-4 lg:p-8">
-            @php
-                $activeShift = \App\Models\Shift::where('user_id', \Illuminate\Support\Facades\Auth::id())->whereNull('end_time')->first();
-            @endphp
+            <!-- Debug Info -->
+            <div class="bg-gray-100 p-4 rounded-xl mb-6">
+                <h4 class="font-semibold text-gray-700">Debug Info</h4>
+                <p class="text-sm text-gray-600">
+                    Active Shift: {{ $activeShift ? 'Yes (ID: ' . $activeShift->id . ')' : 'No' }}<br>
+                    User Role: {{ Auth::user()->hasRole('owner') ? 'Owner' : 'Other' }}<br>
+                    SO Status: {{ $salesOrder->status }}<br>
+                    Approved By: {{ $salesOrder->approved_by ? $salesOrder->approver->name : 'Not Approved' }}<br>
+                    Paid Total: Rp {{ number_format($salesOrder->paid_total, 0, ',', '.') }}<br>
+                    Grand Total: Rp {{ number_format($salesOrder->grand_total, 0, ',', '.') }}<br>
+                    Editable: {{ $salesOrder->isEditable() ? 'Yes' : 'No' }}
+                </p>
+            </div>
 
             <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
                 <div class="flex justify-between items-center">
@@ -32,13 +42,13 @@
                            class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded shadow">
                             <i class="bi bi-arrow-left"></i> Kembali
                         </a>
-                        @if($salesOrder->isEditable() && $activeShift)
+                        @if($salesOrder->isEditable() && $activeShift && Auth::user()->hasRole('owner'))
                             <a href="{{ route('owner.sales.edit', $salesOrder) }}"
                                class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded shadow">
                                 <i class="bi bi-pencil"></i> Edit
                             </a>
                         @endif
-                        @if($salesOrder->status === 'pending' && $salesOrder->approved_by === null && $activeShift)
+                        @if($salesOrder->status === 'pending' && $salesOrder->approved_by === null && $activeShift && Auth::user()->hasRole('owner'))
                             <form action="{{ route('owner.sales.approve', $salesOrder) }}" method="POST">
                                 @csrf
                                 <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow">
@@ -46,7 +56,7 @@
                                 </button>
                             </form>
                         @endif
-                        @if($salesOrder->status === 'pending' && $salesOrder->approved_by !== null && $salesOrder->paid_total >= $salesOrder->grand_total * 0.5 && $activeShift)
+                        @if($salesOrder->status === 'pending' && $salesOrder->approved_by !== null && $salesOrder->paid_total >= $salesOrder->grand_total * 0.5 && $activeShift && Auth::user()->hasRole('owner'))
                             <form action="{{ route('owner.sales.startProcess', $salesOrder) }}" method="POST">
                                 @csrf
                                 <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow">
@@ -54,7 +64,7 @@
                                 </button>
                             </form>
                         @endif
-                        @if($salesOrder->order_type === 'jahit_sendiri' && $salesOrder->status === 'request_kain' && $activeShift)
+                        @if($salesOrder->order_type === 'jahit_sendiri' && $salesOrder->status === 'request_kain' && $activeShift && Auth::user()->hasRole('owner'))
                             <form action="{{ route('owner.sales.processJahit', $salesOrder) }}" method="POST">
                                 @csrf
                                 <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow">
@@ -62,7 +72,7 @@
                                 </button>
                             </form>
                         @endif
-                        @if($salesOrder->order_type === 'jahit_sendiri' && $salesOrder->status === 'proses_jahit' && $activeShift)
+                        @if($salesOrder->order_type === 'jahit_sendiri' && $salesOrder->status === 'proses_jahit' && $activeShift && Auth::user()->hasRole('owner'))
                             <form action="{{ route('owner.sales.markAsJadi', $salesOrder) }}" method="POST">
                                 @csrf
                                 <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow">
@@ -70,7 +80,7 @@
                                 </button>
                             </form>
                         @endif
-                        @if(($salesOrder->order_type === 'jahit_sendiri' && $salesOrder->status === 'jadi') || ($salesOrder->order_type === 'beli_jadi' && $salesOrder->status === 'di proses') && $activeShift)
+                        @if(($salesOrder->order_type === 'jahit_sendiri' && $salesOrder->status === 'jadi') || ($salesOrder->order_type === 'beli_jadi' && $salesOrder->status === 'di proses') && $activeShift && Auth::user()->hasRole('owner'))
                             <form action="{{ route('owner.sales.markAsDiterimaToko', $salesOrder) }}" method="POST">
                                 @csrf
                                 <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow">
@@ -78,7 +88,7 @@
                                 </button>
                             </form>
                         @endif
-                        @if($salesOrder->status === 'diterima_toko' && $activeShift)
+                        @if($salesOrder->status === 'diterima_toko' && $salesOrder->remaining_amount == 0 && $activeShift && Auth::user()->hasRole('owner'))
                             <form action="{{ route('owner.sales.complete', $salesOrder) }}" method="POST">
                                 @csrf
                                 <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow">
@@ -185,9 +195,9 @@
                         <div class="flex justify-between"><span class="text-gray-600">Tipe Order:</span><span class="capitalize">{{ str_replace('_', ' ', $salesOrder->order_type) }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-600">Tanggal Order:</span><span>{{ \Carbon\Carbon::parse($salesOrder->order_date)->format('d/m/Y') }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-600">Customer:</span><span>{{ $salesOrder->customer->name ?? 'Guest' }}</span></div>
-                        <div class="flex justify-between"><span class="text-gray-600">Dibuat Oleh:</span><span>{{ $salesOrder->creator->name }}</span></div>
+                        <div class="flex justify-between"><span class="text-gray-600">Dibuat Oleh:</span><span>{{ $salesOrder->creator->name ?? 'System' }}</span></div>
                         @if($salesOrder->approved_by)
-                            <div class="flex justify-between"><span class="text-gray-600">Disetujui Oleh:</span><span>{{ $salesOrder->approver->name }}</span></div>
+                            <div class="flex justify-between"><span class="text-gray-600">Disetujui Oleh:</span><span>{{ $salesOrder->approver->name ?? 'System' }}</span></div>
                         @endif
                         @if($salesOrder->approved_at)
                             <div class="flex justify-between"><span class="text-gray-600">Tanggal Approve:</span><span>{{ \Carbon\Carbon::parse($salesOrder->approved_at)->format('d/m/Y H:i') }}</span></div>
@@ -212,7 +222,7 @@
                 </div>
             </div>
 
-            @if($salesOrder->status !== 'selesai' && $activeShift)
+            @if($salesOrder->status !== 'selesai' && $activeShift && Auth::user()->hasRole('owner'))
                 <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
                     <h2 class="text-lg font-semibold mb-4 text-gray-800">Tambah Pembayaran</h2>
                     <form action="{{ route('owner.sales.addPayment', $salesOrder) }}" method="POST" enctype="multipart/form-data" id="paymentForm">
@@ -297,8 +307,7 @@
                 </div>
             @endif
 
-<!-- resources/views/owner/sales/show.blade.php -->
-<div class="bg-white p-6 rounded-xl shadow-lg mb-6">
+            <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
     <h2 class="text-lg font-semibold mb-4 text-gray-800">Riwayat Pembayaran</h2>
     <div class="overflow-x-auto">
         <table class="w-full table-auto border-collapse">
@@ -307,7 +316,6 @@
                     <th class="px-4 py-2 border">Tanggal</th>
                     <th class="px-4 py-2 border">Metode</th>
                     <th class="px-4 py-2 border text-right">Jumlah</th>
-                    <!-- TAMBAHKAN KOLOM BARU INI -->
                     <th class="px-4 py-2 border">Operator</th>
                     <th class="px-4 py-2 border">Keterangan</th>
                     <th class="px-4 py-2 border text-center">Aksi</th>
@@ -340,7 +348,6 @@
                                 Total: Rp {{ number_format($cumulativePayment, 0, ',', '.') }}
                             </small>
                         </td>
-                        <!-- TAMBAHKAN DATA OPERATOR/BUAT PEMBAYARAN DI KOLOM BARU INI -->
                         <td class="px-4 py-2 border">
                             {{ $payment->creator->name ?? 'System' }}
                             <br>
@@ -355,11 +362,23 @@
                             @endif
                             @if($payment->proof_path)
                                 <br><a href="{{ Storage::url($payment->proof_path) }}" target="_blank" class="text-blue-500 text-xs">Lihat Bukti</a>
+                            @elseif(in_array($payment->method, ['transfer', 'split']) && $activeShift && Auth::user()->hasRole('owner'))
+                                <br>
+                                <form action="{{ route('owner.sales.uploadProof', ['salesOrder' => $salesOrder, 'payment' => $payment]) }}" method="POST" enctype="multipart/form-data">
+                                    @csrf
+                                    <input type="file" name="proof_path" accept=".jpg,.jpeg,.png,.pdf" class="border rounded px-3 py-2 w-full mt-2">
+                                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs mt-2">
+                                        Upload Bukti
+                                    </button>
+                                    @error('proof_path')
+                                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                    @enderror
+                                </form>
                             @endif
                         </td>
                         <td class="px-4 py-2 border text-center">
                             <div class="flex justify-center gap-2">
-                                <a href="{{ route('owner.sales.printNotaDirect', $payment) }}" class="text-green-600 hover:underline" title="Print Langsung">
+                                <a href="{{ route('owner.sales.printNotaDirect', ['payment' => $payment->id]) }}" class="text-green-600 hover:underline" title="Print Langsung">
                                     <i class="bi bi-printer"></i>
                                 </a>
                                 <a href="{{ route('owner.sales.printNota', $payment) }}" class="text-blue-600 hover:underline" title="Download PDF">
@@ -370,7 +389,6 @@
                     </tr>
                 @empty
                     <tr>
-                        <!-- Tambahkan colspan menjadi 6 karena ada tambahan 1 kolom -->
                         <td colspan="6" class="text-center text-gray-500 px-4 py-4">Belum ada pembayaran</td>
                     </tr>
                 @endforelse
@@ -378,33 +396,29 @@
         </table>
     </div>
 
-    <!-- Tampilkan Summary Pembayaran -->
     @if($salesOrder->payments->isNotEmpty())
-    <div class="mt-4 p-4 bg-gray-50 rounded-lg">
-        <div class="grid grid-cols-2 gap-2 text-sm">
-            <div class="font-semibold">Total yang harus dibayar:</div>
-            <div class="text-right">Rp {{ number_format($salesOrder->grand_total, 0, ',', '.') }}</div>
-
-            <div class="font-semibold">Total sudah dibayar:</div>
-            <div class="text-right text-green-600 font-medium">Rp {{ number_format($salesOrder->paid_total, 0, ',', '.') }}</div>
-
-            <div class="font-semibold">Sisa pembayaran:</div>
-            <div class="text-right @if($salesOrder->remaining_amount > 0) text-red-600 @else text-green-600 @endif font-medium">
-                Rp {{ number_format($salesOrder->remaining_amount, 0, ',', '.') }}
-            </div>
-
-            <div class="font-semibold">Status Pembayaran:</div>
-            <div class="text-right">
-                <span class="px-2 py-1 rounded-full text-xs font-medium @if($salesOrder->payment_status === 'lunas') bg-green-100 text-green-600 @else bg-yellow-100 text-yellow-600 @endif">
-                    {{ ucfirst($salesOrder->payment_status) }}
-                </span>
+        <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+            <div class="grid grid-cols-2 gap-2 text-sm">
+                <div class="font-semibold">Total yang harus dibayar:</div>
+                <div class="text-right">Rp {{ number_format($salesOrder->grand_total, 0, ',', '.') }}</div>
+                <div class="font-semibold">Total sudah dibayar:</div>
+                <div class="text-right text-green-600 font-medium">Rp {{ number_format($salesOrder->paid_total, 0, ',', '.') }}</div>
+                <div class="font-semibold">Sisa pembayaran:</div>
+                <div class="text-right @if($salesOrder->remaining_amount > 0) text-red-600 @else text-green-600 @endif font-medium">
+                    Rp {{ number_format($salesOrder->remaining_amount, 0, ',', '.') }}
+                </div>
+                <div class="font-semibold">Status Pembayaran:</div>
+                <div class="text-right">
+                    <span class="px-2 py-1 rounded-full text-xs font-medium @if($salesOrder->payment_status === 'lunas') bg-green-100 text-green-600 @else bg-yellow-100 text-yellow-600 @endif">
+                        {{ ucfirst($salesOrder->payment_status) }}
+                    </span>
+                </div>
             </div>
         </div>
-    </div>
     @endif
 </div>
 
-            <div class="bg-white p-6 rounded-xl shadow-lg">
+            <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
                 <h2 class="text-lg font-semibold mb-4 text-gray-800">Item Order</h2>
                 <div class="overflow-x-auto">
                     <table class="w-full table-auto border-collapse">
@@ -454,6 +468,10 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div><span class="text-gray-600">Dibuat pada:</span><span>{{ $salesOrder->created_at->format('d/m/Y H:i:s') }}</span></div>
                     <div><span class="text-gray-600">Terakhir diupdate:</span><span>{{ $salesOrder->updated_at->format('d/m/Y H:i:s') }}</span></div>
+                    <div><span class="text-gray-600">Dibuat Oleh:</span><span>{{ $salesOrder->creator->name ?? 'System' }}</span></div>
+                    @if($salesOrder->approved_by)
+                        <div><span class="text-gray-600">Disetujui Oleh:</span><span>{{ $salesOrder->approver->name ?? 'System' }}</span></div>
+                    @endif
                     @if($salesOrder->approved_at)
                         <div><span class="text-gray-600">Disetujui pada:</span><span>{{ \Carbon\Carbon::parse($salesOrder->approved_at)->format('d/m/Y H:i') }}</span></div>
                     @endif
@@ -461,14 +479,43 @@
                         <div><span class="text-gray-600">Diselesaikan pada:</span><span>{{ \Carbon\Carbon::parse($salesOrder->completed_at)->format('d/m/Y H:i') }}</span></div>
                     @endif
                 </div>
+                <div class="mt-6">
+                    <h2 class="text-lg font-semibold mb-4 text-gray-800">Riwayat Aktivitas</h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full table-auto border-collapse">
+                            <thead>
+                                <tr class="bg-gray-50 text-left text-sm font-semibold text-gray-600">
+                                    <th class="px-4 py-2 border">Waktu</th>
+                                    <th class="px-4 py-2 border">Aksi</th>
+                                    <th class="px-4 py-2 border">Deskripsi</th>
+                                    <th class="px-4 py-2 border">Oleh</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($salesOrder->logs as $log)
+                                    <tr class="border-b hover:bg-gray-50">
+                                        <td class="px-4 py-2 border">{{ \Carbon\Carbon::parse($log->created_at)->format('d/m/Y H:i') }}</td>
+                                        <td class="px-4 py-2 border">{{ ucfirst(str_replace('_', ' ', $log->action)) }}</td>
+                                        <td class="px-4 py-2 border">{{ $log->description }}</td>
+                                        <td class="px-4 py-2 border">{{ $log->user->name ?? 'System' }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="4" class="text-center text-gray-500 px-4 py-4">Belum ada log aktivitas</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    function toggleSidebar() { 
-        document.getElementById('sidebar').classList.toggle('-translate-x-full'); 
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('-translate-x-full');
     }
     function toggleDropdown(button) {
         const dropdown = button.nextElementSibling;
@@ -483,11 +530,9 @@
         const proofInput = document.getElementById('proof_path');
         const form = document.getElementById('paymentForm');
 
-        // Initial setup for split fields
         const splitFields = document.getElementById('split-payment-fields');
         splitFields.classList.toggle('hidden', paymentMethod !== 'split');
 
-        // Change event for payment_method
         document.getElementById('payment_method').addEventListener('change', function () {
             splitFields.classList.toggle('hidden', this.value !== 'split');
             if (this.value !== 'split') {
@@ -508,18 +553,13 @@
         }
 
         function updateProofRequired(method) {
-            if (method === 'transfer' || method === 'split') {
-                proofInput.required = true;
-            } else {
-                proofInput.required = false;
-            }
+            proofInput.required = (method === 'transfer' || method === 'split');
         }
 
-        // Initial proof required
         updateProofRequired(paymentMethod);
 
-        document.getElementById('cash_amount').addEventListener('input', updatePaymentAmount);
-        document.getElementById('transfer_amount').addEventListener('input', updatePaymentAmount);
+        document.getElementById('cash_amount')?.addEventListener('input', updatePaymentAmount);
+        document.getElementById('transfer_amount')?.addEventListener('input', updatePaymentAmount);
 
         form.addEventListener('submit', function (e) {
             const method = document.getElementById('payment_method').value;
