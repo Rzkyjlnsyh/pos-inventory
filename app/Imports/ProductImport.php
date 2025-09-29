@@ -58,7 +58,7 @@ class ProductImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnF
             'category_name' => ['nullable', 'string', 'max:255'],
             'cost_price' => ['required', 'numeric', 'min:0'],
             'price' => ['required', 'numeric', 'min:0'],
-            'stock_qty' => ['required', 'integer', 'min:0'],
+            'stock_qty' => ['required', 'integer'], // ❌ hapus min:0
             'is_active' => ['required', 'in:0,1'],
         ];
     }
