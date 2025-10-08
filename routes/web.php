@@ -94,6 +94,10 @@ Route::middleware(['auth', 'owner'])->prefix('owner')->name('owner.')->group(fun
     Route::post('purchases/{purchase}/receive', [\App\Http\Controllers\Owner\PurchaseOrderController::class, 'receive'])->name('purchases.receive');
     Route::patch('purchases/{purchase}/cancel', [\App\Http\Controllers\Owner\PurchaseOrderController::class, 'cancel'])->name('purchases.cancel');
     Route::post('purchases/{purchase}/update-status', [\App\Http\Controllers\Owner\PurchaseOrderController::class, 'updateWorkflowStatus'])->name('purchases.update-status');
+    Route::post('purchases/{purchase}/update-workflow-status', [\App\Http\Controllers\Owner\PurchaseOrderController::class, 'updateWorkflowStatus'])
+    ->name('purchases.update-workflow-status');
+    Route::post('purchases/{purchase}/return', [\App\Http\Controllers\Owner\PurchaseOrderController::class, 'return'])
+    ->name('purchases.return');
 
 // Sales
 Route::middleware(['check.shift'])->group(function () {
@@ -146,6 +150,9 @@ Route::middleware(['check.shift'])->group(function () {
     Route::get('/shift/{shift}', [App\Http\Controllers\Owner\ShiftController::class, 'show'])->name('shift.show');
     Route::get('/shift/{shift}/export-detail', [App\Http\Controllers\Owner\ShiftController::class, 'exportDetail'])->name('shift.export-detail');
     Route::get('/shift/{shift}/export-detail-pdf', [App\Http\Controllers\Owner\ShiftController::class, 'exportDetailPdf'])->name('shift.export-detail-pdf');
+    Route::get('/shift/{shift}/download-summary', [App\Http\Controllers\Owner\ShiftController::class, 'downloadSummary'])->name('shift.download-summary');
+    Route::get('/shift/{shift}/print-preview', [App\Http\Controllers\Owner\ShiftController::class, 'printPreview'])->name('shift.print-preview');
+    Route::get('/shift/{shift}/print-summary', [App\Http\Controllers\Owner\ShiftController::class, 'printSummary'])->name('shift.print-summary');
             Route::post('shift/income', [ShiftController::class, 'income'])->name('shift.income');
 
     // Notifications
@@ -290,8 +297,17 @@ Route::middleware(['auth', 'kepala_toko'])->prefix('kepala-toko')->name('kepala-
         Route::post('/', [App\Http\Controllers\KepalaToko\PurchaseOrderController::class, 'store'])->name('store');
         Route::get('{purchase}', [App\Http\Controllers\KepalaToko\PurchaseOrderController::class, 'show'])->name('show');
         Route::post('{purchase}/submit', [App\Http\Controllers\KepalaToko\PurchaseOrderController::class, 'submit'])->name('submit');
+        Route::post('{purchase}/approve', [App\Http\Controllers\KepalaToko\PurchaseOrderController::class, 'approve'])->name('approve');
         Route::post('{purchase}/update-status', [App\Http\Controllers\KepalaToko\PurchaseOrderController::class, 'updateWorkflowStatus'])->name('update-status');
         Route::patch('{purchase}/cancel', [App\Http\Controllers\KepalaToko\PurchaseOrderController::class, 'cancel'])->name('cancel');
+    });
+    Route::prefix('purchase-returns')->name('purchase-returns.')->group(function () {
+        Route::get('/', [App\Http\Controllers\KepalaToko\PurchaseReturnController::class, 'index'])->name('index');
+        Route::get('create/{purchase}', [App\Http\Controllers\KepalaToko\PurchaseReturnController::class, 'create'])->name('create');
+        Route::post('store/{purchase}', [App\Http\Controllers\KepalaToko\PurchaseReturnController::class, 'store'])->name('store');
+        Route::get('{purchaseReturn}', [App\Http\Controllers\KepalaToko\PurchaseReturnController::class, 'show'])->name('show');
+        Route::post('{purchaseReturn}/confirm', [App\Http\Controllers\KepalaToko\PurchaseReturnController::class, 'confirm'])->name('confirm');
+        Route::post('{purchaseReturn}/cancel', [App\Http\Controllers\KepalaToko\PurchaseReturnController::class, 'cancel'])->name('cancel');
     });
     Route::prefix('shift')->name('shift.')->group(function () {
         Route::get('/dashboard', [\App\Http\Controllers\KepalaToko\ShiftController::class, 'dashboard'])->name('dashboard');
@@ -374,6 +390,14 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         Route::post('{purchase}/update-status', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'updateWorkflowStatus'])->name('update-status');
         Route::patch('{purchase}/cancel', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'cancel'])->name('cancel');
     });
+    Route::prefix('purchase-returns')->name('purchase-returns.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Admin\PurchaseReturnController::class, 'index'])->name('index');
+        Route::get('create/{purchase}', [App\Http\Controllers\Admin\PurchaseReturnController::class, 'create'])->name('create');
+        Route::post('store/{purchase}', [App\Http\Controllers\Admin\PurchaseReturnController::class, 'store'])->name('store');
+        Route::get('{purchaseReturn}', [App\Http\Controllers\Admin\PurchaseReturnController::class, 'show'])->name('show');
+        Route::post('{purchaseReturn}/cancel', [App\Http\Controllers\Admin\PurchaseReturnController::class, 'cancel'])->name('cancel');
+        // TIDAK ADA confirm route untuk admin
+    });
         // Shift routes
         Route::get('shift/dashboard', [App\Http\Controllers\Admin\ShiftController::class, 'dashboard'])->name('shift.dashboard');
         Route::post('shift/start', [App\Http\Controllers\Admin\ShiftController::class, 'start'])->name('shift.start');
@@ -382,6 +406,20 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         Route::get('/shift/history', [App\Http\Controllers\Admin\ShiftController::class, 'history'])->name('shift.history');
         Route::post('shift/income', [ShiftController::class, 'income'])->name('shift.income'); // <-- TAMBAH INI
 
+        // Sales
+
+    Route::resource('sales', SalesOrderController::class)
+        ->parameters(['sales' => 'salesOrder']);
+    Route::post('/sales/{salesOrder}/approve', [SalesOrderController::class, 'approve'])->name('sales.approve');
+    Route::post('/sales/{salesOrder}/addPayment', [SalesOrderController::class, 'addPayment'])->name('sales.addPayment');
+    Route::post('/sales/{salesOrder}/startProcess', [SalesOrderController::class, 'startProcess'])->name('sales.startProcess');
+    Route::post('/sales/{salesOrder}/processJahit', [SalesOrderController::class, 'processJahit'])->name('sales.processJahit');
+    Route::post('/sales/{salesOrder}/markAsJadi', [SalesOrderController::class, 'markAsJadi'])->name('sales.markAsJadi');
+    Route::post('/sales/{salesOrder}/markAsDiterimaToko', [SalesOrderController::class, 'markAsDiterimaToko'])->name('sales.markAsDiterimaToko');
+    Route::post('/sales/{salesOrder}/complete', [SalesOrderController::class, 'complete'])->name('sales.complete');
+    Route::get('/payments/{payment}/nota', [SalesOrderController::class, 'printNota'])->name('sales.printNota');
+    Route::get('/payments/{payment}/nota-direct', [SalesOrderController::class, 'printNotaDirect'])->name('sales.printNotaDirect');
+    Route::post('/sales/{salesOrder}/payment/{payment}/upload-proof', [SalesOrderController::class, 'uploadProof'])->name('sales.uploadProof');
 });
 
 // Editor routes

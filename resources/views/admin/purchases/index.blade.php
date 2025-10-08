@@ -191,7 +191,7 @@
         <!-- Workflow Status: Printing, Jahit, Selesai untuk Admin -->
         @if(count($availableStatuses) > 0 && !in_array($p->status, ['draft', 'pending', 'approved']))
             @foreach($availableStatuses as $nextStatus)
-                @if(in_array($nextStatus, ['printing', 'jahit', 'selesai']) && in_array(auth()->user()->role, ['admin', 'owner']))
+                @if(in_array($nextStatus, ['printing', 'jahit', 'selesai']) && in_array(auth()->user()->usertype, ['admin', 'owner']))
                     <form method="POST" action="{{ route('admin.purchases.update-status', $p) }}" class="inline">
                         @csrf
                         <input type="hidden" name="new_status" value="{{ $nextStatus }}">

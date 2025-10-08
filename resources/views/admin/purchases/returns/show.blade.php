@@ -9,16 +9,16 @@
 </head>
 <body class="bg-gray-100">
     <div class="flex">
-        <x-navbar-owner></x-navbar-owner>
+        <x-navbar-admin></x-navbar-admin>
 
         <div class="flex-1 lg:w-5/6">
-            <x-navbar-top-owner></x-navbar-top-owner>
+            <x-navbar-top-admin></x-navbar-top-admin>
 
             <div class="p-6">
                 <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
                     <div class="flex items-center justify-between mb-6">
                         <h1 class="text-xl font-semibold text-gray-700">Detail Retur Pembelian</h1>
-                        <a href="{{ route('owner.purchase-returns.index') }}" class="text-gray-500 hover:text-gray-700">
+                        <a href="{{ route('admin.purchase-returns.index') }}" class="text-gray-500 hover:text-gray-700">
                             <i class="bi bi-arrow-left"></i> Kembali ke Daftar
                         </a>
                     </div>
@@ -128,22 +128,28 @@
                     </div>
 
                     <!-- Actions -->
-                    @if($purchaseReturn->status === 'pending')
-                    <div class="flex space-x-3">
-                        <form action="{{ route('owner.purchase-returns.confirm', $purchaseReturn) }}" method="POST">
-                            @csrf
-                            <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
-                                Konfirmasi Retur
-                            </button>
-                        </form>
-                        <form action="{{ route('owner.purchase-returns.cancel', $purchaseReturn) }}" method="POST">
-                            @csrf
-                            <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
-                                Batalkan Retur
-                            </button>
-                        </form>
-                    </div>
-                    @endif
+<!-- Actions -->
+@if($purchaseReturn->status === 'pending')
+<div class="flex space-x-3">
+    {{-- HAPUS TOMBOL CONFIRM UNTUK ADMIN --}}
+    {{--
+    <form action="{{ route('admin.purchase-returns.confirm', $purchaseReturn) }}" method="POST">
+        @csrf
+        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
+            Konfirmasi Retur
+        </button>
+    </form>
+    --}}
+    
+    {{-- TINGGALKAN HANYA BATAL UNTUK ADMIN --}}
+    <form action="{{ route('admin.purchase-returns.cancel', $purchaseReturn) }}" method="POST">
+        @csrf
+        <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
+            Batalkan Retur
+        </button>
+    </form>
+</div>
+@endif
                 </div>
             </div>
         </div>

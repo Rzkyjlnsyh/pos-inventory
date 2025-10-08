@@ -165,7 +165,7 @@
                 async search(idx, q) {
                     if (!q || q.length < 2) { this.items[idx].suggestions = []; return; }
                     try {
-                        const resp = await fetch(`/owner/catalog/products/search?q=${encodeURIComponent(q)}`);
+                        const resp = await fetch(`/admin/catalog/products/search?q=${encodeURIComponent(q)}`);
                         const data = await resp.json();
                         this.items[idx].suggestions = data;
                     } catch (e) { this.items[idx].suggestions = []; }

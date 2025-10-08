@@ -77,7 +77,9 @@
                                 <div class="text-right">
                                     <div class="text-sm text-gray-500">Status</div>
                                     <span class="px-3 py-1 rounded text-sm font-medium
-                                    @if($purchase->status === 'draft') bg-gray-100 text-gray-800
+                                    @if($purchase->status === 'partially_returned') bg-orange-100 text-orange-800
+                                    @elseif($purchase->status === 'returned') bg-red-100 text-red-800
+                                    @elseif($purchase->status === 'draft') bg-gray-100 text-gray-800
                                     @elseif($purchase->status === 'pending') bg-yellow-100 text-yellow-800
                                     @elseif($purchase->status === 'approved') bg-blue-100 text-blue-800
                                     @elseif($purchase->status === 'payment') bg-purple-100 text-purple-800
@@ -130,38 +132,112 @@
                                     </div>
                                 </div>
                             </div>
+                            <!-- 🎯 PASTE SUMMARY RETURN STATISTICS DI SINI -->
+@if(in_array($purchase->status, ['partially_returned', 'returned']))
+<div class="bg-{{ $purchase->status === 'returned' ? 'red' : 'orange' }}-50 p-4 rounded-lg border border-{{ $purchase->status === 'returned' ? 'red' : 'orange' }}-200 mt-4">
+    <h3 class="font-semibold text-{{ $purchase->status === 'returned' ? 'red' : 'orange' }}-800 mb-2">
+        <i class="bi bi-arrow-return-left mr-2"></i>
+        Ringkasan Return
+    </h3>
+    <div class="grid grid-cols-2 gap-4 text-sm">
+        <div>
+            <span class="text-gray-600">Total Items:</span>
+            <span class="font-semibold">{{ $purchase->items->count() }}</span>
+        </div>
+        <div>
+            <span class="text-gray-600">Items Diretur:</span>
+            <span class="font-semibold">{{ $purchase->getTotalReturnedItems() }}/{{ $purchase->items->count() }}</span>
+        </div>
+        <div>
+            <span class="text-gray-600">Qty Beli:</span>
+            <span class="font-semibold">{{ $purchase->getTotalPurchasedQty() }}</span>
+        </div>
+        <div>
+            <span class="text-gray-600">Qty Diretur:</span>
+            <span class="font-semibold">{{ $purchase->getTotalReturnedQty() }}</span>
+        </div>
+    </div>
+</div>
+@endif
                         </div>
 
                         <!-- Items Table -->
-                        <div class="bg-white p-6 rounded-xl shadow-lg">
-                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Detail Item</h3>
-                            <div class="overflow-x-auto">
-                                <table class="min-w-full divide-y divide-gray-200">
-                                    <thead class="bg-gray-50">
-                                        <tr>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produk</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Harga</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Diskon</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="bg-white divide-y divide-gray-200">
-                                        @foreach($purchase->items as $item)
-                                        <tr class="hover:bg-gray-50">
-                                            <td class="px-6 py-4 whitespace-nowrap">{{ $item->product_name }}</td>
-                                            <td class="px-6 py-4 whitespace-nowrap">{{ $item->sku ?? '-' }}</td>
-                                            <td class="px-6 py-4 whitespace-nowrap">Rp {{ number_format($item->cost_price,0,',','.') }}</td>
-                                            <td class="px-6 py-4 whitespace-nowrap">{{ $item->qty }}</td>
-                                            <td class="px-6 py-4 whitespace-nowrap">Rp {{ number_format($item->discount,0,',','.') }}</td>
-                                            <td class="px-6 py-4 whitespace-nowrap font-semibold">Rp {{ number_format($item->line_total,0,',','.') }}</td>
-                                        </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+<!-- 🎯 REPLACE ITEMS TABLE YANG EXISTING DENGAN INI -->
+<div class="bg-white p-6 rounded-xl shadow-lg">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4">Detail Item</h3>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produk</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Harga</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty Beli</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status Return</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                @foreach($purchase->items as $item)
+                @php
+                    $returnedQty = $purchase->getReturnedQtyForProduct($item->product_id);
+                    $statusColor = $returnedQty == 0 ? 'green' : ($returnedQty == $item->qty ? 'red' : 'orange');
+                    $statusText = $returnedQty == 0 ? 'Tidak Return' : ($returnedQty == $item->qty ? 'Return All' : "Return {$returnedQty}/{$item->qty}");
+                @endphp
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap">{{ $item->product_name }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">{{ $item->sku ?? '-' }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">Rp {{ number_format($item->cost_price,0,',','.') }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">{{ $item->qty }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 py-1 rounded text-xs bg-{{ $statusColor }}-100 text-{{ $statusColor }}-800">
+                            {{ $statusText }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap font-semibold">Rp {{ number_format($item->line_total,0,',','.') }}</td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Return Information -->
+@if($purchase->purchaseReturns()->where('status', 'confirmed')->exists())
+<div class="bg-white p-6 rounded-xl shadow-lg">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4">Items yang Diretur</h3>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produk</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty Diretur</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No. Return</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal Return</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alasan</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                @foreach($purchase->purchaseReturns()->where('status', 'confirmed')->get() as $return)
+                    @foreach($return->items as $item)
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">{{ $item->product->name ?? $item->product_id }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">{{ $item->qty }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <a href="{{ route('owner.purchase-returns.show', $return) }}" class="text-blue-600 hover:underline">
+                                {{ $return->return_number }}
+                            </a>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">{{ $return->formatted_return_date }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">{{ $return->reason }}</td>
+                    </tr>
+                    @endforeach
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+</div>
+@endif
 
                         <!-- Document Files -->
                         @if($purchase->status !== 'draft' && ($purchase->invoice_file || $purchase->payment_proof_file))
@@ -278,51 +354,131 @@
                             </div>
                         </div>
 
-                        <!-- Actions Card -->
-                        <div class="bg-white p-6 rounded-xl shadow-lg">
-                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Aksi</h3>
-                            
-                            <div class="space-y-3">
-                                @php
-                                    $availableStatuses = $purchase->getNextAvailableStatuses();
-                                @endphp
+<!-- Actions Card -->
+<div class="bg-white p-6 rounded-xl shadow-lg">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4">Aksi</h3>
+    
+    <div class="space-y-3">
+        <!-- DEBUG INFO - Hapus setelah fix -->
+        <div class="text-xs bg-yellow-100 p-2 rounded mb-2">
+            Status: {{ $purchase->status }} | 
+            Type: {{ $purchase->purchase_type }} |
+            Role: {{ auth()->user()->name }}
+        </div>
 
-                                @if($purchase->status === 'draft')
-                                    <form method="POST" action="{{ route('owner.purchases.submit', $purchase) }}">
-                                        @csrf
-                                        <button class="w-full px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors">
-                                            <i class="bi bi-send mr-2"></i>Ajukan
-                                        </button>
-                                    </form>
-                                @endif
-                                @if($purchase->status === 'approved')
-    <button onclick="openModal('payment-modal')" class="w-full px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors">
-        <i class="bi bi-cash mr-2"></i>Payment
-    </button>
-@endif
+        <!-- TOMBOL DRAFT -->
+        @if($purchase->status === 'draft')
+            <form method="POST" action="{{ route('owner.purchases.submit', $purchase) }}">
+                @csrf
+                <button class="w-full px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors">
+                    <i class="bi bi-send mr-2"></i>Ajukan
+                </button>
+            </form>
+        @endif
 
-@if($purchase->status === 'pending')
-    <form method="POST" action="{{ route('owner.purchases.approve', $purchase) }}">
-        @csrf
-        <button class="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors">
-            <i class="bi bi-check-circle mr-2"></i>Approve
-        </button>
-    </form>
-@endif
+        <!-- TOMBOL APPROVE -->
+        @if($purchase->status === 'pending')
+            <form method="POST" action="{{ route('owner.purchases.approve', $purchase) }}">
+                @csrf
+                <button class="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors">
+                    <i class="bi bi-check-circle mr-2"></i>Approve
+                </button>
+            </form>
+        @endif
 
+        <!-- TOMBOL PAYMENT - FIXED LOGIC -->
+        @if($purchase->status === 'approved')
+            <button onclick="openModal('payment-modal')" class="w-full px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors">
+                <i class="bi bi-cash mr-2"></i>Proses Pembayaran
+            </button>
+        @endif
 
+        <!-- TOMBOL MANUAL WORKFLOW - FALLBACK JIKA getNextAvailableStatuses() ERROR -->
+        @if($purchase->status === 'payment')
+            <!-- Untuk Pembelian Kain -->
+            @if($purchase->purchase_type === 'kain')
+                <form method="POST" action="{{ route('owner.purchases.update-status', $purchase) }}">
+                    @csrf
+                    <input type="hidden" name="new_status" value="kain_diterima">
+                    <button type="submit" class="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors mb-2">
+                        <i class="bi bi-check-circle mr-2"></i>Konfirmasi Kain Diterima
+                    </button>
+                </form>
+            @else
+                <!-- Untuk Produk Jadi langsung ke Selesai -->
+                <form method="POST" action="{{ route('owner.purchases.update-status', $purchase) }}">
+                    @csrf
+                    <input type="hidden" name="new_status" value="selesai">
+                    <button type="submit" class="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors mb-2">
+                        <i class="bi bi-check-circle mr-2"></i>Konfirmasi Produk Diterima
+                    </button>
+                </form>
+            @endif
+        @endif
 
-                                @if(!in_array($purchase->status, ['selesai', 'cancelled']) && !in_array($purchase->status, ['payment', 'kain_diterima', 'printing', 'jahit']))
-                                    <form method="POST" action="{{ route('owner.purchases.cancel', $purchase) }}">
-                                        @csrf @method('PATCH')
-                                        <button class="w-full px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors" 
-                                                onclick="return confirm('Apakah Anda yakin ingin membatalkan pembelian ini?')">
-                                            <i class="bi bi-x-circle mr-2"></i>Batalkan
-                                        </button>
-                                    </form>
-                                @endif
-                            </div>
-                        </div>
+        @if($purchase->status === 'kain_diterima')
+            <form method="POST" action="{{ route('owner.purchases.update-status', $purchase) }}">
+                @csrf
+                <input type="hidden" name="new_status" value="printing">
+                <button type="submit" class="w-full px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors mb-2">
+                    <i class="bi bi-printer mr-2"></i>Mulai Printing
+                </button>
+            </form>
+        @endif
+
+        @if($purchase->status === 'printing')
+            <form method="POST" action="{{ route('owner.purchases.update-status', $purchase) }}">
+                @csrf
+                <input type="hidden" name="new_status" value="jahit">
+                <button type="submit" class="w-full px-4 py-2 bg-pink-600 text-white rounded hover:bg-pink-700 transition-colors mb-2">
+                    <i class="bi bi-scissors mr-2"></i>Mulai Jahit
+                </button>
+            </form>
+        @endif
+
+        @if($purchase->status === 'jahit')
+            <form method="POST" action="{{ route('owner.purchases.update-status', $purchase) }}">
+                @csrf
+                <input type="hidden" name="new_status" value="selesai">
+                <button type="submit" class="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors mb-2">
+                    <i class="bi bi-check-circle mr-2"></i>Selesai Produksi
+                </button>
+            </form>
+        @endif
+
+        <!-- TOMBOL RETURN -->
+        @if($purchase->status === 'selesai')
+        <a href="{{ route('owner.purchase-returns.create', ['purchase' => $purchase->id]) }}" 
+   class="w-full inline-flex items-center justify-center px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors">
+    <i class="bi bi-arrow-return-left mr-2"></i>Return Pembelian
+</a>
+        @endif
+
+        <!-- TOMBOL BATAL - HANYA SEBELUM PRODUKSI -->
+        @if(in_array($purchase->status, ['draft', 'pending', 'approved']))
+            <form method="POST" action="{{ route('owner.purchases.cancel', $purchase) }}">
+                @csrf @method('PATCH')
+                <button class="w-full px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors" 
+                        onclick="return confirm('Apakah Anda yakin ingin membatalkan pembelian ini?')">
+                    <i class="bi bi-x-circle mr-2"></i>Batalkan Pembelian
+                </button>
+            </form>
+        @endif
+
+        <!-- STATUS MESSAGE -->
+        @if($purchase->status === 'cancelled')
+            <div class="w-full px-4 py-2 bg-gray-300 text-gray-600 rounded text-center">
+                <i class="bi bi-slash-circle mr-2"></i>Pembelian Telah Dibatalkan
+            </div>
+        @endif
+
+        @if($purchase->status === 'selesai')
+            <div class="w-full px-4 py-2 bg-green-100 text-green-700 rounded text-center">
+                <i class="bi bi-check-circle mr-2"></i>Pembelian Telah Selesai
+            </div>
+        @endif
+    </div>
+</div>
                     </div>
                 </div>
             </div>
@@ -352,8 +508,82 @@
     </div>
 </div>
 @endif
+<!-- Return Modal -->
+@if($purchase->status === 'selesai')
+<div id="return-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <h3 class="text-lg font-semibold text-gray-700 mb-4">Return Pembelian {{ $purchase->po_number }}</h3>
+        <form action="{{ route('owner.purchases.return', $purchase->id) }}" method="POST" id="return-form">
+            @csrf
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Alasan Return</label>
+                <textarea name="reason" required class="w-full border rounded p-2 text-gray-900" rows="3" placeholder="Masukkan alasan return..."></textarea>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Item yang Dikembalikan</label>
+                <div class="space-y-3">
+                    @foreach($purchase->items as $item)
+                    <div class="flex items-center justify-between p-3 border rounded">
+                        <div class="flex-1">
+                            <div class="font-medium">{{ $item->product_name }}</div>
+                            <div class="text-sm text-gray-500">Tersedia: {{ $item->qty }} pcs</div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <input type="number" 
+                                   name="items[{{ $item->id }}][quantity]" 
+                                   min="0" 
+                                   max="{{ $item->qty }}"
+                                   value="0"
+                                   class="w-20 border rounded p-1 text-center return-qty">
+                            <input type="hidden" name="items[{{ $item->id }}][product_id]" value="{{ $item->product_id }}">
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-2">
+                <button type="button" onclick="closeModal('return-modal')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Batal</button>
+                <button type="submit" class="px-4 py-2 bg-orange-600 text-white rounded hover:opacity-90">Proses Return</button>
+            </div>
+        </form>
+    </div>
+</div>
+@endif
 
     <script>
+        // Handle form return submission
+document.getElementById('return-form')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    fetch(this.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            if (data.redirect_url) {
+                window.location.href = data.redirect_url;
+            } else {
+                location.reload();
+            }
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Terjadi kesalahan saat memproses return');
+    });
+});
         function toggleSidebar() {
             const el = document.getElementById('sidebar');
             if (!el) return;

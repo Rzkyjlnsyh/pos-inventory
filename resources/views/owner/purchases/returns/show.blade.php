@@ -30,6 +30,11 @@
                             <div class="space-y-2">
                                 <p><strong>No. Retur:</strong> {{ $purchaseReturn->return_number }}</p>
                                 <p><strong>Tanggal Retur:</strong> {{ $purchaseReturn->return_date ? \Carbon\Carbon::parse($purchaseReturn->return_date)->format('d M Y') : '' }}</p>
+                                <p><strong>Tipe Return:</strong> 
+    <span class="px-2 py-1 rounded text-xs {{ $purchaseReturn->return_type === 'extra' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+        {{ $purchaseReturn->return_type_label }}
+    </span>
+</p>
                                 <p><strong>Status:</strong> 
                                     <span class="capitalize px-2 py-1 rounded 
                                         @if($purchaseReturn->status === 'confirmed') bg-green-100 text-green-800
@@ -103,6 +108,61 @@
                             </table>
                         </div>
                     </div>
+
+                    <!-- Items Pembelian Asli -->
+<div class="mb-6">
+    <h2 class="font-semibold mb-3">Items Pembelian Asli</h2>
+    <div class="overflow-x-auto">
+        <table class="min-w-full border-collapse border border-gray-300">
+            <thead>
+                <tr class="bg-gray-100">
+                    <th class="border border-gray-300 p-2">Product</th>
+                    <th class="border border-gray-300 p-2">Qty Beli</th>
+                    <th class="border border-gray-300 p-2">Harga</th>
+                    <th class="border border-gray-300 p-2">Total</th>
+                    <th class="border border-gray-300 p-2">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($purchaseReturn->purchaseOrder->items as $poItem)
+                @php
+                    $returnedQty = 0;
+                    foreach ($purchaseReturn->items as $returnItem) {
+                        if ($returnItem->product_id == $poItem->product_id) {
+                            $returnedQty = $returnItem->qty;
+                            break;
+                        }
+                    }
+                    $remainingQty = $poItem->qty - $returnedQty;
+                @endphp
+                <tr>
+                    <td class="border border-gray-300 p-2">
+                        {{ $poItem->product_name }}
+                    </td>
+                    <td class="border border-gray-300 p-2 text-center">
+                        {{ $poItem->qty }}
+                    </td>
+                    <td class="border border-gray-300 p-2 text-right">
+                        Rp {{ number_format($poItem->cost_price, 0) }}
+                    </td>
+                    <td class="border border-gray-300 p-2 text-right">
+                        Rp {{ number_format($poItem->line_total, 0) }}
+                    </td>
+                    <td class="border border-gray-300 p-2 text-center">
+                        @if($returnedQty > 0)
+                            <span class="px-2 py-1 bg-{{ $returnedQty == $poItem->qty ? 'red' : 'orange' }}-100 text-{{ $returnedQty == $poItem->qty ? 'red' : 'orange' }}-800 rounded text-xs">
+                                {{ $returnedQty == $poItem->qty ? 'Return All' : 'Return '.$returnedQty.'/'.$poItem->qty }}
+                            </span>
+                        @else
+                            <span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">Tidak Return</span>
+                        @endif
+                    </td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+</div>
 
                     <!-- Summary -->
                     <div class="bg-gray-50 p-4 rounded-lg mb-6">

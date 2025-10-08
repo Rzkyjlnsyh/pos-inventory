@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Owner;
+namespace App\Http\Controllers\KepalaToko;
 
 use App\Http\Controllers\Controller;
 use App\Models\SalesOrder;
@@ -27,7 +27,7 @@ class SalesOrderController extends Controller
         $activeShift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
         if (!$activeShift) {
             \Log::warning('No active shift for user: ' . Auth::id());
-            return redirect()->route('owner.shift.dashboard')->with('error', 'Silakan mulai shift terlebih dahulu untuk melakukan aksi ini.');
+            return redirect()->route('kepala-toko.shift.dashboard')->with('error', 'Silakan mulai shift terlebih dahulu untuk melakukan aksi ini.');
         }
         return true;
     }
@@ -39,7 +39,7 @@ class SalesOrderController extends Controller
             'user_id' => Auth::id(),
             'action' => $action,
             'description' => $description,
-            'created_at' => now(), // Eksplisit set created_at
+            'created_at' => now(),
         ]);
     }
 
@@ -59,7 +59,7 @@ class SalesOrderController extends Controller
             ->orderByDesc('id')
             ->paginate(15);
 
-        return view('owner.sales.index', compact('salesOrders', 'q', 'status', 'payment_status'));
+        return view('kepala-toko.sales.index', compact('salesOrders', 'q', 'status', 'payment_status'));
     }
 
     public function create(): View|RedirectResponse
@@ -67,11 +67,11 @@ class SalesOrderController extends Controller
         $activeShift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
         if (!$activeShift) {
             \Log::warning('No active shift for user: ' . Auth::id());
-            return redirect()->route('owner.shift.dashboard')->with('error', 'Silakan mulai shift dan masukkan kas awal terlebih dahulu.');
+            return redirect()->route('kepala-toko.shift.dashboard')->with('error', 'Silakan mulai shift dan masukkan kas awal terlebih dahulu.');
         }
         $customers = Customer::orderBy('name')->get();
         $products = Product::where('is_active', true)->where('price', '>', 0)->orderBy('name')->get();
-        return view('owner.sales.create', compact('customers', 'products', 'activeShift'));
+        return view('kepala-toko.sales.create', compact('customers', 'products', 'activeShift'));
     }
 
     public function store(Request $request): RedirectResponse|View
@@ -88,8 +88,6 @@ class SalesOrderController extends Controller
             'order_type' => ['required', 'in:jahit_sendiri,beli_jadi'],
             'order_date' => ['required', 'date'],
             'customer_id' => ['nullable', 'exists:customers,id'],
-            'customer_name' => ['nullable', 'string', 'max:255'], // TAMBAH INI
-            'customer_phone' => ['nullable', 'string', 'max:20'], // TAMBAH INI
             'payment_method' => ['required', 'in:cash,transfer,split'],
             'payment_status' => ['required', 'in:dp,lunas'],
             'items' => ['required', 'array', 'min:1'],
@@ -149,21 +147,7 @@ class SalesOrderController extends Controller
 
         try {
             $salesOrder = DB::transaction(function () use ($validated, $request, $cashAmount, $transferAmount, $paymentAmount, $grandTotal, $activeShift, $status, $subtotal, $discountTotal) {
-               // === AUTO CREATE CUSTOMER LOGIC ===
-            $customerId = $validated['customer_id'];
-            if (empty($customerId) && !empty($validated['customer_name'])) {
-                $customer = Customer::create([
-                    'name' => $validated['customer_name'],
-                    'phone' => $validated['customer_phone'] ?? null,
-                    'email' => null,
-                    'address' => null,
-                    'notes' => 'Auto-created from sales order',
-                    'is_active' => true,
-                ]);
-                $customerId = $customer->id;
-                \Log::info('Auto-created customer', ['customer_id' => $customerId, 'name' => $customer->name]);
-            }
-                // === END AUTO CREATE CUSTOMER ===
+                $customerId = $validated['customer_id'];
 
                 $soNumber = $this->generateSoNumber();
 
@@ -234,14 +218,14 @@ class SalesOrderController extends Controller
             if ($paymentAmount > 0) {
                 $salesOrder->load('payments');
                 $payment = $salesOrder->payments->first();
-                return view('owner.sales.nota', [
+                return view('kepala-toko.sales.nota', [
                     'salesOrder' => $salesOrder,
                     'payment' => $payment,
                     'autoPrint' => true,
                 ]);
             }
 
-            return redirect()->route('owner.sales.show', $salesOrder)->with('success', 'Sales order dibuat.');
+            return redirect()->route('kepala-toko.sales.show', $salesOrder)->with('success', 'Sales order dibuat.');
         } catch (\Exception $e) {
             \Log::error('Error storing sales order: ' . $e->getMessage(), ['request' => $request->all()]);
             return back()->withErrors(['error' => 'Terjadi kesalahan: ' . $e->getMessage()])->withInput();
@@ -253,7 +237,7 @@ class SalesOrderController extends Controller
         $salesOrder->load(['customer', 'items', 'creator', 'approver', 'payments.creator', 'logs.user']);
         $payment = $salesOrder->payments->first() ?? new Payment();
         $activeShift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
-        return view('owner.sales.show', compact('salesOrder', 'payment', 'activeShift'));
+        return view('kepala-toko.sales.show', compact('salesOrder', 'payment', 'activeShift'));
     }
 
     public function edit(SalesOrder $salesOrder): View|RedirectResponse
@@ -270,7 +254,7 @@ class SalesOrderController extends Controller
         $customers = Customer::orderBy('name')->get();
         $products = Product::where('is_active', true)->where('price', '>', 0)->orderBy('name')->get();
         $activeShift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
-        return view('owner.sales.edit', compact('salesOrder', 'customers', 'products', 'activeShift'));
+        return view('kepala-toko.sales.edit', compact('salesOrder', 'customers', 'products', 'activeShift'));
     }
 
     public function update(Request $request, SalesOrder $salesOrder): RedirectResponse
@@ -444,7 +428,7 @@ class SalesOrderController extends Controller
             });
 
             \Log::info('Sales order updated successfully', ['so_number' => $salesOrder->so_number]);
-            return redirect()->route('owner.sales.show', $salesOrder)->with('success', 'Sales order diperbarui dan menunggu approval.');
+            return redirect()->route('kepala-toko.sales.show', $salesOrder)->with('success', 'Sales order diperbarui dan menunggu approval.');
         } catch (\Exception $e) {
             \Log::error('Error updating sales order: ' . $e->getMessage(), ['so_number' => $salesOrder->so_number]);
             return back()->withErrors(['error' => 'Terjadi kesalahan saat update SO: ' . $e->getMessage()])->withInput();
@@ -735,14 +719,14 @@ class SalesOrderController extends Controller
     public function printNota(Payment $payment): \Illuminate\Http\Response
     {
         $salesOrder = $payment->salesOrder;
-        $pdf = Pdf::loadView('owner.sales.nota', compact('salesOrder', 'payment'));
+        $pdf = Pdf::loadView('kepala-toko.sales.nota', compact('salesOrder', 'payment'));
         return $pdf->download('nota_' . $salesOrder->so_number . '_payment_' . $payment->id . '.pdf');
     }
 
     public function printNotaDirect(Payment $payment): View
     {
         $salesOrder = $payment->salesOrder;
-        return view('owner.sales.nota', [
+        return view('kepala-toko.sales.nota', [
             'salesOrder' => $salesOrder,
             'payment' => $payment,
             'autoPrint' => true,

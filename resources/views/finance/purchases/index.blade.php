@@ -216,7 +216,7 @@
         @endif
 
         <!-- Approve: Finance/Owner -->
-        @if($p->status === 'pending' && in_array(auth()->user()->role, ['finance', 'owner']))
+        @if($p->status === 'pending' && in_array(auth()->user()->usertype, ['finance', 'owner']))
             <form method="POST" action="{{ route('finance.purchases.approve', $p) }}" class="inline">
                 @csrf
                 <button class="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700">Approve</button>
@@ -224,14 +224,14 @@
         @endif
 
         <!-- Payment: Finance/Owner -->
-        @if($p->status === 'approved' && in_array(auth()->user()->role, ['finance', 'owner']))
+        @if($p->status === 'approved' && in_array(auth()->user()->usertype, ['finance', 'owner']))
             <button onclick="openModal('payment-modal-{{ $p->id }}')" class="px-2 py-1 text-xs bg-purple-600 text-white rounded hover:bg-purple-700">Payment</button>
         @endif
 
         <!-- Workflow Status: Selesai saja untuk Finance -->
         @if(count($availableStatuses) > 0 && !in_array($p->status, ['draft', 'pending', 'approved']))
             @foreach($availableStatuses as $nextStatus)
-                @if($nextStatus === 'selesai' && in_array(auth()->user()->role, ['finance', 'owner']))
+                @if($nextStatus === 'selesai' && in_array(auth()->user()->usertype, ['finance', 'owner']))
                     <form method="POST" action="{{ route('finance.purchases.update-status', $p) }}" class="inline">
                         @csrf
                         <input type="hidden" name="new_status" value="{{ $nextStatus }}">
@@ -254,7 +254,7 @@
     </div>
 
     <!-- Modal Payment -->
-    @if($p->status === 'approved' && in_array(auth()->user()->role, ['finance', 'owner']))
+    @if($p->status === 'approved' && in_array(auth()->user()->usertype, ['finance', 'owner']))
     <div id="payment-modal-{{ $p->id }}" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
         <div class="bg-white rounded-lg p-6 w-full max-w-md">
             <h3 class="text-lg font-semibold text-gray-700 mb-4">Proses Pembayaran {{ $p->po_number }}</h3>

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Owner;
+namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\SalesOrder;
@@ -27,7 +27,7 @@ class SalesOrderController extends Controller
         $activeShift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
         if (!$activeShift) {
             \Log::warning('No active shift for user: ' . Auth::id());
-            return redirect()->route('owner.shift.dashboard')->with('error', 'Silakan mulai shift terlebih dahulu untuk melakukan aksi ini.');
+            return redirect()->route('admin.shift.dashboard')->with('error', 'Silakan mulai shift terlebih dahulu untuk melakukan aksi ini.');
         }
         return true;
     }
@@ -39,7 +39,7 @@ class SalesOrderController extends Controller
             'user_id' => Auth::id(),
             'action' => $action,
             'description' => $description,
-            'created_at' => now(), // Eksplisit set created_at
+            'created_at' => now(),
         ]);
     }
 
@@ -59,7 +59,7 @@ class SalesOrderController extends Controller
             ->orderByDesc('id')
             ->paginate(15);
 
-        return view('owner.sales.index', compact('salesOrders', 'q', 'status', 'payment_status'));
+        return view('admin.sales.index', compact('salesOrders', 'q', 'status', 'payment_status'));
     }
 
     public function create(): View|RedirectResponse
@@ -67,11 +67,11 @@ class SalesOrderController extends Controller
         $activeShift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
         if (!$activeShift) {
             \Log::warning('No active shift for user: ' . Auth::id());
-            return redirect()->route('owner.shift.dashboard')->with('error', 'Silakan mulai shift dan masukkan kas awal terlebih dahulu.');
+            return redirect()->route('admin.shift.dashboard')->with('error', 'Silakan mulai shift dan masukkan kas awal terlebih dahulu.');
         }
         $customers = Customer::orderBy('name')->get();
         $products = Product::where('is_active', true)->where('price', '>', 0)->orderBy('name')->get();
-        return view('owner.sales.create', compact('customers', 'products', 'activeShift'));
+        return view('admin.sales.create', compact('customers', 'products', 'activeShift'));
     }
 
     public function store(Request $request): RedirectResponse|View
@@ -88,8 +88,6 @@ class SalesOrderController extends Controller
             'order_type' => ['required', 'in:jahit_sendiri,beli_jadi'],
             'order_date' => ['required', 'date'],
             'customer_id' => ['nullable', 'exists:customers,id'],
-            'customer_name' => ['nullable', 'string', 'max:255'], // TAMBAH INI
-            'customer_phone' => ['nullable', 'string', 'max:20'], // TAMBAH INI
             'payment_method' => ['required', 'in:cash,transfer,split'],
             'payment_status' => ['required', 'in:dp,lunas'],
             'items' => ['required', 'array', 'min:1'],
@@ -149,21 +147,7 @@ class SalesOrderController extends Controller
 
         try {
             $salesOrder = DB::transaction(function () use ($validated, $request, $cashAmount, $transferAmount, $paymentAmount, $grandTotal, $activeShift, $status, $subtotal, $discountTotal) {
-               // === AUTO CREATE CUSTOMER LOGIC ===
-            $customerId = $validated['customer_id'];
-            if (empty($customerId) && !empty($validated['customer_name'])) {
-                $customer = Customer::create([
-                    'name' => $validated['customer_name'],
-                    'phone' => $validated['customer_phone'] ?? null,
-                    'email' => null,
-                    'address' => null,
-                    'notes' => 'Auto-created from sales order',
-                    'is_active' => true,
-                ]);
-                $customerId = $customer->id;
-                \Log::info('Auto-created customer', ['customer_id' => $customerId, 'name' => $customer->name]);
-            }
-                // === END AUTO CREATE CUSTOMER ===
+                $customerId = $validated['customer_id'];
 
                 $soNumber = $this->generateSoNumber();
 
@@ -234,14 +218,14 @@ class SalesOrderController extends Controller
             if ($paymentAmount > 0) {
                 $salesOrder->load('payments');
                 $payment = $salesOrder->payments->first();
-                return view('owner.sales.nota', [
+                return view('admin.sales.nota', [
                     'salesOrder' => $salesOrder,
                     'payment' => $payment,
                     'autoPrint' => true,
                 ]);
             }
 
-            return redirect()->route('owner.sales.show', $salesOrder)->with('success', 'Sales order dibuat.');
+            return redirect()->route('admin.sales.show', $salesOrder)->with('success', 'Sales order dibuat.');
         } catch (\Exception $e) {
             \Log::error('Error storing sales order: ' . $e->getMessage(), ['request' => $request->all()]);
             return back()->withErrors(['error' => 'Terjadi kesalahan: ' . $e->getMessage()])->withInput();
@@ -253,7 +237,7 @@ class SalesOrderController extends Controller
         $salesOrder->load(['customer', 'items', 'creator', 'approver', 'payments.creator', 'logs.user']);
         $payment = $salesOrder->payments->first() ?? new Payment();
         $activeShift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
-        return view('owner.sales.show', compact('salesOrder', 'payment', 'activeShift'));
+        return view('admin.sales.show', compact('salesOrder', 'payment', 'activeShift'));
     }
 
     public function edit(SalesOrder $salesOrder): View|RedirectResponse
@@ -270,7 +254,7 @@ class SalesOrderController extends Controller
         $customers = Customer::orderBy('name')->get();
         $products = Product::where('is_active', true)->where('price', '>', 0)->orderBy('name')->get();
         $activeShift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
-        return view('owner.sales.edit', compact('salesOrder', 'customers', 'products', 'activeShift'));
+        return view('admin.sales.edit', compact('salesOrder', 'customers', 'products', 'activeShift'));
     }
 
     public function update(Request $request, SalesOrder $salesOrder): RedirectResponse
@@ -444,71 +428,10 @@ class SalesOrderController extends Controller
             });
 
             \Log::info('Sales order updated successfully', ['so_number' => $salesOrder->so_number]);
-            return redirect()->route('owner.sales.show', $salesOrder)->with('success', 'Sales order diperbarui dan menunggu approval.');
+            return redirect()->route('admin.sales.show', $salesOrder)->with('success', 'Sales order diperbarui dan menunggu approval.');
         } catch (\Exception $e) {
             \Log::error('Error updating sales order: ' . $e->getMessage(), ['so_number' => $salesOrder->so_number]);
             return back()->withErrors(['error' => 'Terjadi kesalahan saat update SO: ' . $e->getMessage()])->withInput();
-        }
-    }
-
-    public function uploadProof(Request $request, SalesOrder $salesOrder, Payment $payment): RedirectResponse
-    {
-        $shiftCheck = $this->checkActiveShift();
-        if ($shiftCheck !== true) {
-            return $shiftCheck;
-        }
-
-        if ($payment->sales_order_id !== $salesOrder->id) {
-            \Log::warning('Invalid payment for SO: ' . $salesOrder->so_number, ['payment_id' => $payment->id]);
-            return back()->withErrors(['error' => 'Pembayaran tidak valid untuk sales order ini.']);
-        }
-
-        if (!in_array($payment->method, ['transfer', 'split'])) {
-            \Log::warning('Invalid payment method for proof upload: ' . $payment->method, ['so_number' => $salesOrder->so_number]);
-            return back()->withErrors(['error' => 'Upload bukti hanya untuk metode transfer atau split.']);
-        }
-
-        $validated = $request->validate([
-            'proof_path' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:2048'],
-        ]);
-
-        try {
-            DB::transaction(function () use ($payment, $request) {
-                if ($payment->proof_path) {
-                    Storage::disk('public')->delete($payment->proof_path);
-                }
-                $proofPath = $request->file('proof_path')->store('payment-proofs', 'public');
-                $payment->update(['proof_path' => $proofPath]);
-                $this->logAction($payment->salesOrder, 'proof_uploaded', "Bukti pembayaran diunggah untuk pembayaran ID {$payment->id}");
-            });
-
-            \Log::info('Proof uploaded successfully for SO: ' . $salesOrder->so_number, ['payment_id' => $payment->id]);
-            return back()->with('success', 'Bukti pembayaran berhasil diunggah.');
-        } catch (\Exception $e) {
-            \Log::error('Error uploading proof for SO ' . $salesOrder->so_number . ': ' . $e->getMessage());
-            return back()->withErrors(['error' => 'Terjadi kesalahan saat mengunggah bukti: ' . $e->getMessage()]);
-        }
-    }
-
-    public function approve(Request $request, SalesOrder $salesOrder): RedirectResponse
-    {
-        $shiftCheck = $this->checkActiveShift();
-        if ($shiftCheck !== true) {
-            return $shiftCheck;
-        }
-        if ($salesOrder->status !== 'pending') {
-            \Log::warning('Attempt to approve non-pending SO: ' . $salesOrder->so_number);
-            return back()->withErrors(['status' => 'Hanya pending yang bisa di-approve.']);
-        }
-
-        try {
-            $salesOrder->update(['approved_by' => Auth::id(), 'approved_at' => Carbon::now()]);
-            $this->logAction($salesOrder, 'approved', 'Sales order di-approve oleh ' . Auth::user()->name);
-            \Log::info('Sales order approved', ['so_number' => $salesOrder->so_number]);
-            return back()->with('success', 'Sales order di-approve.');
-        } catch (\Exception $e) {
-            \Log::error('Error approving sales order: ' . $e->getMessage(), ['so_number' => $salesOrder->so_number]);
-            return back()->withErrors(['error' => 'Terjadi kesalahan saat approve: ' . $e->getMessage()]);
         }
     }
 
@@ -591,193 +514,6 @@ class SalesOrderController extends Controller
             \Log::error('Error adding payment for SO ' . $salesOrder->so_number . ': ' . $e->getMessage());
             return back()->withErrors(['error' => 'Terjadi kesalahan saat menambah pembayaran: ' . $e->getMessage()])->withInput();
         }
-    }
-
-    public function startProcess(SalesOrder $salesOrder): RedirectResponse
-    {
-        $shiftCheck = $this->checkActiveShift();
-        if ($shiftCheck !== true) {
-            return $shiftCheck;
-        }
-
-        if ($salesOrder->status !== 'pending') {
-            \Log::warning('Attempt to start process on non-pending SO: ' . $salesOrder->so_number);
-            return back()->withErrors(['status' => 'Hanya pending yang bisa dimulai prosesnya.']);
-        }
-
-        if ($salesOrder->approved_by === null) {
-            \Log::warning('SO not approved: ' . $salesOrder->so_number);
-            return back()->withErrors(['status' => 'Sales order harus di-approve terlebih dahulu.']);
-        }
-
-        if ($salesOrder->paid_total < $salesOrder->grand_total * 0.5) {
-            \Log::warning('Insufficient payment for SO: ' . $salesOrder->so_number, ['paid_total' => $salesOrder->paid_total, 'grand_total' => $salesOrder->grand_total]);
-            return back()->withErrors(['payment' => 'Pembayaran minimal 50% untuk mulai proses.']);
-        }
-
-        if (in_array($salesOrder->payment_method, ['transfer', 'split'])) {
-            $paymentsWithoutProof = $salesOrder->payments()->whereNull('proof_path')->count();
-            if ($paymentsWithoutProof > 0) {
-                \Log::warning('Missing proof for transfer/split payments in SO: ' . $salesOrder->so_number);
-                return back()->withErrors(['payment' => 'Semua pembayaran untuk metode transfer atau split harus memiliki bukti pembayaran.']);
-            }
-        }
-
-        try {
-            DB::transaction(function () use ($salesOrder) {
-                $this->updateStockOnPayment($salesOrder);
-                $newStatus = $salesOrder->order_type === 'jahit_sendiri' ? 'request_kain' : 'di proses';
-                $salesOrder->update(['status' => $newStatus]);
-                $this->logAction($salesOrder, 'process_started', "Proses dimulai: Status berubah ke {$newStatus}");
-            });
-            \Log::info('Process started for SO: ' . $salesOrder->so_number);
-            return back()->with('success', 'Proses dimulai.');
-        } catch (\Exception $e) {
-            \Log::error('Error starting process for SO ' . $salesOrder->so_number . ': ' . $e->getMessage());
-            return back()->withErrors(['error' => 'Terjadi kesalahan saat memulai proses: ' . $e->getMessage()]);
-        }
-    }
-
-    public function processJahit(SalesOrder $salesOrder): RedirectResponse
-    {
-        $shiftCheck = $this->checkActiveShift();
-        if ($shiftCheck !== true) {
-            return $shiftCheck;
-        }
-        if ($salesOrder->order_type !== 'jahit_sendiri' || $salesOrder->status !== 'request_kain') {
-            \Log::warning('Invalid state for jahit process on SO: ' . $salesOrder->so_number, ['order_type' => $salesOrder->order_type, 'status' => $salesOrder->status]);
-            return back()->withErrors(['status' => 'Hanya SO jahit sendiri dengan status request kain yang bisa diproses jahit.']);
-        }
-
-        try {
-            $salesOrder->update(['status' => 'proses_jahit']);
-            $this->logAction($salesOrder, 'jahit_processed', 'Proses jahit dimulai: Status berubah ke proses_jahit');
-            \Log::info('Jahit process started for SO: ' . $salesOrder->so_number);
-            return back()->with('success', 'Proses jahit dimulai.');
-        } catch (\Exception $e) {
-            \Log::error('Error processing jahit for SO ' . $salesOrder->so_number . ': ' . $e->getMessage());
-            return back()->withErrors(['error' => 'Terjadi kesalahan saat memulai proses jahit: ' . $e->getMessage()]);
-        }
-    }
-
-    public function markAsJadi(SalesOrder $salesOrder): RedirectResponse
-    {
-        $shiftCheck = $this->checkActiveShift();
-        if ($shiftCheck !== true) {
-            return $shiftCheck;
-        }
-        if ($salesOrder->order_type !== 'jahit_sendiri' || $salesOrder->status !== 'proses_jahit') {
-            \Log::warning('Invalid state for marking jadi on SO: ' . $salesOrder->so_number, ['order_type' => $salesOrder->order_type, 'status' => $salesOrder->status]);
-            return back()->withErrors(['status' => 'Hanya SO jahit sendiri dengan status proses jahit yang bisa ditandai jadi.']);
-        }
-
-        try {
-            $salesOrder->update(['status' => 'jadi']);
-            $this->logAction($salesOrder, 'marked_jadi', 'Produk selesai dijahit: Status berubah ke jadi');
-            \Log::info('Marked as jadi for SO: ' . $salesOrder->so_number);
-            return back()->with('success', 'Produk selesai dijahit.');
-        } catch (\Exception $e) {
-            \Log::error('Error marking as jadi for SO ' . $salesOrder->so_number . ': ' . $e->getMessage());
-            return back()->withErrors(['error' => 'Terjadi kesalahan saat menandai jadi: ' . $e->getMessage()]);
-        }
-    }
-
-    public function markAsDiterimaToko(SalesOrder $salesOrder): RedirectResponse
-    {
-        $shiftCheck = $this->checkActiveShift();
-        if ($shiftCheck !== true) {
-            return $shiftCheck;
-        }
-        $validStatuses = $salesOrder->order_type === 'jahit_sendiri' ? ['jadi'] : ['di proses'];
-        if (!in_array($salesOrder->status, $validStatuses)) {
-            \Log::warning('Invalid state for marking diterima toko on SO: ' . $salesOrder->so_number, ['status' => $salesOrder->status]);
-            return back()->withErrors(['status' => 'Hanya SO dengan status ' . ($salesOrder->order_type === 'jahit_sendiri' ? 'jadi' : 'di proses') . ' yang bisa ditandai diterima toko.']);
-        }
-
-        try {
-            $salesOrder->update(['status' => 'diterima_toko']);
-            $this->logAction($salesOrder, 'marked_diterima_toko', 'Produk diterima di toko: Status berubah ke diterima_toko');
-            \Log::info('Marked as diterima toko for SO: ' . $salesOrder->so_number);
-            return back()->with('success', 'Produk diterima di toko.');
-        } catch (\Exception $e) {
-            \Log::error('Error marking as diterima toko for SO ' . $salesOrder->so_number . ': ' . $e->getMessage());
-            return back()->withErrors(['error' => 'Terjadi kesalahan saat menandai diterima toko: ' . $e->getMessage()]);
-        }
-    }
-
-    public function complete(SalesOrder $salesOrder): RedirectResponse
-    {
-        $shiftCheck = $this->checkActiveShift();
-        if ($shiftCheck !== true) {
-            return $shiftCheck;
-        }
-        if ($salesOrder->status !== 'diterima_toko') {
-            \Log::warning('Attempt to complete non-diterima_toko SO: ' . $salesOrder->so_number);
-            return back()->withErrors(['status' => 'Hanya SO yang sudah diterima toko yang bisa diselesaikan.']);
-        }
-
-        if ($salesOrder->remaining_amount > 0) {
-            \Log::warning('Incomplete payment for completing SO: ' . $salesOrder->so_number, ['remaining_amount' => $salesOrder->remaining_amount]);
-            return back()->withErrors(['payment' => 'Pembayaran harus lunas untuk menyelesaikan.']);
-        }
-
-        try {
-            $salesOrder->update(['status' => 'selesai', 'completed_at' => Carbon::now()]);
-            $this->logAction($salesOrder, 'completed', 'Sales order selesai: Status berubah ke selesai');
-            \Log::info('Sales order completed: ' . $salesOrder->so_number);
-            return back()->with('success', 'Sales order selesai.');
-        } catch (\Exception $e) {
-            \Log::error('Error completing sales order: ' . $e->getMessage(), ['so_number' => $salesOrder->so_number]);
-            return back()->withErrors(['error' => 'Terjadi kesalahan saat menyelesaikan: ' . $e->getMessage()]);
-        }
-    }
-
-    public function printNota(Payment $payment): \Illuminate\Http\Response
-    {
-        $salesOrder = $payment->salesOrder;
-        $pdf = Pdf::loadView('owner.sales.nota', compact('salesOrder', 'payment'));
-        return $pdf->download('nota_' . $salesOrder->so_number . '_payment_' . $payment->id . '.pdf');
-    }
-
-    public function printNotaDirect(Payment $payment): View
-    {
-        $salesOrder = $payment->salesOrder;
-        return view('owner.sales.nota', [
-            'salesOrder' => $salesOrder,
-            'payment' => $payment,
-            'autoPrint' => true,
-        ]);
-    }
-
-    private function updateStockOnPayment(SalesOrder $salesOrder)
-    {
-        DB::transaction(function () use ($salesOrder) {
-            foreach ($salesOrder->items as $item) {
-                if ($item->product_id) {
-                    $product = $item->product;
-                    $initialStock = $product->stock_qty;
-                    $newStock = $initialStock - $item->qty;
-                    if ($newStock < 0) {
-                        \Log::warning('Negative stock for product ' . $product->id . ' on SO ' . $salesOrder->so_number . ': New stock ' . $newStock);
-                    }
-                    $product->stock_qty = $newStock;
-                    $product->save();
-
-                    StockMovement::create([
-                        'product_id' => $product->id,
-                        'type' => 'OUTGOING',
-                        'ref_code' => $salesOrder->so_number,
-                        'initial_qty' => $initialStock,
-                        'qty_in' => 0,
-                        'qty_out' => $item->qty,
-                        'final_qty' => $product->stock_qty,
-                        'user_id' => Auth::id(),
-                        'notes' => 'Pembayaran SO: ' . $salesOrder->so_number,
-                        'moved_at' => Carbon::now(),
-                    ]);
-                }
-            }
-        });
     }
 
     private function generateSoNumber(): string

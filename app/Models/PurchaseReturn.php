@@ -12,6 +12,8 @@ class PurchaseReturn extends Model
 {
     use HasFactory;
 
+    const TYPE_DEFECT = 'defect';      // Stok berkurang
+    const TYPE_EXTRA = 'extra';        // Stok bertambah
     protected $fillable = [
         'return_number',
         'purchase_order_id',
@@ -25,6 +27,7 @@ class PurchaseReturn extends Model
         'total_amount',
         'status',
         'restock',
+        'return_type',
         'created_by'
     ];
 
@@ -65,5 +68,9 @@ class PurchaseReturn extends Model
     public function product()
 {
     return $this->belongsTo(Product::class);
+}
+public function getReturnTypeLabelAttribute()
+{
+    return $this->return_type === self::TYPE_EXTRA ? 'Produksi Lebih' : 'Return Rusak';
 }
 }

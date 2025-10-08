@@ -58,6 +58,14 @@
                                               placeholder="Catatan tambahan...">{{ old('notes') }}</textarea>
                                 </div>
 
+                                <div class="mb-4">
+    <label class="block text-sm font-medium text-gray-700 mb-1">Tipe Return</label>
+    <select name="return_type" class="w-full border rounded-md p-2" required>
+        <option value="defect">Return Rusak/Salah (Kurangi Stok)</option>
+        <option value="extra">Produksi Lebih (Tambah Stok)</option>
+    </select>
+</div>
+
 {{-- Tampilkan info --}}
 <div class="mb-4 bg-blue-50 p-3 rounded">
     <p class="text-sm text-blue-800">
@@ -88,13 +96,7 @@
                class="w-20 border rounded-md p-1" value="0">
     </div>
     
-    <div>
-        <label class="flex items-center mt-5">
-            <input type="checkbox" name="items[{{ $item->product_id }}][restock]" 
-                   value="1" class="mr-1" checked>
-            <span class="text-xs text-gray-600">Kurangi Stok</span>
-        </label>
-    </div>
+    <input type="hidden" name="items[{{ $item->product_id }}][restock]" value="1">
 </div>
                                         
                                         <input type="hidden" name="items[{{ $item->product_id }}][product_id]" value="{{ $item->product_id }}">

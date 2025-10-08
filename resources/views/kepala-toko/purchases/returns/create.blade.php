@@ -9,16 +9,16 @@
 </head>
 <body class="bg-gray-100">
     <div class="flex">
-        <x-navbar-owner></x-navbar-owner>
+        <x-navbar-kepala-toko></x-navbar-kepala-toko>
 
         <div class="flex-1 lg:w-5/6">
-            <x-navbar-top-owner></x-navbar-top-owner>
+            <x-navbar-top-kepala-toko></x-navbar-top-kepala-toko>
 
             <div class="p-6">
                 <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
                     <div class="flex items-center justify-between mb-6">
                         <h1 class="text-xl font-semibold text-gray-700">Buat Retur Pembelian</h1>
-                        <a href="{{ route('owner.purchases.index') }}" class="text-gray-500 hover:text-gray-700">
+                        <a href="{{ route('kepala-toko.purchases.index') }}" class="text-gray-500 hover:text-gray-700">
                             <i class="bi bi-arrow-left"></i> Kembali
                         </a>
                     </div>
@@ -37,7 +37,7 @@
 
                         <!-- Form Retur -->
                         <div class="bg-white p-4 rounded-lg">
-                            <form action="{{ route('owner.purchase-returns.store', $purchase) }}" method="POST">
+                            <form action="{{ route('kepala-toko.purchase-returns.store', $purchase) }}" method="POST">
                                 @csrf
                                 
                                 <div class="mb-4">

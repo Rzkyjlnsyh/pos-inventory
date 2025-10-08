@@ -34,77 +34,77 @@
                 </div>
 
                 <div class="bg-white p-6 rounded-xl shadow-lg">
-                <div class="flex flex-col space-y-4 mb-6">
-    <!-- Filter Tabs Row -->
-    <div class="w-full">
-        <div class="flex flex-wrap gap-2">
-            <a href="{{ route('owner.purchases.index', ['group' => 'todo']) }}" 
-               class="px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap {{ ($group ?? '')==='todo' ? 'bg-[#005281] text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
-                Butuh Diproses
-            </a>
-            <a href="{{ route('owner.purchases.index', ['group' => 'approved']) }}" 
-               class="px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap {{ ($group ?? '')==='approved' ? 'bg-[#005281] text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
-                Approved
-            </a>
-            <a href="{{ route('owner.purchases.index', ['group' => 'in_progress']) }}" 
-               class="px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap {{ ($group ?? '')==='in_progress' ? 'bg-[#005281] text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
-                Dalam Proses
-            </a>
-            <a href="{{ route('owner.purchases.index', ['group' => 'completed']) }}" 
-               class="px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap {{ ($group ?? '')==='completed' ? 'bg-[#005281] text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
-                Selesai
-            </a>
-            <a href="{{ route('owner.purchases.index', ['group' => 'cancelled']) }}" 
-               class="px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap {{ ($group ?? '')==='cancelled' ? 'bg-[#005281] text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
-                Dibatalkan
-            </a>
-        </div>
-    </div>
+                    <div class="flex flex-col space-y-4 mb-6">
+                        <!-- Filter Tabs Row -->
+                        <div class="w-full">
+                            <div class="flex flex-wrap gap-2">
+                                <a href="{{ route('owner.purchases.index', ['group' => 'todo']) }}" 
+                                   class="px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap {{ ($group ?? '')==='todo' ? 'bg-[#005281] text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+                                    Butuh Diproses
+                                </a>
+                                <a href="{{ route('owner.purchases.index', ['group' => 'approved']) }}" 
+                                   class="px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap {{ ($group ?? '')==='approved' ? 'bg-[#005281] text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+                                    Approved
+                                </a>
+                                <a href="{{ route('owner.purchases.index', ['group' => 'in_progress']) }}" 
+                                   class="px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap {{ ($group ?? '')==='in_progress' ? 'bg-[#005281] text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+                                    Dalam Proses
+                                </a>
+                                <a href="{{ route('owner.purchases.index', ['group' => 'completed']) }}" 
+                                   class="px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap {{ ($group ?? '')==='completed' ? 'bg-[#005281] text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+                                    Selesai
+                                </a>
+                                <a href="{{ route('owner.purchases.index', ['group' => 'cancelled']) }}" 
+                                   class="px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap {{ ($group ?? '')==='cancelled' ? 'bg-[#005281] text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+                                    Dibatalkan
+                                </a>
+                            </div>
+                        </div>
 
-    <!-- Search and Filter Row -->
-    <div class="w-full">
-        <form method="GET" class="flex flex-col lg:flex-row gap-3">
-            <input type="hidden" name="group" value="{{ $group }}" />
-            
-            <!-- Search Input -->
-            <div class="flex-1 lg:max-w-xs">
-                <input type="text" 
-                       name="q" 
-                       value="{{ $q }}" 
-                       placeholder="Cari No/Supplier" 
-                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#005281] focus:border-transparent" />
-            </div>
-            
-            <!-- Filter Controls -->
-            <div class="flex flex-col sm:flex-row gap-3">
-                <!-- Type Filter -->
-                <select name="type" 
-                        class="border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#005281] focus:border-transparent min-w-[140px]">
-                    <option value="">Semua Tipe</option>
-                    <option value="kain" @selected(($type ?? '') === 'kain')>Pembelian Kain</option>
-                    <option value="produk_jadi" @selected(($type ?? '') === 'produk_jadi')>Pembelian Produk Jadi</option>
-                </select>
-                
-                <!-- Status Filter -->
-                <select name="status" 
-                        class="border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#005281] focus:border-transparent min-w-[140px]">
-                    <option value="">Semua Status</option>
-                    @foreach(['draft','pending','approved','payment','kain_diterima','printing','jahit','selesai'] as $st)
-                    <option value="{{ $st }}" @selected($status==$st)>
-                        {{ ucfirst(str_replace('_', ' ', $st)) }}
-                    </option>
-                    @endforeach
-                </select>
-                
-                <!-- Filter Button -->
-                <button type="submit" 
-                        class="bg-[#005281] hover:bg-[#004070] text-white px-6 py-2 rounded-lg font-medium transition-colors min-w-[80px]">
-                    Filter
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
+                        <!-- Search and Filter Row -->
+                        <div class="w-full">
+                            <form method="GET" class="flex flex-col lg:flex-row gap-3">
+                                <input type="hidden" name="group" value="{{ $group }}" />
+                                
+                                <!-- Search Input -->
+                                <div class="flex-1 lg:max-w-xs">
+                                    <input type="text" 
+                                           name="q" 
+                                           value="{{ $q }}" 
+                                           placeholder="Cari No/Supplier" 
+                                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#005281] focus:border-transparent" />
+                                </div>
+                                
+                                <!-- Filter Controls -->
+                                <div class="flex flex-col sm:flex-row gap-3">
+                                    <!-- Type Filter -->
+                                    <select name="type" 
+                                            class="border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#005281] focus:border-transparent min-w-[140px]">
+                                        <option value="">Semua Tipe</option>
+                                        <option value="kain" @selected(($type ?? '') === 'kain')>Pembelian Kain</option>
+                                        <option value="produk_jadi" @selected(($type ?? '') === 'produk_jadi')>Pembelian Produk Jadi</option>
+                                    </select>
+                                    
+                                    <!-- Status Filter -->
+                                    <select name="status" 
+                                            class="border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#005281] focus:border-transparent min-w-[140px]">
+                                        <option value="">Semua Status</option>
+                                        @foreach(['draft','pending','approved','payment','kain_diterima','printing','jahit','selesai'] as $st)
+                                        <option value="{{ $st }}" @selected($status==$st)>
+                                            {{ ucfirst(str_replace('_', ' ', $st)) }}
+                                        </option>
+                                        @endforeach
+                                    </select>
+                                    
+                                    <!-- Filter Button -->
+                                    <button type="submit" 
+                                            class="bg-[#005281] hover:bg-[#004070] text-white px-6 py-2 rounded-lg font-medium transition-colors min-w-[80px]">
+                                        Filter
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
 
                     <div class="overflow-x-auto">
                         <table class="min-w-full text-left text-sm">
@@ -176,53 +176,73 @@
                                     </td>
                                     <td class="px-3 py-2">
     <div class="flex flex-wrap gap-1">
-        @php
-            $availableStatuses = $p->getNextAvailableStatuses();
-        @endphp
-        
-        <!-- Draft: Semua role bisa submit -->
+        <!-- TOMBOL DETAIL -->
+        <a href="{{ route('owner.purchases.show', $p) }}" class="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">Detail</a>
+
+        <!-- TOMBOL DRAFT -->
         @if($p->status === 'draft')
             <form method="POST" action="{{ route('owner.purchases.submit', $p) }}" class="inline">
                 @csrf
-                <button class="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded">Ajukan</button>
+                <button class="px-2 py-1 text-xs bg-gray-600 text-white rounded hover:bg-gray-700">Ajukan</button>
             </form>
         @endif
 
-        <!-- Approve: Hanya Finance/Owner -->
-        @if($p->status === 'pending' && in_array(auth()->user()->role, ['finance', 'owner']))
+        <!-- TOMBOL APPROVE -->
+        @if($p->status === 'pending')
             <form method="POST" action="{{ route('owner.purchases.approve', $p) }}" class="inline">
                 @csrf
                 <button class="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700">Approve</button>
             </form>
         @endif
 
-        <!-- Payment: Hanya Finance/Owner -->
-        @if($p->status === 'approved' && in_array(auth()->user()->role, ['finance', 'owner']))
+        <!-- TOMBOL PAYMENT -->
+        @if($p->status === 'approved')
             <button onclick="openModal('payment-modal-{{ $p->id }}')" class="px-2 py-1 text-xs bg-purple-600 text-white rounded hover:bg-purple-700">Payment</button>
         @endif
 
-        <!-- Workflow Status: Sesuai role -->
-        @if(count($availableStatuses) > 0 && !in_array($p->status, ['draft', 'pending', 'approved']))
-            @foreach($availableStatuses as $nextStatus)
-                @if(
-                    ($nextStatus === 'kain_diterima' && in_array(auth()->user()->role, ['kepala_toko', 'owner'])) ||
-                    (in_array($nextStatus, ['printing', 'jahit']) && in_array(auth()->user()->role, ['admin', 'kepala_toko', 'editor', 'owner'])) ||
-                    ($nextStatus === 'selesai' && in_array(auth()->user()->role, ['admin', 'kepala_toko', 'editor', 'owner', 'finance']))
-                )
-                    <form method="POST" action="{{ route('owner.purchases.update-status', $p) }}" class="inline">
-                        @csrf
-                        <input type="hidden" name="new_status" value="{{ $nextStatus }}">
-                        <button class="px-2 py-1 text-xs bg-[#005281] text-white rounded hover:opacity-90" 
-                                onclick="return confirm('Update status ke {{ ucfirst(str_replace('_', ' ', $nextStatus)) }}?')">
-                            {{ ucfirst(str_replace('_', ' ', $nextStatus)) }}
-                        </button>
-                    </form>
-                @endif
-            @endforeach
+        <!-- TOMBOL WORKFLOW MANUAL -->
+        @if($p->status === 'payment')
+            @if($p->purchase_type === 'kain')
+                <form method="POST" action="{{ route('owner.purchases.update-status', $p) }}" class="inline">
+                    @csrf
+                    <input type="hidden" name="new_status" value="kain_diterima">
+                    <button class="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">Kain Diterima</button>
+                </form>
+            @else
+                <form method="POST" action="{{ route('owner.purchases.update-status', $p) }}" class="inline">
+                    @csrf
+                    <input type="hidden" name="new_status" value="selesai">
+                    <button class="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700">Selesai</button>
+                </form>
+            @endif
         @endif
 
-        <!-- Cancel: Sebelum produksi -->
-        @if(!in_array($p->status, ['selesai', 'cancelled', 'payment', 'kain_diterima', 'printing', 'jahit']))
+        @if($p->status === 'kain_diterima')
+            <form method="POST" action="{{ route('owner.purchases.update-status', $p) }}" class="inline">
+                @csrf
+                <input type="hidden" name="new_status" value="printing">
+                <button class="px-2 py-1 text-xs bg-orange-600 text-white rounded hover:bg-orange-700">Printing</button>
+            </form>
+        @endif
+
+        @if($p->status === 'printing')
+            <form method="POST" action="{{ route('owner.purchases.update-status', $p) }}" class="inline">
+                @csrf
+                <input type="hidden" name="new_status" value="jahit">
+                <button class="px-2 py-1 text-xs bg-pink-600 text-white rounded hover:bg-pink-700">Jahit</button>
+            </form>
+        @endif
+
+        @if($p->status === 'jahit')
+            <form method="POST" action="{{ route('owner.purchases.update-status', $p) }}" class="inline">
+                @csrf
+                <input type="hidden" name="new_status" value="selesai">
+                <button class="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700">Selesai</button>
+            </form>
+        @endif
+
+        <!-- TOMBOL BATAL -->
+        @if(in_array($p->status, ['draft', 'pending', 'approved']))
             <form method="POST" action="{{ route('owner.purchases.cancel', $p) }}" class="inline" onsubmit="return confirm('Batalkan pembelian ini?')">
                 @csrf @method('PATCH')
                 <button class="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700">Batalkan</button>
@@ -231,7 +251,7 @@
     </div>
 
     <!-- Modal Payment -->
-    @if($p->status === 'approved' && in_array(auth()->user()->role, ['finance', 'owner']))
+    @if($p->status === 'approved')
     <div id="payment-modal-{{ $p->id }}" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
         <div class="bg-white rounded-lg p-6 w-full max-w-md">
             <h3 class="text-lg font-semibold text-gray-700 mb-4">Proses Pembayaran {{ $p->po_number }}</h3>

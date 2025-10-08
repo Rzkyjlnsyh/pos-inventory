@@ -27,6 +27,8 @@ class PurchaseOrder extends Model
     // Purchase Types
     const TYPE_KAIN = 'kain';
     const TYPE_PRODUK_JADI = 'produk_jadi';
+    const STATUS_RETURNED = 'returned';
+    const STATUS_PARTIALLY_RETURNED = 'partially_returned';
 
     protected $fillable = [
         // existing properties
@@ -188,6 +190,8 @@ class PurchaseOrder extends Model
             self::STATUS_JAHIT => 'Jahit',
             self::STATUS_SELESAI => 'Selesai',
             self::STATUS_CANCELLED => 'Cancelled',
+            self::STATUS_RETURNED => 'Returned (All)',
+            self::STATUS_PARTIALLY_RETURNED => 'Selesai & Returned (Partial)',
             default => ucfirst($this->status)
         };
     }
@@ -274,4 +278,62 @@ class PurchaseOrder extends Model
 
         return $this->save();
     }
+    public function purchaseReturns(): HasMany
+{
+    return $this->hasMany(PurchaseReturn::class);
+}
+public function getTotalReturnedQty(): int
+{
+    $total = 0;
+    foreach ($this->purchaseReturns()->where('status', 'confirmed')->get() as $return) {
+        foreach ($return->items as $item) {
+            $total += $item->qty;
+        }
+    }
+    return $total;
+}
+public function getTotalPurchasedQty(): int
+{
+    return $this->items->sum('qty');
+}
+public function updateReturnStatus(): void
+{
+    $totalReturned = $this->getTotalReturnedQty();
+    $totalPurchased = $this->getTotalPurchasedQty();
+    
+    if ($totalReturned >= $totalPurchased) {
+        $this->status = self::STATUS_RETURNED; // All returned
+    } elseif ($totalReturned > 0) {
+        $this->status = self::STATUS_PARTIALLY_RETURNED; // Some returned
+    } else {
+        $this->status = self::STATUS_SELESAI; // No returns
+    }
+    $this->save();
+}
+// Helper methods untuk return information
+public function getReturnedQtyForProduct($productId): int
+{
+    $total = 0;
+    foreach ($this->purchaseReturns()->where('status', 'confirmed')->get() as $return) {
+        foreach ($return->items as $item) {
+            if ($item->product_id == $productId) {
+                $total += $item->qty;
+            }
+        }
+    }
+    return $total;
+}
+
+public function getTotalReturnedItems(): int
+{
+    $returnedItems = [];
+    foreach ($this->purchaseReturns()->where('status', 'confirmed')->get() as $return) {
+        foreach ($return->items as $item) {
+            if ($item->qty > 0) {
+                $returnedItems[$item->product_id] = true;
+            }
+        }
+    }
+    return count($returnedItems);
+}
 }

@@ -283,34 +283,37 @@
                             <h3 class="text-lg font-semibold text-gray-800 mb-4">Aksi</h3>
                             
                             <div class="space-y-3">
-    <!-- Draft: Submit -->
-    @if($purchase->status === 'draft')
-        <form method="POST" action="{{ route('kepala_toko.purchases.submit', $purchase) }}">
+    <!-- Approve: Finance/Owner -->
+    @if($purchase->status === 'pending' && in_array(auth()->user()->usertype, ['kepala_toko', 'owner']))
+        <form method="POST" action="{{ route('kepala-toko.purchases.approve', $purchase) }}">
             @csrf
-            <button class="w-full px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors">
-                <i class="bi bi-send mr-2"></i>Ajukan
+            <button class="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors">
+                <i class="bi bi-check-circle mr-2"></i>Approve
+            </button>
+        </form>
+    @endif
+                <!-- TOMBOL RETURN -->
+                @if($purchase->status === 'selesai')
+        <a href="{{ route('admin.purchase-returns.create', ['purchase' => $purchase->id]) }}" 
+   class="w-full inline-flex items-center justify-center px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors">
+    <i class="bi bi-arrow-return-left mr-2"></i>Return Pembelian
+</a>
+        @endif
+
+    <!-- Selesai: Finance/Owner -->
+    @if($purchase->status === 'jahit' && in_array(auth()->user()->usertype, ['kepala_toko', 'owner']))
+        <form method="POST" action="{{ route('kepala-toko.purchases.update-status', $purchase) }}">
+            @csrf
+            <input type="hidden" name="new_status" value="selesai">
+            <button class="w-full px-4 py-2 bg-[#005281] text-white rounded hover:opacity-90 transition-colors">
+                <i class="bi bi-arrow-right-circle mr-2"></i>Selesai
             </button>
         </form>
     @endif
 
-    <!-- Workflow Status: Kain Diterima, Printing, Jahit, Selesai -->
-    @if(count($availableStatuses) > 0 && !in_array($purchase->status, ['draft', 'pending', 'approved']))
-        @foreach($availableStatuses as $nextStatus)
-            @if(in_array($nextStatus, ['kain_diterima', 'printing', 'jahit', 'selesai']) && in_array(auth()->user()->role, ['kepala_toko', 'owner']))
-                <form method="POST" action="{{ route('kepala_toko.purchases.update-status', $purchase) }}">
-                    @csrf
-                    <input type="hidden" name="new_status" value="{{ $nextStatus }}">
-                    <button class="w-full px-4 py-2 bg-[#005281] text-white rounded hover:opacity-90 transition-colors">
-                        <i class="bi bi-arrow-right-circle mr-2"></i>{{ ucfirst(str_replace('_', ' ', $nextStatus)) }}
-                    </button>
-                </form>
-            @endif
-        @endforeach
-    @endif
-
     <!-- Cancel -->
     @if(!in_array($purchase->status, ['selesai', 'cancelled', 'payment', 'kain_diterima', 'printing', 'jahit']))
-        <form method="POST" action="{{ route('kepala_toko.purchases.cancel', $purchase) }}">
+        <form method="POST" action="{{ route('kepala-toko.purchases.cancel', $purchase) }}">
             @csrf @method('PATCH')
             <button class="w-full px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors" 
                     onclick="return confirm('Apakah Anda yakin ingin membatalkan pembelian ini?')">
@@ -325,30 +328,6 @@
             </div>
         </div>
     </div>
-
-<!-- Payment Modal -->
-@if($purchase->status === 'approved')
-<div id="payment-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
-    <div class="bg-white rounded-lg p-6 w-full max-w-md">
-        <h3 class="text-lg font-semibold text-gray-700 mb-4">Proses Pembayaran {{ $purchase->po_number }}</h3>
-        <form action="{{ route('kepala-toko.purchases.payment', $purchase->id) }}" method="POST" enctype="multipart/form-data">
-            @csrf
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Upload Faktur (PDF/JPG/PNG)</label>
-                <input type="file" name="invoice_file" accept=".pdf,.jpg,.jpeg,.png" required class="w-full border rounded p-2 text-gray-900" />
-            </div>
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Upload Bukti Pembayaran (PDF/JPG/PNG)</label>
-                <input type="file" name="payment_proof_file" accept=".pdf,.jpg,.jpeg,.png" required class="w-full border rounded p-2 text-gray-900" />
-            </div>
-            <div class="flex justify-end space-x-2">
-                <button type="button" onclick="closeModal('payment-modal')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Batal</button>
-                <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded hover:opacity-90">Submit</button>
-            </div>
-        </form>
-    </div>
-</div>
-@endif
 
     <script>
         function toggleSidebar() {

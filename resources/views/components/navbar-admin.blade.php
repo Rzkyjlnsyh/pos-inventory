@@ -89,7 +89,7 @@
         <i class="bi bi-chevron-down transition-transform"></i>
       </button>
       <div class="dropdown-menu space-y-2 overflow-hidden max-h-0 transition-all duration-300">
-        <a href="{{ route('admin.dashboard') }}" class="block p-3 rounded-md bg-none transition mt-2 hover-link">
+        <a href="{{ route('admin.sales.index') }}" class="block p-3 rounded-md bg-none transition mt-2 hover-link">
           <span class="nav-text font-semibold">Transaksi</span>
         </a>
         <a href="{{ route('admin.shift.dashboard') }}" class="block p-3 rounded-md bg-none transition mt-2 hover-link">

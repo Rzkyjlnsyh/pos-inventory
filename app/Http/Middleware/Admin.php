@@ -4,23 +4,16 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Auth;
 
 class Admin
 {
-    /**
-     * Handle an incoming request.
-     *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
-     */
-    public function handle(Request $request, Closure $next): Response
+    public function handle(Request $request, Closure $next)
     {
-        // Ganti 'admin' dengan nama role yang sesuai di database Anda
-        if (!Auth::check() || !Auth::user()->hasRole('admin')) {
-            abort(403, 'Unauthorized access. Admin role required.');
+        if (Auth::check() && Auth::user()->usertype === 'admin') {
+            return $next($request);
         }
 
-        return $next($request);
+        return redirect('/dashboard')->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk mengakses halaman ini.');
     }
 }

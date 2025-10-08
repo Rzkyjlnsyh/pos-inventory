@@ -55,39 +55,73 @@ class ShiftController extends Controller
         return redirect()->route('owner.shift.dashboard')->with('success', 'Shift dimulai dengan kas awal Rp ' . number_format($validated['initial_cash'], 0, ',', '.'));
     }
 
-    public function end(Request $request): Response|RedirectResponse
-    {
-        $validated = $request->validate([
-            'final_cash' => ['required', 'numeric', 'min:0'],
-            'notes' => ['nullable', 'string'],
-            'print_summary' => ['nullable', 'boolean'],
-        ]);
+// Ganti method end
+public function end(Request $request): Response|RedirectResponse
+{
+    $validated = $request->validate([
+        'final_cash' => ['required', 'numeric', 'min:0'],
+        'notes' => ['nullable', 'string'],
+        'print_summary' => ['nullable', 'boolean'],
+    ]);
 
-        $shift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
-        if (!$shift) {
-            return back()->withErrors(['error' => 'Anda tidak memiliki shift aktif. Mulai shift terlebih dahulu.']);
-        }
-
-        $expectedCash = $shift->initial_cash + $shift->cash_total - $shift->expense_total;
-        $discrepancy = $validated['final_cash'] - $expectedCash;
-
-        $shift->update([
-            'final_cash' => $validated['final_cash'],
-            'discrepancy' => $discrepancy,
-            'end_time' => now(),
-            'notes' => $validated['notes'] ?? null,
-            'status' => 'closed',
-        ]);
-
-        if ($request->has('print_summary')) {
-            // Generate dan simpan PDF ke storage
-            $pdfPath = $this->printShiftSummary($shift->id);
-            // Simpan path PDF di session
-            session()->flash('pdf_download', $pdfPath);
-        }
-    
-        return redirect()->route('owner.shift.history')->with('success', 'Shift diakhiri. Kas diharapkan: Rp ' . number_format($expectedCash, 0, ',', '.') . ', Selisih: Rp ' . number_format($discrepancy, 0, ',', '.'));
+    $shift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
+    if (!$shift) {
+        return back()->withErrors(['error' => 'Anda tidak memiliki shift aktif. Mulai shift terlebih dahulu.']);
     }
+
+    $expectedCash = $shift->initial_cash + $shift->cash_total - $shift->expense_total;
+    $discrepancy = $validated['final_cash'] - $expectedCash;
+
+    $shift->update([
+        'final_cash' => $validated['final_cash'],
+        'discrepancy' => $discrepancy,
+        'end_time' => now(),
+        'notes' => $validated['notes'] ?? null,
+        'status' => 'closed',
+    ]);
+
+    // SELALU generate PDF untuk print
+    $pdfPath = $this->printShiftSummary($shift->id);
+
+    if ($request->has('print_summary')) {
+        // Langsung download PDF
+        return $this->downloadSummary($shift->id);
+    }
+
+    return redirect()->route('owner.shift.history')->with('success', 'Shift diakhiri. Kas diharapkan: Rp ' . number_format($expectedCash, 0, ',', '.') . ', Selisih: Rp ' . number_format($discrepancy, 0, ',', '.'));
+}
+// Method untuk print summary (struk thermal)
+public function printSummary($id)
+{
+    $shift = Shift::with('user')->findOrFail($id);
+    
+    $payments = Payment::where('created_by', $shift->user_id)
+        ->where('created_at', '>=', $shift->start_time)
+        ->where('created_at', '<=', $shift->end_time ?? now())
+        ->with('salesOrder')
+        ->get();
+        
+    $incomes = Income::where('shift_id', $id)->get();
+    $expenses = Expense::where('shift_id', $id)->get();
+
+    $pdf = PDF::loadView('owner.shift.closing_summary', compact('shift', 'incomes', 'expenses', 'payments'));
+    
+    // Set paper size dan margin
+    $pdf->setPaper('a4', 'portrait'); // Default A4
+    $pdf->setOption('margin-top', 0);
+    $pdf->setOption('margin-right', 0);
+    $pdf->setOption('margin-bottom', 0);
+    $pdf->setOption('margin-left', 0);
+    
+    return $pdf->stream('closing_summary_shift_' . $shift->id . '.pdf');
+}
+
+// Tambahkan method untuk print preview
+public function printPreview($id)
+{
+    $shift = Shift::with('user')->findOrFail($id);
+    return view('owner.shift.print_preview', compact('shift'));
+}
 
     public function printShiftSummary($id)
     {
@@ -391,4 +425,21 @@ class ShiftController extends Controller
         $pdf = Pdf::loadView('owner.shift.pdf', compact('shifts'));
         return $pdf->download('laporan_shift_' . date('Ymd_His') . '.pdf');
     }
+    public function downloadSummary($id)
+{
+    try {
+        $shift = Shift::findOrFail($id);
+        $pdfPath = 'pdfs/closing_summary_' . $shift->id . '.pdf';
+        
+        // Cek file exists
+        if (!Storage::exists($pdfPath)) {
+            // Regenerate PDF jika tidak ada
+            $pdfPath = $this->printShiftSummary($shift->id);
+        }
+        
+        return response()->download(storage_path('app/' . $pdfPath), 'closing_summary_shift_' . $shift->id . '.pdf');
+    } catch (\Exception $e) {
+        return back()->withErrors(['error' => 'File tidak ditemukan: ' . $e->getMessage()]);
+    }
+}
 }

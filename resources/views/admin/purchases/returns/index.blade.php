@@ -15,16 +15,16 @@
 </head>
 <body class="bg-gray-100">
     <div class="flex">
-        <x-navbar-owner></x-navbar-owner>
+        <x-navbar-admin></x-navbar-admin>
 
         <div class="flex-1 lg:w-5/6">
-            <x-navbar-top-owner></x-navbar-top-owner>
+            <x-navbar-top-admin></x-navbar-top-admin>
 
             <div class="p-4 lg:p-8">
           <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
             <div class="flex items-center justify-between">
               <h2 class="text-xl font-semibold text-gray-700">Purchase Return</h2>
-              <a href="{{ route('owner.purchases.create') }}" class="bg-[#005281] text-white px-4 py-2 rounded-md hover:opacity-90">Buat Pembelian</a>
+              <a href="{{ route('admin.purchases.create') }}" class="bg-[#005281] text-white px-4 py-2 rounded-md hover:opacity-90">Buat Pembelian</a>
             </div>
           </div>
 
@@ -32,7 +32,7 @@
                 <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
                     <div class="flex items-center justify-between mb-6">
                         <h1 class="text-xl font-semibold text-gray-700">Daftar Retur Pembelian</h1>
-                        <a href="{{ route('owner.purchases.index') }}" class="text-gray-500 hover:text-gray-700">
+                        <a href="{{ route('admin.purchases.index') }}" class="text-gray-500 hover:text-gray-700">
                             <i class="bi bi-arrow-left"></i> Kembali ke Pembelian
                         </a>
                     </div>
@@ -67,7 +67,7 @@
                                         </span>
                                     </td>
                                     <td class="p-3">
-                                        <a href="{{ route('owner.purchase-returns.show', $retur) }}" 
+                                        <a href="{{ route('admin.purchase-returns.show', $retur) }}" 
                                            class="text-blue-600 hover:text-blue-800">
                                             Detail
                                         </a>

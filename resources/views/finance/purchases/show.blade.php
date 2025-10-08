@@ -284,7 +284,7 @@
                             
                             <div class="space-y-3">
     <!-- Approve: Finance/Owner -->
-    @if($purchase->status === 'pending' && in_array(auth()->user()->role, ['finance', 'owner']))
+    @if($purchase->status === 'pending' && in_array(auth()->user()->usertype, ['finance', 'owner']))
         <form method="POST" action="{{ route('finance.purchases.approve', $purchase) }}">
             @csrf
             <button class="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors">
@@ -294,14 +294,14 @@
     @endif
 
     <!-- Payment: Finance/Owner -->
-    @if($purchase->status === 'approved' && in_array(auth()->user()->role, ['finance', 'owner']))
+    @if($purchase->status === 'approved' && in_array(auth()->user()->usertype, ['finance', 'owner']))
         <button onclick="openModal('payment-modal')" class="w-full px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors">
             <i class="bi bi-cash mr-2"></i>Payment
         </button>
     @endif
 
     <!-- Selesai: Finance/Owner -->
-    @if($purchase->status === 'payment' && in_array(auth()->user()->role, ['finance', 'owner']))
+    @if($purchase->status === 'jahit' && in_array(auth()->user()->usertype, ['finance', 'owner']))
         <form method="POST" action="{{ route('finance.purchases.update-status', $purchase) }}">
             @csrf
             <input type="hidden" name="new_status" value="selesai">
@@ -324,7 +324,7 @@
 </div>
 
 <!-- Modal Payment (sudah ada dari Anda, ganti route ke finance.purchases.payment) -->
-@if($purchase->status === 'approved' && in_array(auth()->user()->role, ['finance', 'owner']))
+@if($purchase->status === 'approved' && in_array(auth()->user()->usertype, ['finance', 'owner']))
 <div id="payment-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
     <div class="bg-white rounded-lg p-6 w-full max-w-md">
         <h3 class="text-lg font-semibold text-gray-700 mb-4">Proses Pembayaran {{ $purchase->po_number }}</h3>

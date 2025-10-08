@@ -191,7 +191,7 @@
         <!-- Workflow Status: Kain Diterima, Printing, Jahit, Selesai -->
         @if(count($availableStatuses) > 0 && !in_array($p->status, ['draft', 'pending', 'approved']))
             @foreach($availableStatuses as $nextStatus)
-                @if(in_array($nextStatus, ['kain_diterima', 'printing', 'jahit', 'selesai']) && in_array(auth()->user()->role, ['kepala-toko', 'owner']))
+                @if(in_array($nextStatus, ['kain_diterima', 'printing', 'jahit', 'selesai']) && in_array(auth()->user()->usertype, ['kepala_toko', 'owner']))
                     <form method="POST" action="{{ route('kepala-toko.purchases.update-status', $p) }}" class="inline">
                         @csrf
                         <input type="hidden" name="new_status" value="{{ $nextStatus }}">
