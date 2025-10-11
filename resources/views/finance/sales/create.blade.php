@@ -49,9 +49,9 @@
 </head>
 <body class="bg-gray-100">
 <div class="flex">
-    <x-navbar-owner />
+    <x-navbar-finance />
     <div class="flex-1 lg:w-5/6">
-        <x-navbar-top-owner />
+        <x-navbar-top-finance />
         <div class="p-4 lg:p-8">
             <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
                 <h1 class="text-2xl font-semibold text-gray-800 mb-4">Buat Sales Order</h1>
@@ -69,7 +69,7 @@
                         {{ session('error') }}
                     </div>
                 @endif
-                <form action="{{ route('owner.sales.store') }}" method="POST" id="soForm" enctype="multipart/form-data">
+                <form action="{{ route('finance.sales.store') }}" method="POST" id="soForm" enctype="multipart/form-data">
                     @csrf
                     <div class="grid md:grid-cols-2 gap-4 mb-4">
                         <div>

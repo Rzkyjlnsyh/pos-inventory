@@ -522,4 +522,13 @@ class SalesOrderController extends Controller
         $seq = DB::table('sales_orders')->whereDate('created_at', Carbon::today())->count() + 1;
         return 'SAL' . $date . str_pad((string)$seq, 4, '0', STR_PAD_LEFT);
     }
+    public function printNotaDirect(Payment $payment): View
+    {
+        $salesOrder = $payment->salesOrder;
+        return view('admin.sales.nota', [
+            'salesOrder' => $salesOrder,
+            'payment' => $payment,
+            'autoPrint' => true,
+        ]);
+    }
 }

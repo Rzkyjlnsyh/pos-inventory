@@ -247,6 +247,21 @@ Route::middleware(['auth', 'finance'])->prefix('finance')->name('finance.')->gro
         Route::get('/{shift}/export-detail', [\App\Http\Controllers\Finance\ShiftController::class, 'exportDetail'])->name('export-detail');
         // TIDAK ADA route post (start, end, expense) untuk finance
     });
+    // Admin routes - TAMBAHKAN INI SETELAH SHIFT ROUTES
+Route::middleware(['auth', 'finance', 'check.shift'])->group(function () {
+    Route::resource('sales', \App\Http\Controllers\Finance\SalesOrderController::class)
+        ->parameters(['sales' => 'salesOrder']);
+    Route::post('/sales/{salesOrder}/approve', [\App\Http\Controllers\Finance\SalesOrderController::class, 'approve'])->name('sales.approve');
+    Route::post('/sales/{salesOrder}/addPayment', [\App\Http\Controllers\Finance\SalesOrderController::class, 'addPayment'])->name('sales.addPayment');
+    Route::post('/sales/{salesOrder}/startProcess', [\App\Http\Controllers\Finance\SalesOrderController::class, 'startProcess'])->name('sales.startProcess');
+    Route::post('/sales/{salesOrder}/processJahit', [\App\Http\Controllers\Finance\SalesOrderController::class, 'processJahit'])->name('sales.processJahit');
+    Route::post('/sales/{salesOrder}/markAsJadi', [\App\Http\Controllers\Finance\SalesOrderController::class, 'markAsJadi'])->name('sales.markAsJadi');
+    Route::post('/sales/{salesOrder}/markAsDiterimaToko', [\App\Http\Controllers\Finance\SalesOrderController::class, 'markAsDiterimaToko'])->name('sales.markAsDiterimaToko');
+    Route::post('/sales/{salesOrder}/complete', [\App\Http\Controllers\Finance\SalesOrderController::class, 'complete'])->name('sales.complete');
+    Route::get('/payments/{payment}/nota', [\App\Http\Controllers\Finance\SalesOrderController::class, 'printNota'])->name('sales.printNota');
+    Route::get('/payments/{payment}/nota-direct', [\App\Http\Controllers\Finance\SalesOrderController::class, 'printNotaDirect'])->name('sales.printNotaDirect');
+    Route::post('/sales/{salesOrder}/payment/{payment}/upload-proof', [\App\Http\Controllers\Finance\SalesOrderController::class, 'uploadProof'])->name('sales.uploadProof');
+});
 
   });
 
@@ -309,17 +324,23 @@ Route::middleware(['auth', 'kepala_toko'])->prefix('kepala-toko')->name('kepala-
         Route::post('{purchaseReturn}/confirm', [App\Http\Controllers\KepalaToko\PurchaseReturnController::class, 'confirm'])->name('confirm');
         Route::post('{purchaseReturn}/cancel', [App\Http\Controllers\KepalaToko\PurchaseReturnController::class, 'cancel'])->name('cancel');
     });
-    Route::prefix('shift')->name('shift.')->group(function () {
-        Route::get('/dashboard', [\App\Http\Controllers\KepalaToko\ShiftController::class, 'dashboard'])->name('dashboard');
-        Route::get('/history', [\App\Http\Controllers\KepalaToko\ShiftController::class, 'history'])->name('history');
-        Route::get('/{shift}', [\App\Http\Controllers\KepalaToko\ShiftController::class, 'show'])->name('show');
-        Route::get('/export', [\App\Http\Controllers\KepalaToko\ShiftController::class, 'export'])->name('export');
-        Route::get('/{shift}/export-detail', [\App\Http\Controllers\KepalaToko\ShiftController::class, 'exportDetail'])->name('export-detail');
-        Route::post('/start', [\App\Http\Controllers\KepalaToko\ShiftController::class, 'start'])->name('start');
-        Route::post('/end', [\App\Http\Controllers\KepalaToko\ShiftController::class, 'end'])->name('end');
-        Route::post('/expense', [\App\Http\Controllers\KepalaToko\ShiftController::class, 'expense'])->name('expense');
-        Route::get('/shift/history', [App\Http\Controllers\Admin\ShiftController::class, 'history'])->name('shift.history');
-    });
+
+    // Shift routes
+    // Shift routes
+    Route::get('shift/dashboard', [App\Http\Controllers\KepalaToko\ShiftController::class, 'dashboard'])->name('shift.dashboard');
+    Route::post('shift/start', [App\Http\Controllers\KepalaToko\ShiftController::class, 'start'])->name('shift.start');
+    Route::post('shift/end', [App\Http\Controllers\KepalaToko\ShiftController::class, 'end'])->name('shift.end');
+    Route::post('shift/expense', [App\Http\Controllers\KepalaToko\ShiftController::class, 'expense'])->name('shift.expense');
+    Route::get('/shift/history', [App\Http\Controllers\KepalaToko\ShiftController::class, 'history'])->name('shift.history');
+    Route::get('/shift/export', [App\Http\Controllers\KepalaToko\ShiftController::class, 'export'])->name('shift.export');
+    Route::get('/shift/export-pdf', [App\Http\Controllers\KepalaToko\ShiftController::class, 'exportPdf'])->name('shift.export-pdf');
+    Route::get('/shift/{shift}', [App\Http\Controllers\KepalaToko\ShiftController::class, 'show'])->name('shift.show');
+    Route::get('/shift/{shift}/export-detail', [App\Http\Controllers\KepalaToko\ShiftController::class, 'exportDetail'])->name('shift.export-detail');
+    Route::get('/shift/{shift}/export-detail-pdf', [App\Http\Controllers\KepalaToko\ShiftController::class, 'exportDetailPdf'])->name('shift.export-detail-pdf');
+    Route::get('/shift/{shift}/download-summary', [App\Http\Controllers\KepalaToko\ShiftController::class, 'downloadSummary'])->name('shift.download-summary');
+    Route::get('/shift/{shift}/print-preview', [App\Http\Controllers\KepalaToko\ShiftController::class, 'printPreview'])->name('shift.print-preview');
+    Route::get('/shift/{shift}/print-summary', [App\Http\Controllers\KepalaToko\ShiftController::class, 'printSummary'])->name('shift.print-summary');
+            Route::post('shift/income', [ShiftController::class, 'income'])->name('shift.income');
 });
 
 // Admin routes
@@ -404,22 +425,26 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         Route::post('shift/end', [App\Http\Controllers\Admin\ShiftController::class, 'end'])->name('shift.end');
         Route::post('shift/expense', [App\Http\Controllers\Admin\ShiftController::class, 'expense'])->name('shift.expense');
         Route::get('/shift/history', [App\Http\Controllers\Admin\ShiftController::class, 'history'])->name('shift.history');
-        Route::post('shift/income', [ShiftController::class, 'income'])->name('shift.income'); // <-- TAMBAH INI
+        Route::post('shift/income', [App\Http\Controllers\Admin\ShiftController::class, 'income'])->name('shift.income'); // <-- TAMBAH INI
+        Route::get('/shift/{shift}', [App\Http\Controllers\Admin\ShiftController::class, 'show'])->name('shift.show');
+        Route::get('/shift/{shift}/export-detail', [App\Http\Controllers\Admin\ShiftController::class, 'exportDetail'])->name('shift.export-detail');
+        Route::get('/shift/{shift}/export-detail-pdf', [App\Http\Controllers\Admin\ShiftController::class, 'exportDetailPdf'])->name('shift.export-detail-pdf');
 
-        // Sales
-
-    Route::resource('sales', SalesOrderController::class)
+// Admin routes - TAMBAHKAN INI SETELAH SHIFT ROUTES
+Route::middleware(['auth', 'admin', 'check.shift'])->group(function () {
+    Route::resource('sales', \App\Http\Controllers\Admin\SalesOrderController::class)
         ->parameters(['sales' => 'salesOrder']);
-    Route::post('/sales/{salesOrder}/approve', [SalesOrderController::class, 'approve'])->name('sales.approve');
-    Route::post('/sales/{salesOrder}/addPayment', [SalesOrderController::class, 'addPayment'])->name('sales.addPayment');
-    Route::post('/sales/{salesOrder}/startProcess', [SalesOrderController::class, 'startProcess'])->name('sales.startProcess');
-    Route::post('/sales/{salesOrder}/processJahit', [SalesOrderController::class, 'processJahit'])->name('sales.processJahit');
-    Route::post('/sales/{salesOrder}/markAsJadi', [SalesOrderController::class, 'markAsJadi'])->name('sales.markAsJadi');
-    Route::post('/sales/{salesOrder}/markAsDiterimaToko', [SalesOrderController::class, 'markAsDiterimaToko'])->name('sales.markAsDiterimaToko');
-    Route::post('/sales/{salesOrder}/complete', [SalesOrderController::class, 'complete'])->name('sales.complete');
-    Route::get('/payments/{payment}/nota', [SalesOrderController::class, 'printNota'])->name('sales.printNota');
-    Route::get('/payments/{payment}/nota-direct', [SalesOrderController::class, 'printNotaDirect'])->name('sales.printNotaDirect');
-    Route::post('/sales/{salesOrder}/payment/{payment}/upload-proof', [SalesOrderController::class, 'uploadProof'])->name('sales.uploadProof');
+    Route::post('/sales/{salesOrder}/approve', [\App\Http\Controllers\Admin\SalesOrderController::class, 'approve'])->name('sales.approve');
+    Route::post('/sales/{salesOrder}/addPayment', [\App\Http\Controllers\Admin\SalesOrderController::class, 'addPayment'])->name('sales.addPayment');
+    Route::post('/sales/{salesOrder}/startProcess', [\App\Http\Controllers\Admin\SalesOrderController::class, 'startProcess'])->name('sales.startProcess');
+    Route::post('/sales/{salesOrder}/processJahit', [\App\Http\Controllers\Admin\SalesOrderController::class, 'processJahit'])->name('sales.processJahit');
+    Route::post('/sales/{salesOrder}/markAsJadi', [\App\Http\Controllers\Admin\SalesOrderController::class, 'markAsJadi'])->name('sales.markAsJadi');
+    Route::post('/sales/{salesOrder}/markAsDiterimaToko', [\App\Http\Controllers\Admin\SalesOrderController::class, 'markAsDiterimaToko'])->name('sales.markAsDiterimaToko');
+    Route::post('/sales/{salesOrder}/complete', [\App\Http\Controllers\Admin\SalesOrderController::class, 'complete'])->name('sales.complete');
+    Route::get('/payments/{payment}/nota', [\App\Http\Controllers\Admin\SalesOrderController::class, 'printNota'])->name('sales.printNota');
+    Route::get('/payments/{payment}/nota-direct', [\App\Http\Controllers\Admin\SalesOrderController::class, 'printNotaDirect'])->name('sales.printNotaDirect');
+    Route::post('/sales/{salesOrder}/payment/{payment}/upload-proof', [\App\Http\Controllers\Admin\SalesOrderController::class, 'uploadProof'])->name('sales.uploadProof');
+});
 });
 
 // Editor routes

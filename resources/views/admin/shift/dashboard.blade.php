@@ -10,13 +10,12 @@
 <body class="bg-gray-100">
 <div class="flex">
     <x-navbar-admin />
-    
     <div class="flex-1 lg:w-5/6">
         <x-navbar-top-admin />
-        
         <div class="p-4 lg:p-8">
             <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
                 <h1 class="text-2xl font-semibold text-gray-800 mb-4">Dashboard Shift</h1>
+
                 <!-- Notifikasi Shift Aktif -->
 @php
     $activeShift = \App\Models\Shift::whereNull('end_time')->first();
@@ -36,12 +35,13 @@
     </div>
 @endif
 
-@if(session('error'))
-    <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4" role="alert">
-        <p>{{ session('error') }}</p>
-    </div>
-@endif
-                
+                @if(session('error'))
+                <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4" role="alert">
+                    <p>{{ session('error') }}</p>
+                </div>
+                @endif
+
+
                 <div class="flex flex-wrap gap-4 mb-4">
                     <a href="{{ route('admin.shift.history') }}" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow inline-flex items-center">
                         <i class="bi bi-clock-history mr-2"></i> Lihat Riwayat
@@ -65,11 +65,11 @@
                 @endif
 
                 <!-- Grid Stats -->
+                @if($shift)
                 <div class="grid md:grid-cols-2 gap-6 mt-6">
-                    <!-- Kolom Kiri - Kas Masuk -->
+                    <!-- Kolom Kiri - Pemasukan -->
                     <div class="bg-green-50 p-4 rounded-lg">
-                        <h2 class="text-lg font-semibold mb-4 text-green-800">💰 Kas Masuk</h2>
-                        
+                        <h2 class="text-lg font-semibold mb-4 text-green-800">💰 Pemasukan</h2>
                         <table class="w-full table-auto text-sm">
                             <tbody>
                                 <tr class="border-b">
@@ -101,7 +101,7 @@
                                     <td class="px-3 py-1 text-right text-blue-600">Rp {{ number_format($pemasukanManual, 0, ',', '.') }}</td>
                                 </tr>
                                 <tr class="bg-green-100 font-semibold">
-                                    <td class="px-3 py-1">Total Kas Masuk</td>
+                                    <td class="px-3 py-1">Total Pemasukan</td>
                                     <td class="px-3 py-1 text-right">Rp {{ number_format($cashLunas + $cashDp + $cashPelunasan + $transferLunas + $transferDp + $transferPelunasan + $pemasukanManual, 0, ',', '.') }}</td>
                                 </tr>
                             </tbody>
@@ -133,6 +133,37 @@
                         </table>
                     </div>
                 </div>
+
+                <!-- Debug Section (untuk memeriksa data pembayaran) -->
+                <!-- @if (config('app.env') === 'local')
+                <div class="mt-6 bg-gray-100 p-4 rounded-lg">
+                    <h2 class="text-lg font-semibold mb-3 text-gray-800">Debug Info (Pembayaran di Shift Ini)</h2>
+                    <pre class="bg-gray-800 text-white p-4 rounded-lg overflow-auto text-xs">
+                        @php
+                            $debugPayments = \App\Models\Payment::where('created_by', Auth::id())
+                                ->where('created_at', '>=', $shift->start_time)
+                                ->with('salesOrder')
+                                ->get();
+                            foreach ($debugPayments as $p) {
+                                echo "Payment ID: " . $p->id . "\n";
+                                echo "SO Number: " . ($p->salesOrder ? $p->salesOrder->so_number : 'N/A') . "\n";
+                                echo "Method: " . $p->method . "\n";
+                                echo "Status: " . $p->status . "\n";
+                                echo "Category: " . $p->category . "\n";
+                                echo "Amount: " . $p->amount, 2, '.', '' . "\n";
+                                echo "Cash Amount: " .$p->cash_amount, 2, '.', '' . "\n";
+                                echo "Transfer Amount: " .$p->transfer_amount, 2, '.', '' . "\n";
+                                echo "Paid At: " . $p->paid_at . "\n";
+                                echo "Grand Total SO: " . ($p->salesOrder ? number_format($p->salesOrder->grand_total, 2, '.', '') : 'N/A') . "\n";
+                                echo "Payments Count in SO: " . ($p->salesOrder ? $p->salesOrder->payments->count() : 'N/A') . "\n";
+                                echo "Created By: " . $p->created_by . "\n";
+                                echo "------------------------\n";
+                            }
+                        @endphp
+                    </pre>
+                </div>
+                @endif -->
+                @endif
 
                 <!-- Form Input Pemasukan -->
                 @if($shift)
@@ -190,44 +221,111 @@
                 </div>
                 @endif
 
-                <!-- Form Tutup Shift -->
-                <div class="mt-6">
-                    @if($shift)
-                        <form action="{{ route('admin.shift.end') }}" method="POST">
-                            @csrf
-                            <div class="grid md:grid-cols-2 gap-4 mb-4">
-                                <div>
-                                    <label for="final_cash" class="block font-medium mb-1">Kas Aktual di Laci *</label>
-                                    <input type="number" name="final_cash" id="final_cash" required 
-                                           class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
-                                           placeholder="Jumlah uang fisik di laci">
-                                </div>
-                                <div>
-                                    <label for="notes" class="block font-medium mb-1">Catatan Penutupan</label>
-                                    <textarea name="notes" id="notes" rows="2"
-                                              class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
-                                              placeholder="Catatan khusus shift ini"></textarea>
-                                </div>
-                            </div>
-                            <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded shadow">
-                                <i class="bi bi-lock-fill"></i> Tutup Shift
-                            </button>
-                        </form>
-                    @else
-                        <form action="{{ route('admin.shift.start') }}" method="POST">
-                            @csrf
-                            <div class="max-w-md">
-                                <label for="initial_cash" class="block font-medium mb-1">Kas Awal di Laci *</label>
-                                <input type="number" name="initial_cash" id="initial_cash" required 
-                                       class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
-                                       placeholder="Jumlah uang awal di laci">
-                            </div>
-                            <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded shadow mt-3">
-                                <i class="bi bi-play-fill"></i> Mulai Shift Baru
-                            </button>
-                        </form>
-                    @endif
+<!-- Form Tutup/Mulai Shift -->
+<div class="mt-6">
+<!-- Form Tutup Shift -->
+@if($shift)
+    <form action="{{ route('admin.shift.end') }}" method="POST">
+        @csrf
+        
+        <!-- INFO KAS AKHIR OTOMATIS -->
+        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
+            <h3 class="font-semibold text-blue-800 mb-2">💰 Kas Akhir Otomatis</h3>
+            <div class="grid md:grid-cols-2 gap-4 text-sm">
+                <div>
+                    <p><strong>Kas Awal:</strong> Rp {{ number_format($shift->initial_cash, 0, ',', '.') }}</p>
+                    <p><strong>Pemasukan Cash:</strong> Rp {{ number_format($cashLunas + $cashDp + $cashPelunasan, 0, ',', '.') }}</p>
+                    <p><strong>Pengeluaran:</strong> Rp {{ number_format($pengeluaran, 0, ',', '.') }}</p>
                 </div>
+                <div class="bg-white p-3 rounded border">
+                    <p class="font-semibold text-green-600">
+                        <strong>Kas Akhir:</strong> Rp {{ number_format($totalDiharapkan, 0, ',', '.') }}
+                    </p>
+                    <p class="text-xs text-gray-600 mt-1">
+                        Sistem otomatis menghitung berdasarkan transaksi
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <label for="notes" class="block font-medium mb-1">Catatan Penutupan (Opsional)</label>
+            <textarea name="notes" id="notes" rows="2"
+                      class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
+                      placeholder="Catatan khusus shift ini"></textarea>
+        </div>
+
+        <!-- Checkbox Print -->
+        <div class="mb-4">
+            <label class="flex items-center">
+                <input type="checkbox" name="print_summary" value="1" 
+                       class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" checked>
+                <span class="ml-2 text-sm text-gray-600">Cetak summary penutupan shift</span>
+            </label>
+            <p class="text-xs text-gray-500 mt-1">Summary akan otomatis didownload setelah tutup shift</p>
+        </div>
+
+        <button type="submit" 
+                class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded shadow font-semibold">
+            <i class="bi bi-lock-fill"></i> Konfirmasi Tutup Shift
+        </button>
+        
+        <p class="text-xs text-gray-600 mt-2">
+            💡 <strong>Note:</strong> Kas akhir dihitung otomatis oleh sistem
+        </p>
+    </form>
+    @else
+        <!-- TAMPILKAN FORM MULAI SHIFT HANYA JIKA TIDAK ADA SHIFT AKTIF -->
+        @if(!$shift)
+            @php
+                $latestClosedShift = \App\Models\Shift::whereNotNull('end_time')->latest('end_time')->first();
+                $isFirstTime = !$latestClosedShift;
+            @endphp
+            
+            @if($isFirstTime)
+                <!-- FIRST TIME: Manual input required -->
+                <form action="{{ route('admin.shift.start') }}" method="POST">
+                    @csrf
+                    <div class="max-w-md">
+                        <label for="initial_cash" class="block font-medium mb-1">Kas Awal di Laci *</label>
+                        <input type="number" name="initial_cash" id="initial_cash" required 
+                               class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
+                               placeholder="Jumlah uang awal di laci">
+                        <p class="text-xs text-gray-500 mt-1">Input manual hanya untuk shift pertama kali</p>
+                    </div>
+                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded shadow mt-3">
+                        <i class="bi bi-play-fill"></i> Mulai Shift Pertama
+                    </button>
+                </form>
+            @else
+                <!-- AUTO: Kas awal dari shift sebelumnya -->
+                <form action="{{ route('admin.shift.start') }}" method="POST">
+                    @csrf
+                    <div class="bg-blue-50 p-4 rounded-lg mb-4">
+                        <h3 class="font-semibold text-blue-800 mb-2">🔄 Kas Awal Otomatis</h3>
+                        <p class="text-sm text-blue-700">
+                            Kas awal diambil dari shift sebelumnya: 
+                            <strong>Rp {{ number_format($latestClosedShift->final_cash, 0, ',', '.') }}</strong>
+                        </p>
+                        <p class="text-xs text-blue-600 mt-1">
+                            Shift sebelumnya: {{ $latestClosedShift->end_time->format('d/m/Y H:i') }}
+                        </p>
+                    </div>
+                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded shadow">
+                        <i class="bi bi-play-fill"></i> Mulai Shift Baru
+                    </button>
+                </form>
+            @endif
+        @else
+            <div class="bg-gray-100 p-4 rounded-lg text-center">
+                <p class="text-gray-600">
+                    <i class="bi bi-info-circle"></i> 
+                    Tidak bisa mulai shift baru karena shift sedang aktif
+                </p>
+            </div>
+        @endif
+    @endif
+</div>
             </div>
         </div>
     </div>

@@ -60,7 +60,7 @@
                         </thead>
                         <tbody>
                             @foreach ($shifts as $shift)
-                                <tr>
+                            <tr class="hover:bg-gray-50 border-b cursor-pointer" onclick="window.location='{{ route('admin.shift.show', $shift) }}'">
                                     <td class="border px-4 py-2">{{ \Carbon\Carbon::parse($shift->start_time)->format('d/m/Y H:i') }}</td>
                                     <td class="border px-4 py-2">{{ $shift->end_time ? \Carbon\Carbon::parse($shift->end_time)->format('d/m/Y H:i') : '-' }}</td>
                                     <td class="border px-4 py-2">Rp {{ number_format($shift->initial_cash, 0, ',', '.') }}</td>

@@ -89,18 +89,54 @@
                                 <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                             @enderror
                         </div>
-                        <div>
-                            <label for="customer_id" class="block font-medium mb-1">Customer</label>
-                            <select name="customer_id" id="customer_id" class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
-                                <option value="">Guest</option>
-                                @foreach($customers as $customer)
-                                    <option value="{{ $customer->id }}" {{ old('customer_id') == $customer->id ? 'selected' : '' }}>{{ $customer->name }}</option>
-                                @endforeach
-                            </select>
-                            @error('customer_id')
-                                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                            @enderror
-                        </div>
+                        <div class="relative">
+    <label for="customer_search" class="block font-medium mb-1">Customer</label>
+    <input type="text" 
+           id="customer_search" 
+           class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
+           placeholder="Ketik nama customer atau pilih dari dropdown..."
+           autocomplete="off">
+    
+    <!-- Hidden fields untuk data customer -->
+    <input type="hidden" name="customer_id" id="customer_id" value="{{ old('customer_id') }}">
+    <input type="hidden" name="customer_name" id="customer_name" value="{{ old('customer_name') }}">
+    <input type="hidden" name="customer_phone" id="customer_phone" value="{{ old('customer_phone') }}">
+    
+    <!-- Dropdown untuk existing customers -->
+    <div id="customer_dropdown" class="hidden absolute z-10 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto">
+        <!-- Existing customers akan dimuat di sini -->
+        @foreach($customers as $customer)
+            <div class="p-2 hover:bg-gray-100 cursor-pointer customer-option"
+                 data-id="{{ $customer->id }}"
+                 data-name="{{ $customer->name }}"
+                 data-phone="{{ $customer->phone ?? '' }}">
+                {{ $customer->name }} @if($customer->phone)({{ $customer->phone }})@endif
+            </div>
+        @endforeach
+    </div>
+    
+    <!-- Info customer yang dipilih -->
+    <div id="selected_customer" class="mt-2 p-2 bg-blue-50 rounded hidden">
+        <span id="customer_display_name" class="font-medium"></span>
+        <span id="customer_display_phone" class="text-sm text-gray-600 ml-2"></span>
+        <button type="button" id="clear_customer" class="text-red-600 ml-2">✕</button>
+    </div>
+
+    <!-- Fields untuk customer baru - TAMBAH INPUT PHONE DISINI -->
+    <div id="new_customer_fields" class="hidden mt-2">
+        <div class="grid md:grid-cols-2 gap-4">
+            <div>
+                <label class="block font-medium mb-1">Nama Customer Baru *</label>
+                <input type="text" id="new_customer_name" class="border rounded px-3 py-2 w-full" placeholder="Nama customer baru" required>
+            </div>
+            <div>
+                <label class="block font-medium mb-1">Nomor Telepon</label>
+                <input type="text" id="new_customer_phone" class="border rounded px-3 py-2 w-full" placeholder="Contoh: 08123456789">
+            </div>
+        </div>
+        <p class="text-sm text-gray-600 mt-1">* Customer baru akan otomatis dibuat</p>
+    </div>
+</div>
                         <div>
                             <label for="payment_method" class="block font-medium mb-1">Metode Pembayaran</label>
                             <select name="payment_method" id="payment_method" required class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
@@ -236,9 +272,110 @@
 </div>
 
 <script>
-    let itemIndex = 1;
+document.addEventListener('DOMContentLoaded', function () {
+    // index awal untuk item baru (mulai dari 1 jika tidak ada old items)
+    let itemIndex = {{ count(old('items', [])) > 0 ? count(old('items', [])) : 1 }};
+    let grandTotal = 0;
+
+    const soForm = document.getElementById('soForm');
+    const itemsContainer = document.getElementById('items-container');
+    const paymentMethod = document.getElementById('payment_method');
+    const paymentAmount = document.getElementById('payment_amount');
+    const cashAmount = document.getElementById('cash_amount');
+    const transferAmount = document.getElementById('transfer_amount');
+    const proofField = document.getElementById('proof-field');
+    const splitFields = document.getElementById('split-payment-fields');
+    const dpInfo = document.getElementById('dp-info');
+    const paymentStatus = document.getElementById('payment_status');
+
+    // Pastikan ada hidden grand_total untuk dikirim ke server
+    if (soForm && !document.getElementById('grand_total')) {
+        const hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = 'grand_total';
+        hidden.id = 'grand_total';
+        hidden.value = '0';
+        soForm.appendChild(hidden);
+    }
+
+    // --- Fungsi utama: hitung grand total ---
+    function updateGrandTotal() {
+        const rows = document.querySelectorAll('.item-row');
+        let subtotal = 0;
+        let discountTotal = 0;
+
+        rows.forEach(row => {
+            const price = parseFloat(row.querySelector('.sale-price').value) || 0;
+            const qty = parseInt(row.querySelector('.qty').value) || 0;
+            const discount = parseFloat(row.querySelector('.discount').value) || 0;
+
+            const itemSubtotal = price * qty;
+            const itemDiscount = discount * qty;
+            subtotal += itemSubtotal;
+            discountTotal += itemDiscount;
+
+            // jika ada elemen subtotal atau display per row, kita bisa set (opsional)
+            const displaySubtotal = row.querySelector('.display-subtotal');
+            if (displaySubtotal) {
+                displaySubtotal.textContent = (itemSubtotal - itemDiscount).toLocaleString('id-ID');
+            }
+        });
+
+        grandTotal = subtotal - discountTotal;
+
+        // update hidden field
+        const grandInput = document.getElementById('grand_total');
+        if (grandInput) grandInput.value = grandTotal.toFixed(2);
+
+        // update DP info
+        if (dpInfo) {
+            dpInfo.textContent = grandTotal > 0 ? `DP minimal 50%: Rp ${Math.ceil(grandTotal * 0.5).toLocaleString('id-ID')}` : '';
+        }
+
+        // jika metode split, sinkron jumlah
+        updatePaymentAmount();
+        updatePaymentStatus();
+    }
+
+    // --- Ketika pilih produk: isi sku, nama, harga otomatis ---
+    // Delegated event listener untuk select produk (termasuk row awal & row dinamis)
+    itemsContainer.addEventListener('change', function (e) {
+        const target = e.target;
+        if (target.classList.contains('product-select')) {
+            const row = target.closest('.item-row');
+            const opt = target.options[target.selectedIndex];
+            const price = opt && opt.dataset.price ? parseFloat(opt.dataset.price) : 0;
+            const sku = opt && opt.dataset.sku ? opt.dataset.sku : '';
+            const name = opt && (opt.dataset.name || opt.text) ? (opt.dataset.name || opt.text) : '';
+
+            // set fields jika ada
+            const nameField = row.querySelector('.product-name');
+            if (nameField) nameField.value = name;
+
+            const skuField = row.querySelector('.sku');
+            if (skuField) skuField.value = sku;
+
+            const priceField = row.querySelector('.sale-price');
+            if (priceField) priceField.value = price > 0 ? parseFloat(price).toFixed(2) : '';
+
+            updateGrandTotal();
+
+            if (price <= 0) {
+                // beri peringatan tapi jangan spam bila user memilih option kosong
+                if (opt && opt.value) {
+                    alert('Harga produk tidak valid atau kosong. Harap periksa data produk di database.');
+                }
+            }
+        }
+
+        // perubahan qty / harga / discount juga update total
+        if (target.classList.contains('qty') || target.classList.contains('sale-price') || target.classList.contains('discount')) {
+            updateGrandTotal();
+        }
+    });
+
+    // --- Add item (gunakan template yang sama seperti layout kamu) ---
     document.getElementById('add-item').addEventListener('click', function () {
-        const container = document.getElementById('items-container');
         const newRow = document.createElement('div');
         newRow.className = 'item-row grid md:grid-cols-5 gap-4 mt-4';
         newRow.innerHTML = `
@@ -265,7 +402,7 @@
             </div>
             <div>
                 <label class="block font-medium mb-1">Qty</label>
-                <input type="number" name="items[${itemIndex}][qty]" class="qty border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" min="1" required>
+                <input type="number" name="items[${itemIndex}][qty]" class="qty border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" min="1" value="1" required>
             </div>
             <div>
                 <label class="block font-medium mb-1">Diskon</label>
@@ -273,40 +410,20 @@
                 <button type="button" class="remove-item text-red-600 hover:text-red-800 mt-2"><i class="bi bi-trash"></i></button>
             </div>
         `;
-        container.appendChild(newRow);
+        itemsContainer.appendChild(newRow);
         itemIndex++;
+        // fokus ke select produk barunya (opsional)
+        const selects = newRow.querySelectorAll('.product-select');
+        if (selects.length) selects[0].focus();
     });
 
-    document.getElementById('items-container').addEventListener('change', function (e) {
-        if (e.target.classList.contains('product-select')) {
-            const row = e.target.closest('.item-row');
-            const select = e.target;
-            const selectedOption = select.options[select.selectedIndex];
-            const productName = selectedOption ? selectedOption.dataset.name || '' : '';
-            const sku = selectedOption ? selectedOption.dataset.sku || '' : '';
-            const price = selectedOption && selectedOption.dataset.price ? parseFloat(selectedOption.dataset.price) : 0;
-
-            row.querySelector('.product-name').value = productName;
-            row.querySelector('.sku').value = sku;
-            row.querySelector('.sale-price').value = price > 0 ? price.toFixed(2) : '';
-
-            if (price <= 0) {
-                alert('Harga produk tidak valid atau kosong. Harap periksa data produk di database.');
-            }
-
-            updateGrandTotal();
-        }
-
-        if (e.target.classList.contains('qty') || e.target.classList.contains('sale-price') || e.target.classList.contains('discount')) {
-            updateGrandTotal();
-        }
-    });
-
-    document.getElementById('items-container').addEventListener('click', function (e) {
-        if (e.target.closest('.remove-item')) {
-            const row = e.target.closest('.item-row');
-            if (document.querySelectorAll('.item-row').length > 1) {
-                row.remove();
+    // --- Remove item (handle ikon di dalam button juga) ---
+    itemsContainer.addEventListener('click', function (e) {
+        const btn = e.target.closest('.remove-item');
+        if (btn) {
+            const rows = document.querySelectorAll('.item-row');
+            if (rows.length > 1) {
+                btn.closest('.item-row').remove();
                 updateGrandTotal();
             } else {
                 alert('Minimal satu item harus ada.');
@@ -314,325 +431,218 @@
         }
     });
 
-    let grandTotal = 0;
-
-    function updateGrandTotal() {
-        const items = document.querySelectorAll('.item-row');
-        let subtotal = 0;
-        let discountTotal = 0;
-
-        items.forEach(item => {
-            const price = parseFloat(item.querySelector('.sale-price').value) || 0;
-            const qty = parseInt(item.querySelector('.qty').value) || 0;
-            const discount = parseFloat(item.querySelector('.discount').value) || 0;
-            const itemSubtotal = price * qty;
-            const itemDiscount = discount * qty;
-            subtotal += itemSubtotal;
-            discountTotal += itemDiscount;
-        });
-
-        grandTotal = subtotal - discountTotal;
-        const dpInfo = document.getElementById('dp-info');
-        dpInfo.textContent = grandTotal > 0 ? `DP minimal 50%: Rp ${Math.ceil(grandTotal * 0.5).toLocaleString('id-ID')}` : '';
-    }
-
-    document.getElementById('payment_method').addEventListener('change', function () {
-    const splitFields = document.getElementById('split-payment-fields');
-    const proofField = document.getElementById('proof-field');
-    splitFields.classList.toggle('hidden', this.value !== 'split');
-    proofField.classList.toggle('hidden', !(this.value === 'transfer' || this.value === 'split')); // Munculkan proof_field untuk transfer juga
-    if (this.value !== 'split') {
-        document.getElementById('cash_amount').value = '';
-        document.getElementById('transfer_amount').value = '';
-    }
-    if (this.value !== 'transfer' && this.value !== 'split') {
-        document.getElementById('proof_path').value = '';
-    }
-    updatePaymentAmount();
-    updateProofRequired(this.value); // Tambah ini untuk set required
-});
-
-function updatePaymentAmount() {
-    const method = document.getElementById('payment_method').value;
-    const cash = parseFloat(document.getElementById('cash_amount')?.value || 0);
-    const transfer = parseFloat(document.getElementById('transfer_amount')?.value || 0);
-    const total = method === 'split' ? cash + transfer : parseFloat(document.getElementById('payment_amount').value) || 0;
-    document.getElementById('payment_amount').value = total.toFixed(2);
-    updatePaymentStatus();
-}
-function updateProofRequired(method) {
-    const proofInput = document.getElementById('proof_path');
-    proofInput.required = (method === 'transfer' || method === 'split'); // Set required untuk transfer/split
-}
-
-    function updatePaymentStatus() {
-        const paymentAmount = parseFloat(document.getElementById('payment_amount').value) || 0;
-        const paymentStatusSelect = document.getElementById('payment_status');
-        if (paymentAmount >= grandTotal && grandTotal > 0) {
-            paymentStatusSelect.value = 'lunas';
-        } else {
-            paymentStatusSelect.value = 'dp';
-        }
-    }
-
-    document.getElementById('payment_amount').addEventListener('input', updatePaymentStatus);
-    document.getElementById('cash_amount')?.addEventListener('input', updatePaymentAmount);
-    document.getElementById('transfer_amount')?.addEventListener('input', updatePaymentAmount);
-
-    document.getElementById('soForm').addEventListener('submit', function (e) {
-    console.log('Form submitted, validating...');
-    const salePriceInputs = document.querySelectorAll('.sale-price');
-    for (let input of salePriceInputs) {
-        if (!input.value || parseFloat(input.value) <= 0) {
-            e.preventDefault();
-            alert('Harga produk tidak boleh kosong atau nol. Silakan pilih produk yang valid.');
-            console.log('Validation failed: Invalid sale price');
-            return;
-        }
-    }
-
-    const paymentMethod = document.getElementById('payment_method').value;
-    const paymentStatus = document.getElementById('payment_status').value;
-    let paymentAmount = 0;
-
-    if (paymentMethod === 'split') {
-        const cashAmount = parseFloat(document.getElementById('cash_amount').value) || 0;
-        const transferAmount = parseFloat(document.getElementById('transfer_amount').value) || 0;
-        paymentAmount = cashAmount + transferAmount;
-        if (transferAmount > 0 && !document.getElementById('proof_path').files[0]) {
-            e.preventDefault();
-            alert('Bukti pembayaran wajib untuk transfer di metode split.');
-            console.log('Validation failed: Missing proof for split transfer');
-            return;
-        }
-    } else if (paymentMethod === 'transfer') {
-        paymentAmount = parseFloat(document.getElementById('payment_amount').value) || 0;
-        if (paymentAmount > 0 && !document.getElementById('proof_path').files[0]) {
-            e.preventDefault();
-            alert('Bukti pembayaran wajib untuk metode transfer.');
-            console.log('Validation failed: Missing proof for transfer');
-            return;
-        }
-    } else {
-        paymentAmount = parseFloat(document.getElementById('payment_amount').value) || 0;
-    }
-
-    if (paymentAmount > 0) {
-        if (paymentStatus === 'dp' && paymentAmount < grandTotal * 0.5) {
-            e.preventDefault();
-            alert(`Jumlah pembayaran kurang dari DP minimal 50%: Rp ${(grandTotal * 0.5).toLocaleString('id-ID')}`);
-            console.log('Validation failed: Payment amount below 50% DP');
-            return;
-        }
-        if (paymentAmount > grandTotal) {
-            e.preventDefault();
-            alert(`Jumlah pembayaran melebihi grand total: Rp ${grandTotal.toLocaleString('id-ID')}`);
-            console.log('Validation failed: Payment amount exceeds grand total');
-            return;
-        }
-    }
-    console.log('Validation passed, submitting form...');
-});
-
-    function toggleSidebar() {
-        const sidebar = document.getElementById('sidebar');
-        sidebar.classList.toggle('-translate-x-full');
-    }
-
-    function toggleDropdown(button) {
-        const dropdownMenu = button.nextElementSibling;
-        const chevronIcon = button.querySelector('.bi-chevron-down');
-        dropdownMenu.classList.toggle('max-h-0');
-        dropdownMenu.classList.toggle('max-h-40');
-        chevronIcon.classList.toggle('rotate-180');
-    }
-
-    updateGrandTotal();    let itemIndex = {{ count(old('items', [])) }};
-    let grandTotal = 0;
-
-    function updateGrandTotal() {
-        const items = document.querySelectorAll('.item-row');
-        let subtotal = 0;
-        items.forEach(row => {
-            const qty = parseInt(row.querySelector('.qty').value) || 0;
-            const salePrice = parseFloat(row.querySelector('.sale-price').value) || 0;
-            const discount = parseFloat(row.querySelector('.discount').value) || 0;
-            subtotal += (salePrice * qty) - (discount * qty);
-        });
-        grandTotal = subtotal;
-        document.getElementById('grand_total').value = grandTotal.toFixed(2);
-        updatePaymentStatus();
-    }
-
+    // --- Payment / split handling ---
     function updatePaymentAmount() {
-        const paymentMethod = document.getElementById('payment_method').value;
-        const paymentAmountInput = document.getElementById('payment_amount');
-        let paymentAmount = parseFloat(paymentAmountInput.value) || 0;
-        if (paymentMethod === 'split') {
-            const cashAmount = parseFloat(document.getElementById('cash_amount').value) || 0;
-            const transferAmount = parseFloat(document.getElementById('transfer_amount').value) || 0;
-            paymentAmount = cashAmount + transferAmount;
-            paymentAmountInput.value = paymentAmount.toFixed(2);
-        }
-        updatePaymentStatus();
-    }
+        const method = paymentMethod.value;
+        const cash = parseFloat(cashAmount?.value) || 0;
+        const transfer = parseFloat(transferAmount?.value) || 0;
 
-    function updatePaymentStatus() {
-        const paymentAmount = parseFloat(document.getElementById('payment_amount').value) || 0;
-        const paymentStatus = document.getElementById('payment_status').value;
-        const dpInfo = document.getElementById('dp-info');
-        if (paymentStatus === 'dp' && paymentAmount > 0) {
-            const minDp = grandTotal * 0.5;
-            dpInfo.textContent = `Minimal DP 50%: Rp ${minDp.toLocaleString('id-ID')}`;
+        if (method === 'split') {
+            // set payment_amount sebagai jumlah cash+transfer
+            paymentAmount.value = (cash + transfer).toFixed(2);
+            if (splitFields) splitFields.classList.remove('hidden');
         } else {
-            dpInfo.textContent = '';
+            // untuk cash/transfer default isi grandTotal (kasir biasanya otomatis)
+            if (method === 'cash' || method === 'transfer') {
+                paymentAmount.value = grandTotal.toFixed(2);
+            }
+            if (splitFields) splitFields.classList.add('hidden');
         }
+
+        updateProofRequired(method);
+        updatePaymentStatus();
     }
 
     function updateProofRequired(method) {
-        const proofField = document.getElementById('proof-field');
-        proofField.classList.toggle('hidden', !(method === 'transfer' || method === 'split'));
+        // proof-field adalah wrapper, proof input id = proof_path
+        const proofInput = document.getElementById('proof_path');
+        if (!proofInput) return;
+        if (method === 'transfer' || method === 'split') {
+            proofInput.required = true;
+            if (proofField) proofField.classList.remove('hidden');
+        } else {
+            proofInput.required = false;
+            if (proofField) proofField.classList.add('hidden');
+        }
     }
 
-    document.getElementById('add-item').addEventListener('click', function () {
-        const itemContainer = document.getElementById('items-container');
-        const newItem = document.createElement('div');
-        newItem.classList.add('item-row', 'grid', 'md:grid-cols-5', 'gap-4', 'mb-4');
-        newItem.innerHTML = `
-            <div>
-                <label class="block font-medium mb-1">Produk</label>
-                <select name="items[${itemIndex}][product_id]" class="product-select border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
-                    <option value="">Pilih Produk</option>
-                    @foreach ($products as $product)
-                        <option value="{{ $product->id }}" data-price="{{ $product->price }}" data-sku="{{ $product->sku }}">{{ $product->name }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div>
-                <label class="block font-medium mb-1">Nama Produk</label>
-                <input type="text" name="items[${itemIndex}][product_name]" class="product-name border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" required>
-            </div>
-            <div>
-                <label class="block font-medium mb-1">SKU</label>
-                <input type="text" name="items[${itemIndex}][sku]" class="sku border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
-            </div>
-            <div>
-                <label class="block font-medium mb-1">Harga</label>
-                <input type="number" name="items[${itemIndex}][sale_price]" class="sale-price border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" step="0.01" min="0" required>
-            </div>
-            <div>
-                <label class="block font-medium mb-1">Qty</label>
-                <input type="number" name="items[${itemIndex}][qty]" class="qty border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" min="1" required>
-            </div>
-            <div>
-                <label class="block font-medium mb-1">Diskon (opsional)</label>
-                <input type="number" name="items[${itemIndex}][discount]" class="discount border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" step="0.01" min="0">
-            </div>
-            <div>
-                <button type="button" class="remove-item text-red-500 hover:text-red-700 mt-6">Hapus</button>
-            </div>
-        `;
-        itemContainer.appendChild(newItem);
-        itemIndex++;
-        updateGrandTotal();
-    });
-
-    document.getElementById('items-container').addEventListener('click', function (e) {
-        if (e.target.classList.contains('remove-item')) {
-            e.target.closest('.item-row').remove();
-            updateGrandTotal();
-        }
-    });
-
-    document.getElementById('items-container').addEventListener('change', function (e) {
-        if (e.target.classList.contains('product-select')) {
-            const row = e.target.closest('.item-row');
-            const selectedOption = e.target.options[e.target.selectedIndex];
-            const price = selectedOption.getAttribute('data-price') || 0;
-            const sku = selectedOption.getAttribute('data-sku') || '';
-            const productName = selectedOption.text || '';
-            row.querySelector('.sale-price').value = parseFloat(price).toFixed(2);
-            row.querySelector('.sku').value = sku;
-            row.querySelector('.product-name').value = productName;
-            updateGrandTotal();
-        }
-        if (e.target.classList.contains('qty') || e.target.classList.contains('sale-price') || e.target.classList.contains('discount')) {
-            updateGrandTotal();
-        }
-    });
-
-    document.getElementById('payment_method').addEventListener('change', function () {
-        const splitFields = document.getElementById('split-payment-fields');
-        const proofField = document.getElementById('proof-field');
-        splitFields.classList.toggle('hidden', this.value !== 'split');
-        proofField.classList.toggle('hidden', !(this.value === 'transfer' || this.value === 'split'));
-        if (this.value !== 'split') {
-            document.getElementById('cash_amount').value = '';
-            document.getElementById('transfer_amount').value = '';
-        }
-        if (this.value !== 'transfer' && this.value !== 'split') {
-            document.getElementById('proof_path').value = '';
-        }
-        updatePaymentAmount();
-        updateProofRequired(this.value);
-    });
-
-    document.getElementById('payment_amount').addEventListener('input', updatePaymentStatus);
-    document.getElementById('payment_status').addEventListener('change', updatePaymentStatus);
-    document.getElementById('cash_amount').addEventListener('input', updatePaymentAmount);
-    document.getElementById('transfer_amount').addEventListener('input', updatePaymentAmount);
-
-    document.getElementById('soForm').addEventListener('submit', function (e) {
-        console.log('Form submitted, validating...');
-        const salePriceInputs = document.querySelectorAll('.sale-price');
-        for (let input of salePriceInputs) {
-            if (!input.value || parseFloat(input.value) <= 0) {
-                e.preventDefault();
-                alert('Harga produk tidak boleh kosong atau nol. Silakan pilih produk yang valid.');
-                console.log('Validation failed: Invalid sale price');
-                return;
-            }
+    function updatePaymentStatus() {
+        const amount = parseFloat(paymentAmount.value) || 0;
+        if (grandTotal > 0 && amount >= grandTotal) {
+            paymentStatus.value = 'lunas';
+        } else {
+            paymentStatus.value = 'dp';
         }
 
-        const paymentMethod = document.getElementById('payment_method').value;
-        const paymentStatus = document.getElementById('payment_status').value;
-        const paymentAmountInput = document.getElementById('payment_amount');
-        let paymentAmount = parseFloat(paymentAmountInput ? paymentAmountInput.value : 0) || 0;
+        // update dpInfo khusus jika status dipilih dp
+        if (paymentStatus.value === 'dp' && amount > 0) {
+            const minDp = Math.ceil(grandTotal * 0.5);
+            dpInfo.textContent = `Minimal DP 50%: Rp ${minDp.toLocaleString('id-ID')}`;
+        } else {
+            dpInfo.textContent = grandTotal > 0 ? `DP minimal 50%: Rp ${Math.ceil(grandTotal * 0.5).toLocaleString('id-ID')}` : '';
+        }
+    }
 
-        console.log('Payment amount:', paymentAmount, 'Method:', paymentMethod);
+    // Event binding payment fields
+    if (paymentMethod) paymentMethod.addEventListener('change', updatePaymentAmount);
+    if (cashAmount) cashAmount.addEventListener('input', updatePaymentAmount);
+    if (transferAmount) transferAmount.addEventListener('input', updatePaymentAmount);
+    if (paymentAmount) paymentAmount.addEventListener('input', updatePaymentStatus);
+    if (paymentStatus) paymentStatus.addEventListener('change', updatePaymentStatus);
 
-        if (paymentAmount > 0) {
-            if (paymentMethod === 'split') {
-                const cashAmount = parseFloat(document.getElementById('cash_amount').value) || 0;
-                const transferAmount = parseFloat(document.getElementById('transfer_amount').value) || 0;
-                if (paymentAmount != cashAmount + transferAmount) {
+    // --- Submit validation ---
+    if (soForm) {
+        soForm.addEventListener('submit', function (e) {
+            // validasi harga produk > 0 untuk semua baris
+            const prices = document.querySelectorAll('.sale-price');
+            for (let p of prices) {
+                if (!p.value || parseFloat(p.value) <= 0) {
                     e.preventDefault();
-                    alert('Jumlah total harus sama dengan cash + transfer.');
-                    console.log('Validation failed: Split amount mismatch');
+                    alert('Harga produk tidak boleh kosong atau nol. Silakan pilih produk yang valid.');
                     return;
                 }
             }
 
-            if (paymentStatus === 'dp' && paymentAmount < grandTotal * 0.5) {
-                e.preventDefault();
-                alert(`Jumlah pembayaran kurang dari DP minimal 50%: Rp ${(grandTotal * 0.5).toLocaleString('id-ID')}`);
-                console.log('Validation failed: Payment amount below 50% DP');
-                return;
+            // validasi payment split/proof/dp checks
+            const method = paymentMethod.value;
+            const amount = parseFloat(paymentAmount.value) || 0;
+            if (method === 'split') {
+                const c = parseFloat(cashAmount.value) || 0;
+                const t = parseFloat(transferAmount.value) || 0;
+                if ((c + t).toFixed(2) != amount.toFixed(2)) {
+                    e.preventDefault();
+                    alert('Jumlah total harus sama dengan cash + transfer.');
+                    return;
+                }
+                if (t > 0) {
+                    const proof = document.getElementById('proof_path');
+                    if (proof && (!proof.files || !proof.files[0])) {
+                        e.preventDefault();
+                        alert('Bukti pembayaran wajib untuk transfer di metode split.');
+                        return;
+                    }
+                }
+            } else if (method === 'transfer') {
+                if (amount > 0) {
+                    const proof = document.getElementById('proof_path');
+                    if (proof && (!proof.files || !proof.files[0])) {
+                        e.preventDefault();
+                        alert('Bukti pembayaran wajib untuk metode transfer.');
+                        return;
+                    }
+                }
             }
-            if (paymentAmount > grandTotal) {
-                e.preventDefault();
-                alert(`Jumlah pembayaran melebihi grand total: Rp ${grandTotal.toLocaleString('id-ID')}`);
-                console.log('Validation failed: Payment amount exceeds grand total');
-                return;
-            }
-        } else {
-            console.log('No payment amount, skipping payment validation');
-        }
-        console.log('Validation passed, submitting form...');
-    });
 
+            if (amount > 0) {
+                if (paymentStatus.value === 'dp' && amount < (grandTotal * 0.5)) {
+                    e.preventDefault();
+                    alert(`Jumlah pembayaran kurang dari DP minimal 50%: Rp ${(grandTotal * 0.5).toLocaleString('id-ID')}`);
+                    return;
+                }
+                if (amount > grandTotal) {
+                    e.preventDefault();
+                    alert(`Jumlah pembayaran melebihi grand total: Rp ${grandTotal.toLocaleString('id-ID')}`);
+                    return;
+                }
+            }
+
+            // kalau lolos semua, biarkan submit
+        });
+    }
+    // Jalankan inisialisasi awal
     updateGrandTotal();
-    document.getElementById('payment_method').dispatchEvent(new Event('change'));
+    // pastikan payment method render sesuai awal
+    if (paymentMethod) paymentMethod.dispatchEvent(new Event('change'));
+});
+
+// === SIMPLE CUSTOMER SEARCH FIX ===
+const customerSearch = document.getElementById('customer_search');
+const customerDropdown = document.getElementById('customer_dropdown');
+const customerIdInput = document.getElementById('customer_id');
+const customerNameInput = document.getElementById('customer_name');
+const customerPhoneInput = document.getElementById('customer_phone');
+const selectedCustomerDiv = document.getElementById('selected_customer');
+const newCustomerFields = document.getElementById('new_customer_fields');
+const newCustomerName = document.getElementById('new_customer_name');
+const newCustomerPhone = document.getElementById('new_customer_phone');
+
+// Show dropdown when clicking search
+customerSearch.addEventListener('click', function() {
+    customerDropdown.classList.remove('hidden');
+});
+
+// Hide dropdown when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.relative')) {
+        customerDropdown.classList.add('hidden');
+    }
+});
+
+// Select existing customer
+customerDropdown.addEventListener('click', function(e) {
+    const customerOption = e.target.closest('.customer-option');
+    if (customerOption) {
+        const id = customerOption.getAttribute('data-id');
+        const name = customerOption.getAttribute('data-name');
+        const phone = customerOption.getAttribute('data-phone');
+        
+        customerIdInput.value = id;
+        customerNameInput.value = name;
+        customerPhoneInput.value = phone || '';
+        
+        // Show selected customer info
+        document.getElementById('customer_display_name').textContent = name;
+        document.getElementById('customer_display_phone').textContent = phone ? `(${phone})` : '';
+        selectedCustomerDiv.classList.remove('hidden');
+        
+        // Hide dropdown and clear search
+        customerDropdown.classList.add('hidden');
+        customerSearch.value = '';
+    }
+});
+
+// Clear customer selection
+document.getElementById('clear_customer').addEventListener('click', function() {
+    customerIdInput.value = '';
+    customerNameInput.value = '';
+    customerPhoneInput.value = '';
+    selectedCustomerDiv.classList.add('hidden');
+    newCustomerFields.classList.add('hidden');
+    customerSearch.value = '';
+    newCustomerName.value = '';
+    newCustomerPhone.value = '';
+});
+
+// Create new customer - show fields when typing
+customerSearch.addEventListener('input', function() {
+    const searchTerm = this.value.trim();
+    
+    if (searchTerm.length > 0) {
+        // Check if customer exists
+        const existingCustomer = Array.from(customerDropdown.querySelectorAll('.customer-option'))
+            .find(opt => opt.getAttribute('data-name').toLowerCase() === searchTerm.toLowerCase());
+        
+        if (!existingCustomer) {
+            // Show new customer fields
+            newCustomerName.value = searchTerm;
+            customerNameInput.value = searchTerm;
+            newCustomerFields.classList.remove('hidden');
+        } else {
+            newCustomerFields.classList.add('hidden');
+        }
+    } else {
+        newCustomerFields.classList.add('hidden');
+    }
+});
+
+// Sync new customer fields
+newCustomerName.addEventListener('input', function() {
+    customerNameInput.value = this.value;
+});
+
+newCustomerPhone.addEventListener('input', function() {
+    customerPhoneInput.value = this.value;
+});
 </script>
 </body>
 </html>

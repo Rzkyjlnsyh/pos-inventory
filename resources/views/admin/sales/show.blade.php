@@ -378,9 +378,9 @@
                         </td>
                         <td class="px-4 py-2 border text-center">
                             <div class="flex justify-center gap-2">
-                                <a href="{{ route('admin.sales.printNotaDirect', ['payment' => $payment->id]) }}" class="text-green-600 hover:underline" title="Print Langsung">
-                                    <i class="bi bi-printer"></i>
-                                </a>
+                            <button onclick="printPaymentNota({{ $payment->id }})" class="text-green-600 hover:underline" title="Print Langsung">
+            <i class="bi bi-printer"></i>
+        </button>
                                 <a href="{{ route('admin.sales.printNota', $payment) }}" class="text-blue-600 hover:underline" title="Download PDF">
                                     <i class="bi bi-download"></i>
                                 </a>
@@ -569,6 +569,138 @@
             }
         });
     });
+    function printPaymentNota(paymentId) {
+    // Tampilkan loading
+    const printBtn = event.target;
+    const originalHTML = printBtn.innerHTML;
+    printBtn.innerHTML = '<i class="bi bi-hourglass"></i>';
+    printBtn.disabled = true;
+
+    // Cari data payment berdasarkan ID
+    const payment = getPaymentById(paymentId);
+    if (!payment) {
+        alert('Data pembayaran tidak ditemukan!');
+        printBtn.innerHTML = originalHTML;
+        printBtn.disabled = false;
+        return;
+    }
+
+    // Format plain text yang sudah terbukti work
+    const textContent = `PARECUSTOM
+NOTA PEMBAYARAN
+${''.padEnd(32, '-')}
+SO Number  : {{ $salesOrder->so_number }}
+Customer   : {{ $salesOrder->customer->name ?? 'Guest' }}
+Tanggal    : ${new Date().toLocaleDateString('id-ID')} ${new Date().toLocaleTimeString('id-ID')}
+${''.padEnd(32, '-')}
+Grand Total: Rp ${formatNumber({{ $salesOrder->grand_total }})}
+Total Bayar: Rp ${formatNumber({{ $salesOrder->paid_total }})}
+Sisa       : Rp ${formatNumber({{ $salesOrder->remaining_amount }})}
+${''.padEnd(32, '-')}
+DETAIL PEMBAYARAN
+${''.padEnd(32, '-')}
+Tanggal Bayar: ${formatDate(payment.paid_at)}
+Metode      : ${payment.method.toUpperCase()}
+Jumlah      : Rp ${formatNumber(payment.amount)}
+${payment.method === 'split' ? `- Cash     : Rp ${formatNumber(payment.cash_amount)}
+- Transfer : Rp ${formatNumber(payment.transfer_amount)}` : ''}
+${payment.reference ? `Referensi  : ${payment.reference}` : ''}
+${payment.note ? `Catatan    : ${payment.note}` : ''}
+${''.padEnd(32, '-')}
+Operator   : ${payment.creator_name || 'System'}
+${''.padEnd(32, '-')}
+Terima kasih atas pembayarannya
+*** ${new Date().toLocaleDateString('id-ID')} ${new Date().toLocaleTimeString('id-ID')} ***`;
+
+    // Buka window baru untuk print
+    const printWindow = window.open('', '_blank', 'width=230,height=500');
+    
+    if (!printWindow) {
+        alert('Popup diblokir! Izinkan popup untuk cetak.');
+        printBtn.innerHTML = originalHTML;
+        printBtn.disabled = false;
+        return;
+    }
+
+    const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Print Payment Nota</title>
+            <meta charset="UTF-8">
+            <style>
+                body {
+                    font-family: 'Courier New', monospace;
+                    font-size: 11px;
+                    width: 58mm;
+                    margin: 0;
+                    padding: 5px;
+                    line-height: 1.2;
+                }
+                pre {
+                    margin: 0;
+                    white-space: pre;
+                    font-family: 'Courier New', monospace;
+                }
+                @media print {
+                    body { margin: 0; padding: 5px; }
+                }
+            </style>
+        </head>
+        <body>
+            <pre>${textContent}</pre>
+            <script>
+                window.onload = function() {
+                    setTimeout(function() {
+                        window.print();
+                        setTimeout(function() {
+                            window.close();
+                        }, 100);
+                    }, 100);
+                };
+            <\/script>
+        </body>
+        </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+
+    // Reset tombol setelah 3 detik
+    setTimeout(function() {
+        printBtn.innerHTML = originalHTML;
+        printBtn.disabled = false;
+    }, 3000);
+}
+
+// Helper functions
+function formatNumber(num) {
+    return parseInt(num).toLocaleString('id-ID');
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('id-ID') + ' ' + date.toLocaleTimeString('id-ID');
+}
+
+// Function untuk mendapatkan data payment dari JavaScript
+function getPaymentById(paymentId) {
+    const payments = {!! json_encode($salesOrder->payments->map(function($payment) {
+        return [
+            'id' => $payment->id,
+            'amount' => $payment->amount,
+            'method' => $payment->method,
+            'cash_amount' => $payment->cash_amount,
+            'transfer_amount' => $payment->transfer_amount,
+            'reference' => $payment->reference,
+            'note' => $payment->note,
+            'paid_at' => $payment->paid_at,
+            'creator_name' => $payment->creator->name ?? 'System'
+        ];
+    })) !!};
+    
+    return payments.find(p => p.id === paymentId);
+}
 </script>
 </body>
 </html>

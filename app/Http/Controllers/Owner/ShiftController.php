@@ -24,10 +24,6 @@ class ShiftController extends Controller
 {
     public function start(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'initial_cash' => ['required', 'numeric', 'min:0'],
-        ]);
-    
         // CEK APAKAH SUDAH ADA SHIFT AKTIF DI TOKO INI
         $existingShift = Shift::whereNull('end_time')->first();
         
@@ -45,51 +41,73 @@ class ShiftController extends Controller
             return back()->withErrors(['error' => 'Anda sudah memiliki shift aktif. Akhiri shift sebelumnya terlebih dahulu.']);
         }
     
+        // === LOGIC AUTO KAS AWAL ===
+        $latestClosedShift = Shift::whereNotNull('end_time')->latest('end_time')->first();
+        
+        if ($latestClosedShift) {
+            // AUTO: ambil final_cash dari shift sebelumnya sebagai initial_cash
+            $initialCash = $latestClosedShift->final_cash;
+            $message = 'Shift dimulai dengan kas awal otomatis: Rp ' . number_format($initialCash, 0, ',', '.');
+        } else {
+            // FIRST TIME: manual input required
+            $validated = $request->validate([
+                'initial_cash' => ['required', 'numeric', 'min:0'],
+            ]);
+            $initialCash = $validated['initial_cash'];
+            $message = 'Shift pertama dimulai dengan kas awal: Rp ' . number_format($initialCash, 0, ',', '.');
+        }
+    
         Shift::create([
             'user_id' => Auth::id(),
-            'initial_cash' => $validated['initial_cash'],
+            'initial_cash' => $initialCash,
             'start_time' => now(),
             'status' => 'open',
         ]);
     
-        return redirect()->route('owner.shift.dashboard')->with('success', 'Shift dimulai dengan kas awal Rp ' . number_format($validated['initial_cash'], 0, ',', '.'));
+        return redirect()->route('owner.shift.dashboard')->with('success', $message);
     }
 
-// Ganti method end
-public function end(Request $request): Response|RedirectResponse
-{
-    $validated = $request->validate([
-        'final_cash' => ['required', 'numeric', 'min:0'],
-        'notes' => ['nullable', 'string'],
-        'print_summary' => ['nullable', 'boolean'],
-    ]);
-
-    $shift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
-    if (!$shift) {
-        return back()->withErrors(['error' => 'Anda tidak memiliki shift aktif. Mulai shift terlebih dahulu.']);
+    public function end(Request $request): Response|RedirectResponse
+    {
+        $validated = $request->validate([
+            'notes' => ['nullable', 'string'],
+            'print_summary' => ['nullable', 'boolean'],
+        ]);
+    
+        $shift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
+        if (!$shift) {
+            return back()->withErrors(['error' => 'Anda tidak memiliki shift aktif. Mulai shift terlebih dahulu.']);
+        }
+    
+        // === AUTO CALCULATE FINAL CASH ===
+        $expectedCash = $shift->initial_cash + $shift->cash_total - $shift->expense_total;
+        
+        // FINAL CASH = EXPECTED CASH (tidak ada input manual)
+        $finalCash = $expectedCash;
+        $discrepancy = 0; // Selalu 0 karena tidak ada input manual
+    
+        $shift->update([
+            'final_cash' => $finalCash,
+            'discrepancy' => $discrepancy,
+            'end_time' => now(),
+            'notes' => $validated['notes'] ?? null,
+            'status' => 'closed',
+        ]);
+    
+        // SELALU generate PDF untuk print
+        $pdfPath = $this->printShiftSummary($shift->id);
+    
+        if ($request->has('print_summary')) {
+            // Langsung download PDF
+            return $this->downloadSummary($shift->id);
+        }
+    
+        return redirect()->route('owner.shift.history')->with('success', 
+            'Shift diakhiri. ' .
+            'Kas akhir: Rp ' . number_format($finalCash, 0, ',', '.') . '. ' .
+            'Tidak ada selisih karena perhitungan sistem.'
+        );
     }
-
-    $expectedCash = $shift->initial_cash + $shift->cash_total - $shift->expense_total;
-    $discrepancy = $validated['final_cash'] - $expectedCash;
-
-    $shift->update([
-        'final_cash' => $validated['final_cash'],
-        'discrepancy' => $discrepancy,
-        'end_time' => now(),
-        'notes' => $validated['notes'] ?? null,
-        'status' => 'closed',
-    ]);
-
-    // SELALU generate PDF untuk print
-    $pdfPath = $this->printShiftSummary($shift->id);
-
-    if ($request->has('print_summary')) {
-        // Langsung download PDF
-        return $this->downloadSummary($shift->id);
-    }
-
-    return redirect()->route('owner.shift.history')->with('success', 'Shift diakhiri. Kas diharapkan: Rp ' . number_format($expectedCash, 0, ',', '.') . ', Selisih: Rp ' . number_format($discrepancy, 0, ',', '.'));
-}
 // Method untuk print summary (struk thermal)
 public function printSummary($id)
 {
@@ -208,18 +226,26 @@ public function printPreview($id)
         $awalLaci = 0;
         $totalDiharapkan = 0;
     
+        // === VARIABEL STATISTICS BARU ===
+        $totalTransactions = 0;
+        $totalInvoices = 0;
+        $totalSales = 0;
+        $totalCustomers = 0;
+        $shiftDuration = '0 jam 0 menit';
+        $averageTransaction = 0;
+    
         if ($shift) {
             $awalLaci = $shift->initial_cash;
             $pengeluaran = $shift->expense_total;
             $pemasukanManual = $shift->income_total;
-        
+    
             // Ambil semua pembayaran yang dibuat selama shift ini, berdasarkan Payment.created_at
             $payments = Payment::where('created_by', Auth::id())
                 ->where('created_at', '>=', $shift->start_time)
                 ->where('created_at', '<=', $shift->end_time ?? now())
                 ->with('salesOrder')
                 ->get();
-        
+    
             foreach ($payments as $payment) {
                 $so = $payment->salesOrder;
                 $isLunasSekaliBayar = ($payment->category === 'pelunasan' && $so->payments->count() === 1);
@@ -252,7 +278,7 @@ public function printPreview($id)
                     }
                 }
             }
-        
+    
             // Hitung total cash dari pembayaran + pemasukan manual
             $totalCashFromPayments = $cashLunas + $cashDp + $cashPelunasan;
             $totalCashFromAllSources = $totalCashFromPayments + $pemasukanManual;
@@ -260,6 +286,35 @@ public function printPreview($id)
             // Hitung tunai di laci
             $tunaiDiLaci = $shift->initial_cash + $totalCashFromAllSources - $shift->expense_total;
             $totalDiharapkan = $shift->initial_cash + $totalCashFromAllSources - $shift->expense_total;
+    
+            // === CALCULATE STATISTICS - FIXED ===
+            // 1. Total transaksi = Jumlah UNIQUE sales order yang ada payment di shift ini
+            $salesOrdersInShift = SalesOrder::whereHas('payments', function($query) use ($shift) {
+                    $query->where('created_by', Auth::id())
+                          ->where('created_at', '>=', $shift->start_time)
+                          ->where('created_at', '<=', $shift->end_time ?? now());
+                })
+                ->get();
+    
+            $totalTransactions = $salesOrdersInShift->count();
+    
+            // 2. Total invoices = Jumlah payment di shift ini
+            $totalInvoices = $payments->count();
+    
+            // 3. Total penjualan = SUM dari amount semua payment di shift ini
+            $totalSales = $payments->sum('amount');
+    
+            // 4. Total customer = UNIQUE customer dari semua sales order yang ada payment di shift ini
+            $totalCustomers = $salesOrdersInShift->pluck('customer_id')->filter()->unique()->count();
+    
+            // Durasi shift
+            $start = Carbon::parse($shift->start_time);
+            $end = $shift->end_time ? Carbon::parse($shift->end_time) : now();
+            $duration = $start->diff($end);
+            $shiftDuration = $duration->h . ' jam ' . $duration->i . ' menit';
+    
+            // Rata-rata transaksi = Total sales / Total transactions
+            $averageTransaction = $totalTransactions > 0 ? $totalSales / $totalTransactions : 0;
         }
     
         return view('owner.shift.dashboard', compact(
@@ -274,7 +329,14 @@ public function printPreview($id)
             'pemasukanManual',
             'tunaiDiLaci',
             'awalLaci',
-            'totalDiharapkan'
+            'totalDiharapkan',
+            // Statistics baru
+            'totalTransactions',
+            'totalInvoices', 
+            'totalSales',
+            'totalCustomers',
+            'shiftDuration',
+            'averageTransaction'
         ));
     }
 

@@ -42,4 +42,32 @@ class Shift extends Model
     {
         return $this->hasMany(Payment::class);
     }
+    public function expenses()
+    {
+        return $this->hasMany(Expense::class);
+    }
+        public function incomes()
+    {
+        return $this->hasMany(Income::class);
+    }
+    public function isFirstShift(): bool
+{
+    return Shift::whereNotNull('end_time')->count() === 0;
+}
+public function getPreviousShift(): ?Shift
+{
+    return Shift::whereNotNull('end_time')
+                ->where('id', '<', $this->id)
+                ->latest('end_time')
+                ->first();
+}
+public function calculateFinalCash(): float
+{
+    return $this->initial_cash + $this->cash_total - $this->expense_total;
+}
+
+public function getExpectedCash(): float
+{
+    return $this->initial_cash + $this->cash_total - $this->expense_total;
+}
 }

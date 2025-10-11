@@ -9,22 +9,22 @@
 </head>
 <body class="bg-gray-100">
 <div class="flex">
-    <x-navbar-owner />
+    <x-navbar-admin />
     <div class="flex-1 lg:w-5/6">
-        <x-navbar-top-owner />
+        <x-navbar-top-admin />
         <div class="p-4 lg:p-8">
             <div class="bg-white p-6 rounded-xl shadow-lg">
                 <h1 class="text-2xl font-semibold text-gray-800 mb-4">Detail Shift</h1>
                 
                 <!-- Di bagian tombol action, tambah ini: -->
                 <div class="flex flex-wrap gap-4 mb-6">
-                    <a href="{{ route('owner.shift.history') }}" class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded shadow inline-flex items-center">
+                    <a href="{{ route('admin.shift.history') }}" class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded shadow inline-flex items-center">
                         <i class="bi bi-arrow-left mr-2"></i> Kembali
                     </a>
-                    <a href="{{ route('owner.shift.export-detail', $shift) }}" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow inline-flex items-center">
+                    <a href="{{ route('admin.shift.export-detail', $shift) }}" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow inline-flex items-center">
                         <i class="bi bi-file-earmark-excel mr-2"></i> Export Excel
                     </a>
-                    <a href="{{ route('owner.shift.export-detail-pdf', $shift) }}" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded shadow inline-flex items-center">
+                    <a href="{{ route('admin.shift.export-detail-pdf', $shift) }}" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded shadow inline-flex items-center">
                         <i class="bi bi-file-earmark-pdf mr-2"></i> Export PDF
                     </a>
                     <!-- TOMBOL CETAK NOTA DENGAN ONCLICK -->
