@@ -89,6 +89,13 @@
                                 <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                             @enderror
                         </div>
+                        <div>
+    <label for="deadline" class="block font-medium mb-1">Deadline/Target Selesai (Opsional)</label>
+    <input type="date" name="deadline" id="deadline" value="{{ old('deadline') }}" class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
+    @error('deadline')
+        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+    @enderror
+</div>
                         <div class="relative">
     <label for="customer_search" class="block font-medium mb-1">Customer</label>
     <input type="text" 

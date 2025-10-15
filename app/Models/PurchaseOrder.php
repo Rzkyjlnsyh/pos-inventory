@@ -60,10 +60,12 @@ class PurchaseOrder extends Model
         'jahit_by',
         'selesai_at',
         'selesai_by',
+        'deadline', // tambah ini
     ];
 
     protected $casts = [
         'order_date' => 'date',
+        'deadline' => 'date', // TAMBAH INI
         'approved_at' => 'datetime',
         'received_at' => 'datetime',
         'payment_at' => 'datetime',

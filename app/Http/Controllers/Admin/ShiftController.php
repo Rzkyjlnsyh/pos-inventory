@@ -226,18 +226,26 @@ public function printPreview($id)
         $awalLaci = 0;
         $totalDiharapkan = 0;
     
+        // === VARIABEL STATISTICS BARU ===
+        $totalTransactions = 0;
+        $totalInvoices = 0;
+        $totalSales = 0;
+        $totalCustomers = 0;
+        $shiftDuration = '0 jam 0 menit';
+        $averageTransaction = 0;
+    
         if ($shift) {
             $awalLaci = $shift->initial_cash;
             $pengeluaran = $shift->expense_total;
             $pemasukanManual = $shift->income_total;
-        
+    
             // Ambil semua pembayaran yang dibuat selama shift ini, berdasarkan Payment.created_at
             $payments = Payment::where('created_by', Auth::id())
                 ->where('created_at', '>=', $shift->start_time)
                 ->where('created_at', '<=', $shift->end_time ?? now())
                 ->with('salesOrder')
                 ->get();
-        
+    
             foreach ($payments as $payment) {
                 $so = $payment->salesOrder;
                 $isLunasSekaliBayar = ($payment->category === 'pelunasan' && $so->payments->count() === 1);
@@ -270,7 +278,7 @@ public function printPreview($id)
                     }
                 }
             }
-        
+    
             // Hitung total cash dari pembayaran + pemasukan manual
             $totalCashFromPayments = $cashLunas + $cashDp + $cashPelunasan;
             $totalCashFromAllSources = $totalCashFromPayments + $pemasukanManual;
@@ -278,6 +286,35 @@ public function printPreview($id)
             // Hitung tunai di laci
             $tunaiDiLaci = $shift->initial_cash + $totalCashFromAllSources - $shift->expense_total;
             $totalDiharapkan = $shift->initial_cash + $totalCashFromAllSources - $shift->expense_total;
+    
+            // === CALCULATE STATISTICS - FIXED ===
+            // 1. Total transaksi = Jumlah UNIQUE sales order yang ada payment di shift ini
+            $salesOrdersInShift = SalesOrder::whereHas('payments', function($query) use ($shift) {
+                    $query->where('created_by', Auth::id())
+                          ->where('created_at', '>=', $shift->start_time)
+                          ->where('created_at', '<=', $shift->end_time ?? now());
+                })
+                ->get();
+    
+            $totalTransactions = $salesOrdersInShift->count();
+    
+            // 2. Total invoices = Jumlah payment di shift ini
+            $totalInvoices = $payments->count();
+    
+            // 3. Total penjualan = SUM dari amount semua payment di shift ini
+            $totalSales = $payments->sum('amount');
+    
+            // 4. Total customer = UNIQUE customer dari semua sales order yang ada payment di shift ini
+            $totalCustomers = $salesOrdersInShift->pluck('customer_id')->filter()->unique()->count();
+    
+            // Durasi shift
+            $start = Carbon::parse($shift->start_time);
+            $end = $shift->end_time ? Carbon::parse($shift->end_time) : now();
+            $duration = $start->diff($end);
+            $shiftDuration = $duration->h . ' jam ' . $duration->i . ' menit';
+    
+            // Rata-rata transaksi = Total sales / Total transactions
+            $averageTransaction = $totalTransactions > 0 ? $totalSales / $totalTransactions : 0;
         }
     
         return view('admin.shift.dashboard', compact(
@@ -292,7 +329,14 @@ public function printPreview($id)
             'pemasukanManual',
             'tunaiDiLaci',
             'awalLaci',
-            'totalDiharapkan'
+            'totalDiharapkan',
+            // Statistics baru
+            'totalTransactions',
+            'totalInvoices', 
+            'totalSales',
+            'totalCustomers',
+            'shiftDuration',
+            'averageTransaction'
         ));
     }
 

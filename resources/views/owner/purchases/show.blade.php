@@ -106,6 +106,10 @@
                                     <div>{{ \Carbon\Carbon::parse($purchase->order_date)->format('d M Y') }}</div>
                                 </div>
                                 <div>
+                                    <div class="text-sm text-gray-500">Tanggal Deadline</div>
+                                    <div>{{ \Carbon\Carbon::parse($purchase->deadline)->format('d M Y') }}</div>
+                                </div>
+                                <div>
                                     <div class="text-sm text-gray-500">Supplier</div>
                                     <div>{{ $purchase->supplier?->name ?? '-' }}</div>
                                 </div>
@@ -365,6 +369,13 @@
             Type: {{ $purchase->purchase_type }} |
             Role: {{ auth()->user()->name }}
         </div>
+
+        <!-- Tambah di bagian action buttons -->
+        @if(in_array($purchase->status, ['draft', 'pending', 'approved']))
+<a href="{{ route('owner.purchases.edit', $purchase) }}" class="w-full text-white rounded">
+    <div class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-center"><i class="bi bi-pencil"></i> Edit</div>
+</a>
+@endif
 
         <!-- TOMBOL DRAFT -->
         @if($purchase->status === 'draft')

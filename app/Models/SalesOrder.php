@@ -26,6 +26,7 @@ class SalesOrder extends Model
         'approved_by',
         'approved_at',
         'completed_at',
+        'deadline', // tambah ini
     ];
 
     protected $casts = [
@@ -33,6 +34,7 @@ class SalesOrder extends Model
         'discount_total' => 'decimal:2',
         'grand_total' => 'decimal:2',
         'order_date' => 'date',
+        'deadline' => 'date', // TAMBAH INI
         'approved_at' => 'datetime',
         'completed_at' => 'datetime',
     ];

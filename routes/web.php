@@ -96,6 +96,8 @@ Route::middleware(['auth', 'owner'])->prefix('owner')->name('owner.')->group(fun
     Route::post('purchases/{purchase}/update-status', [\App\Http\Controllers\Owner\PurchaseOrderController::class, 'updateWorkflowStatus'])->name('purchases.update-status');
     Route::post('purchases/{purchase}/update-workflow-status', [\App\Http\Controllers\Owner\PurchaseOrderController::class, 'updateWorkflowStatus'])
     ->name('purchases.update-workflow-status');
+    Route::get('purchases/{purchase}/edit', [\App\Http\Controllers\Owner\PurchaseOrderController::class, 'edit'])->name('purchases.edit');
+Route::put('purchases/{purchase}', [\App\Http\Controllers\Owner\PurchaseOrderController::class, 'update'])->name('purchases.update');
     Route::post('purchases/{purchase}/return', [\App\Http\Controllers\Owner\PurchaseOrderController::class, 'return'])
     ->name('purchases.return');
 
@@ -181,8 +183,8 @@ Route::middleware(['check.shift'])->group(function () {
 
 // Finance routes
 Route::middleware(['auth', 'finance'])->prefix('finance')->name('finance.')->group(function () {
-    Route::view('/', 'finance.dashboard')->name('index');
-    Route::get('dashboard', fn() => view('finance.dashboard'))->name('dashboard');
+    Route::get('/', [\App\Http\Controllers\Finance\FinanceController::class, 'index'])->name('index');
+    Route::get('dashboard', [\App\Http\Controllers\Finance\FinanceController::class, 'dashboard'])->name('dashboard');
 
     // Contacts (Customer & Supplier)
     Route::get('contacts', [FinanceContactController::class, 'index'])->name('contacts.index');

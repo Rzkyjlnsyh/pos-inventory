@@ -21,6 +21,98 @@
     $activeShift = \App\Models\Shift::whereNull('end_time')->first();
 @endphp
 
+<!-- STATISTICS DASHBOARD -->
+@if($shift)
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <!-- Total Transaksi -->
+    <div class="bg-white p-4 rounded-lg shadow border-l-4 border-blue-500">
+        <div class="flex items-center">
+            <div class="bg-blue-100 p-2 rounded-lg mr-3">
+                <i class="bi bi-receipt text-blue-600 text-xl"></i>
+            </div>
+            <div>
+                <p class="text-sm text-gray-600">Total Transaksi</p>
+                <p class="text-xl font-bold text-gray-800">{{ $totalTransactions }}</p>
+            </div>
+        </div>
+        <p class="text-xs text-gray-500 mt-2">Sales order di shift ini</p>
+    </div>
+
+    <!-- Invoice Tercetak -->
+    <div class="bg-white p-4 rounded-lg shadow border-l-4 border-green-500">
+        <div class="flex items-center">
+            <div class="bg-green-100 p-2 rounded-lg mr-3">
+                <i class="bi bi-printer text-green-600 text-xl"></i>
+            </div>
+            <div>
+                <p class="text-sm text-gray-600">Invoice</p>
+                <p class="text-xl font-bold text-gray-800">{{ $totalInvoices }}</p>
+            </div>
+        </div>
+        <p class="text-xs text-gray-500 mt-2">Nota yang tercetak</p>
+    </div>
+
+    <!-- Total Penjualan -->
+    <div class="bg-white p-4 rounded-lg shadow border-l-4 border-purple-500">
+        <div class="flex items-center">
+            <div class="bg-purple-100 p-2 rounded-lg mr-3">
+                <i class="bi bi-currency-dollar text-purple-600 text-xl"></i>
+            </div>
+            <div>
+                <p class="text-sm text-gray-600">Total Penjualan</p>
+                <p class="text-xl font-bold text-gray-800">Rp {{ number_format($totalSales, 0, ',', '.') }}</p>
+            </div>
+        </div>
+        <p class="text-xs text-gray-500 mt-2">Nilai transaksi</p>
+    </div>
+
+    <!-- Customer Dilayani -->
+    <div class="bg-white p-4 rounded-lg shadow border-l-4 border-orange-500">
+        <div class="flex items-center">
+            <div class="bg-orange-100 p-2 rounded-lg mr-3">
+                <i class="bi bi-people text-orange-600 text-xl"></i>
+            </div>
+            <div>
+                <p class="text-sm text-gray-600">Customer</p>
+                <p class="text-xl font-bold text-gray-800">{{ $totalCustomers }}</p>
+            </div>
+        </div>
+        <p class="text-xs text-gray-500 mt-2">Customer dilayani</p>
+    </div>
+</div>
+
+<!-- ROW 2 STATISTICS -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+    <!-- Durasi Shift -->
+    <div class="bg-white p-4 rounded-lg shadow border-l-4 border-indigo-500">
+        <div class="flex items-center">
+            <div class="bg-indigo-100 p-2 rounded-lg mr-3">
+                <i class="bi bi-clock text-indigo-600 text-xl"></i>
+            </div>
+            <div>
+                <p class="text-sm text-gray-600">Durasi Shift</p>
+                <p class="text-xl font-bold text-gray-800">{{ $shiftDuration }}</p>
+            </div>
+        </div>
+        <p class="text-xs text-gray-500 mt-2">Mulai: {{ \Carbon\Carbon::parse($shift->start_time)->format('H:i') }}</p>
+    </div>
+
+    <!-- Rata-rata Transaksi -->
+    <div class="bg-white p-4 rounded-lg shadow border-l-4 border-pink-500">
+        <div class="flex items-center">
+            <div class="bg-pink-100 p-2 rounded-lg mr-3">
+                <i class="bi bi-graph-up text-pink-600 text-xl"></i>
+            </div>
+            <div>
+                <p class="text-sm text-gray-600">Rata-rata/Transaksi</p>
+                <p class="text-xl font-bold text-gray-800">Rp {{ number_format($averageTransaction, 0, ',', '.') }}</p>
+            </div>
+        </div>
+        <p class="text-xs text-gray-500 mt-2">Nilai per transaksi</p>
+    </div>
+</div>
+@endif
+
 @if($activeShift && !$shift)
     <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4" role="alert">
         <div class="flex items-center">
@@ -235,6 +327,7 @@
                 <div>
                     <p><strong>Kas Awal:</strong> Rp {{ number_format($shift->initial_cash, 0, ',', '.') }}</p>
                     <p><strong>Pemasukan Cash:</strong> Rp {{ number_format($cashLunas + $cashDp + $cashPelunasan, 0, ',', '.') }}</p>
+                    <p><strong>Pemasukan Transfer:</strong> Rp {{ number_format($transferLunas + $transferDp + $transferPelunasan, 0, ',', '.') }}</p>
                     <p><strong>Pengeluaran:</strong> Rp {{ number_format($pengeluaran, 0, ',', '.') }}</p>
                 </div>
                 <div class="bg-white p-3 rounded border">
@@ -307,7 +400,7 @@
                             Kas awal diambil dari shift sebelumnya: 
                             <strong>Rp {{ number_format($latestClosedShift->final_cash, 0, ',', '.') }}</strong>
                         </p>
-                        <p class="text-xs text-blue-600 mt-1">
+                        <p class="text-sm text-blue-600 mt-1">
                             Shift sebelumnya: {{ $latestClosedShift->end_time->format('d/m/Y H:i') }}
                         </p>
                     </div>

@@ -61,6 +61,7 @@ class PurchaseOrderController extends Controller
     {
         $validated = $request->validate([
             'order_date' => ['required','date'],
+            'deadline' => ['nullable','date'], // TAMBAH INI
             'supplier_id' => ['nullable','exists:suppliers,id'],
             'supplier_name' => ['nullable','string','max:255'],
             'purchase_type' => ['required','in:kain,produk_jadi'], // validasi tipe pembelian
@@ -104,6 +105,7 @@ class PurchaseOrderController extends Controller
                 'order_date' => $validated['order_date'],
                 'supplier_id' => $supplierId,
                 'purchase_type' => $validated['purchase_type'], // simpan tipe pembelian
+                'deadline' => $validated['deadline'] ?? null, // tambah ini
                 'subtotal' => $subtotal,
                 'discount_total' => $discountTotal,
                 'grand_total' => $grandTotal,
@@ -137,6 +139,84 @@ class PurchaseOrderController extends Controller
             'paymentProcessor', 'kainReceiver', 'printer', 'tailor', 'finisher'
         ]);
         return view('owner.purchases.show', compact('purchase'));
+    }
+
+    public function edit(PurchaseOrder $purchase): View
+    {
+        $purchase->load(['supplier', 'items']);
+        $suppliers = Supplier::orderBy('name')->get();
+        return view('owner.purchases.edit', compact('purchase', 'suppliers'));
+    }
+
+    public function update(Request $request, PurchaseOrder $purchase): RedirectResponse
+    {
+        // Validasi sama seperti store
+        $validated = $request->validate([
+            'order_date' => ['required','date'],
+            'deadline' => ['nullable','date'], // TAMBAH INI
+            'supplier_id' => ['nullable','exists:suppliers,id'],
+            'supplier_name' => ['nullable','string','max:255'],
+            'purchase_type' => ['required','in:kain,produk_jadi'],
+            'items' => ['required','array','min:1'],
+            'items.*.product_id' => ['nullable','exists:products,id'],
+            'items.*.product_name' => ['required','string','max:255'],
+            'items.*.sku' => ['nullable','string','max:100'],
+            'items.*.cost_price' => ['required','numeric','min:0'],
+            'items.*.qty' => ['required','integer','min:1'],
+            'items.*.discount' => ['nullable','numeric','min:0'],
+        ]);
+
+        $supplierId = $validated['supplier_id'] ?? null;
+        if (!$supplierId) {
+            if (!empty($validated['supplier_name'])) {
+                $supplier = Supplier::firstOrCreate(
+                    ['name' => $validated['supplier_name']],
+                    ['is_active' => true]
+                );
+                $supplierId = $supplier->id;
+            } else {
+                return back()->withErrors(['supplier_id' => 'Pilih supplier atau isi nama supplier.'])->withInput();
+            }
+        }
+
+        DB::transaction(function () use ($purchase, $validated, $supplierId) {
+            $subtotal = 0; $discountTotal = 0; $grandTotal = 0;
+            foreach ($validated['items'] as $item) {
+                $line = ((float)$item['cost_price'] * (int)$item['qty']);
+                $disc = (float)($item['discount'] ?? 0);
+                $subtotal += $line;
+                $discountTotal += $disc;
+            }
+            $grandTotal = $subtotal - $discountTotal;
+
+            $purchase->update([
+                'order_date' => $validated['order_date'],
+                'deadline' => $validated['deadline'] ?? null, // TAMBAH INI
+                'supplier_id' => $supplierId,
+                'purchase_type' => $validated['purchase_type'],
+                'subtotal' => $subtotal,
+                'discount_total' => $discountTotal,
+                'grand_total' => $grandTotal,
+            ]);
+
+            // Hapus items lama dan buat yang baru
+            $purchase->items()->delete();
+            foreach ($validated['items'] as $item) {
+                $line = ((float)$item['cost_price'] * (int)$item['qty']) - (float)($item['discount'] ?? 0);
+                PurchaseOrderItem::create([
+                    'purchase_order_id' => $purchase->id,
+                    'product_id' => $item['product_id'] ?? null,
+                    'product_name' => $item['product_name'],
+                    'sku' => $item['sku'] ?? null,
+                    'cost_price' => $item['cost_price'],
+                    'qty' => $item['qty'],
+                    'discount' => $item['discount'] ?? 0,
+                    'line_total' => $line,
+                ]);
+            }
+        });
+
+        return redirect()->route('owner.purchases.show', $purchase)->with('success', 'Purchase order berhasil diupdate.');
     }
 
     public function submit(PurchaseOrder $purchase): RedirectResponse

@@ -18,7 +18,7 @@
         <x-navbar-top-admin />
         <div class="p-4 lg:p-8">
             <!-- Debug Info -->
-            <div class="bg-gray-100 p-4 rounded-xl mb-6">
+            <!-- <div class="bg-gray-100 p-4 rounded-xl mb-6">
                 <h4 class="font-semibold text-gray-700">Debug Info</h4>
                 <p class="text-sm text-gray-600">
                     Active Shift: {{ $activeShift ? 'Yes (ID: ' . $activeShift->id . ')' : 'No' }}<br>
@@ -29,7 +29,7 @@
                     Grand Total: Rp {{ number_format($salesOrder->grand_total, 0, ',', '.') }}<br>
                     Editable: {{ $salesOrder->isEditable() ? 'Yes' : 'No' }}
                 </p>
-            </div>
+            </div> -->
 
             <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
                 <div class="flex justify-between items-center">
