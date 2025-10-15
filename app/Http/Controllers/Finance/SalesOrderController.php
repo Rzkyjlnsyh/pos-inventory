@@ -87,6 +87,7 @@ class SalesOrderController extends Controller
         $validated = $request->validate([
             'order_type' => ['required', 'in:jahit_sendiri,beli_jadi'],
             'order_date' => ['required', 'date'],
+            'deadline' => ['nullable','date'], // TAMBAH INI
             'customer_id' => ['nullable', 'exists:customers,id'],
             'payment_method' => ['required', 'in:cash,transfer,split'],
             'payment_status' => ['required', 'in:dp,lunas'],
@@ -155,6 +156,7 @@ class SalesOrderController extends Controller
                     'so_number' => $soNumber,
                     'order_type' => $validated['order_type'],
                     'order_date' => $validated['order_date'],
+                    'deadline' => $validated['deadline'] ?? null, // tambah ini
                     'customer_id' => $customerId ?? null,
                     'subtotal' => $subtotal,
                     'discount_total' => $discountTotal,
@@ -272,6 +274,7 @@ class SalesOrderController extends Controller
         $validated = $request->validate([
             'order_type' => ['required', 'in:jahit_sendiri,beli_jadi'],
             'order_date' => ['required', 'date'],
+            'deadline' => ['nullable', 'date'], // TAMBAH INI
             'customer_id' => ['nullable', 'exists:customers,id'],
             'payment_method' => ['required', 'in:cash,transfer,split'],
             'payment_status' => ['required', 'in:dp,lunas'],
@@ -331,6 +334,7 @@ class SalesOrderController extends Controller
                 $salesOrder->update([
                     'order_type' => $validated['order_type'],
                     'order_date' => $validated['order_date'],
+                    'deadline' => $validated['deadline'] ?? null, // TAMBAH INI
                     'customer_id' => $validated['customer_id'] ?? null,
                     'subtotal' => $subtotal,
                     'discount_total' => $discountTotal,

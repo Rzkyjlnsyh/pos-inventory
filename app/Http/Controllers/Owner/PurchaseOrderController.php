@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Owner;
 use App\Http\Controllers\Controller;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
+use App\Models\PurchaseOrderLog; // TAMBAH INI
 use App\Models\PurchaseReturn;
 use App\Models\PurchaseReturnItem;
 use App\Models\Product;
@@ -21,6 +22,17 @@ use Carbon\Carbon;
 
 class PurchaseOrderController extends Controller
 {
+        // TAMBAH METHOD LOG HELPER
+        private function logAction(PurchaseOrder $purchaseOrder, string $action, string $description): void
+        {
+            PurchaseOrderLog::create([
+                'purchase_order_id' => $purchaseOrder->id,
+                'user_id' => Auth::id(),
+                'action' => $action,
+                'description' => $description,
+                'created_at' => now(),
+            ]);
+        }
     public function index(Request $request): View
     {
         $q = $request->get('q');
@@ -127,6 +139,12 @@ class PurchaseOrderController extends Controller
                     'line_total' => $line,
                 ]);
             }
+            // TAMBAH LOG CREATE
+            $this->logAction($po, 'created', 
+                "Purchase order dibuat: {$poNumber}, Tipe: {$validated['purchase_type']}, " .
+                "Supplier: " . ($po->supplier->name ?? 'Baru') . ", " .
+                "Total: Rp " . number_format($grandTotal, 0, ',', '.')
+            );
         });
 
         return redirect()->route('owner.purchases.index')->with('success', 'Pembelian tersimpan sebagai draft.');
@@ -136,7 +154,8 @@ class PurchaseOrderController extends Controller
     {
         $purchase->load([
             'supplier','items','creator','approver','receiver',
-            'paymentProcessor', 'kainReceiver', 'printer', 'tailor', 'finisher'
+            'paymentProcessor', 'kainReceiver', 'printer', 'tailor', 'finisher',
+            'logs.user' // TAMBAH INI UNTUK LOAD LOGS
         ]);
         return view('owner.purchases.show', compact('purchase'));
     }
@@ -148,12 +167,12 @@ class PurchaseOrderController extends Controller
         return view('owner.purchases.edit', compact('purchase', 'suppliers'));
     }
 
+    // UPDATE UPDATE METHOD - TAMBAH LOG UPDATE
     public function update(Request $request, PurchaseOrder $purchase): RedirectResponse
     {
-        // Validasi sama seperti store
         $validated = $request->validate([
             'order_date' => ['required','date'],
-            'deadline' => ['nullable','date'], // TAMBAH INI
+            'deadline' => ['nullable','date'],
             'supplier_id' => ['nullable','exists:suppliers,id'],
             'supplier_name' => ['nullable','string','max:255'],
             'purchase_type' => ['required','in:kain,produk_jadi'],
@@ -180,6 +199,8 @@ class PurchaseOrderController extends Controller
         }
 
         DB::transaction(function () use ($purchase, $validated, $supplierId) {
+            $oldData = $purchase->getOriginal();
+            
             $subtotal = 0; $discountTotal = 0; $grandTotal = 0;
             foreach ($validated['items'] as $item) {
                 $line = ((float)$item['cost_price'] * (int)$item['qty']);
@@ -191,7 +212,7 @@ class PurchaseOrderController extends Controller
 
             $purchase->update([
                 'order_date' => $validated['order_date'],
-                'deadline' => $validated['deadline'] ?? null, // TAMBAH INI
+                'deadline' => $validated['deadline'] ?? null,
                 'supplier_id' => $supplierId,
                 'purchase_type' => $validated['purchase_type'],
                 'subtotal' => $subtotal,
@@ -214,11 +235,28 @@ class PurchaseOrderController extends Controller
                     'line_total' => $line,
                 ]);
             }
+
+            // TAMBAH LOG UPDATE
+            $changes = [];
+            if ($oldData['order_date'] != $validated['order_date']) {
+                $changes[] = "Tanggal order diubah";
+            }
+            if ($oldData['purchase_type'] != $validated['purchase_type']) {
+                $changes[] = "Tipe pembelian diubah dari {$oldData['purchase_type']} ke {$validated['purchase_type']}";
+            }
+            if ($oldData['grand_total'] != $grandTotal) {
+                $changes[] = "Total diubah dari Rp " . number_format($oldData['grand_total'], 0, ',', '.') . " ke Rp " . number_format($grandTotal, 0, ',', '.');
+            }
+            
+            if (!empty($changes)) {
+                $this->logAction($purchase, 'updated', "Purchase order diupdate: " . implode(', ', $changes));
+            }
         });
 
         return redirect()->route('owner.purchases.show', $purchase)->with('success', 'Purchase order berhasil diupdate.');
     }
 
+    // UPDATE SUBMIT METHOD - TAMBAH LOG
     public function submit(PurchaseOrder $purchase): RedirectResponse
     {
         if ($purchase->status !== PurchaseOrder::STATUS_DRAFT) {
@@ -228,9 +266,13 @@ class PurchaseOrderController extends Controller
         $purchase->status = PurchaseOrder::STATUS_PENDING;
         $purchase->save();
         
+        // TAMBAH LOG
+        $this->logAction($purchase, 'submitted', 'Purchase order diajukan untuk approval');
+        
         return back()->with('success', 'Pembelian diajukan untuk approval.');
     }
 
+    // UPDATE APPROVE METHOD - TAMBAH LOG
     public function approve(Request $request, PurchaseOrder $purchase): RedirectResponse
     {
         if ($purchase->status !== PurchaseOrder::STATUS_PENDING) {
@@ -242,6 +284,9 @@ class PurchaseOrderController extends Controller
             'approved_by' => Auth::id(),
             'approved_at' => Carbon::now(),
         ]);
+
+        // TAMBAH LOG
+        $this->logAction($purchase, 'approved', 'Purchase order di-approve oleh ' . Auth::user()->name);
     
         return back()->with('success', 'Pembelian telah di-approve.');
     }
@@ -266,6 +311,9 @@ class PurchaseOrderController extends Controller
             'invoice_file' => $invoicePath,
             'payment_proof_file' => $paymentProofPath,
         ]);
+
+        // TAMBAH LOG
+        $this->logAction($purchase, 'payment_processed', 'Pembayaran diproses dengan upload invoice dan bukti pembayaran');
     
         return back()->with('success', 'Pembayaran telah diproses dengan file faktur dan bukti pembayaran.');
     }
@@ -277,11 +325,17 @@ class PurchaseOrderController extends Controller
             'new_status' => 'required|string',
         ]);
 
+        $oldStatus = $purchase->status;
         $success = $purchase->updateStatus($validated['new_status'], Auth::id());
         
         if (!$success) {
             return back()->withErrors(['status' => 'Status tidak valid atau tidak bisa diupdate.']);
         }
+
+        // TAMBAH LOG STATUS CHANGE
+        $this->logAction($purchase, 'status_changed', 
+            "Status diubah dari {$oldStatus} ke {$validated['new_status']} oleh " . Auth::user()->name
+        );
 
         // Handle khusus untuk selesai - update stock untuk kedua tipe
         if ($validated['new_status'] === PurchaseOrder::STATUS_SELESAI) {

@@ -206,6 +206,39 @@
     </div>
 </div>
 
+<!-- TAMBAH SECTION RIWAYAT AKTIVITAS -->
+<div class="bg-white p-6 rounded-xl shadow-lg mt-6">
+    <h2 class="text-lg font-semibold mb-4 text-gray-800">Riwayat Aktivitas</h2>
+    <div class="overflow-x-auto">
+        <table class="w-full table-auto border-collapse">
+            <thead>
+                <tr class="bg-gray-50 text-left text-sm font-semibold text-gray-600">
+                    <th class="px-4 py-2 border">Waktu</th>
+                    <th class="px-4 py-2 border">Aksi</th>
+                    <th class="px-4 py-2 border">Deskripsi</th>
+                    <th class="px-4 py-2 border">Oleh</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($purchase->logs as $log)
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="px-4 py-2 border">{{ \Carbon\Carbon::parse($log->created_at)->format('d/m/Y H:i') }}</td>
+                        <td class="px-4 py-2 border">
+                            <span class="capitalize">{{ str_replace('_', ' ', $log->action) }}</span>
+                        </td>
+                        <td class="px-4 py-2 border">{{ $log->description }}</td>
+                        <td class="px-4 py-2 border">{{ $log->user->name ?? 'System' }}</td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="4" class="text-center text-gray-500 px-4 py-4">Belum ada log aktivitas</td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+</div>
+
 <!-- Return Information -->
 @if($purchase->purchaseReturns()->where('status', 'confirmed')->exists())
 <div class="bg-white p-6 rounded-xl shadow-lg">

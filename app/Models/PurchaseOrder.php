@@ -338,4 +338,9 @@ public function getTotalReturnedItems(): int
     }
     return count($returnedItems);
 }
+public function logs()
+{
+    return $this->hasMany(PurchaseOrderLog::class)->orderBy('created_at', 'desc');
+}
+
 }
