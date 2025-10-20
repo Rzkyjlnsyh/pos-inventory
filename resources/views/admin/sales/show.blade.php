@@ -48,14 +48,6 @@
                                 <i class="bi bi-pencil"></i> Edit
                             </a>
                         @endif
-                        @if($salesOrder->status === 'pending' && $salesOrder->approved_by === null && $activeShift && Auth::user()->hasRole('admin'))
-                            <form action="{{ route('admin.sales.approve', $salesOrder) }}" method="POST">
-                                @csrf
-                                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow">
-                                    <i class="bi bi-check-circle"></i> Approve
-                                </button>
-                            </form>
-                        @endif
                         @if($salesOrder->status === 'pending' && $salesOrder->approved_by !== null && $salesOrder->paid_total >= $salesOrder->grand_total * 0.5 && $activeShift && Auth::user()->hasRole('admin'))
                             <form action="{{ route('admin.sales.startProcess', $salesOrder) }}" method="POST">
                                 @csrf
@@ -194,7 +186,7 @@
                         <div class="flex justify-between"><span class="text-gray-600">SO Number:</span><span class="font-mono font-semibold">{{ $salesOrder->so_number }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-600">Tipe Order:</span><span class="capitalize">{{ str_replace('_', ' ', $salesOrder->order_type) }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-600">Tanggal Order:</span><span>{{ \Carbon\Carbon::parse($salesOrder->order_date)->format('d/m/Y') }}</span></div>
-                        <div class="flex justify-between"><span class="text-gray-600">Customer:</span><span>{{ $salesOrder->customer->name ?? 'Guest' }}</span></div>
+                        <div class="flex justify-between"><span class="text-gray-600">Customer:</span><span>{{ $salesOrder->customer ? $salesOrder->customer->name : 'Umum' }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-600">Dibuat Oleh:</span><span>{{ $salesOrder->creator->name ?? 'System' }}</span></div>
                         @if($salesOrder->approved_by)
                             <div class="flex justify-between"><span class="text-gray-600">Disetujui Oleh:</span><span>{{ $salesOrder->approver->name ?? 'System' }}</span></div>
@@ -590,7 +582,7 @@
 NOTA PEMBAYARAN
 ${''.padEnd(32, '-')}
 SO Number  : {{ $salesOrder->so_number }}
-Customer   : {{ $salesOrder->customer->name ?? 'Guest' }}
+Customer   : {{ $salesOrder->customer ? $salesOrder->customer->name : 'Umum' }}
 Tanggal    : ${new Date().toLocaleDateString('id-ID')} ${new Date().toLocaleTimeString('id-ID')}
 ${''.padEnd(32, '-')}
 Grand Total: Rp ${formatNumber({{ $salesOrder->grand_total }})}

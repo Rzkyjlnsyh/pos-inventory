@@ -97,12 +97,12 @@
     @enderror
 </div>
                         <div class="relative">
-    <label for="customer_search" class="block font-medium mb-1">Customer</label>
-    <input type="text" 
-           id="customer_search" 
-           class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
-           placeholder="Ketik nama customer atau pilih dari dropdown..."
-           autocomplete="off">
+                        <label for="customer_search" class="block font-medium mb-1">Customer (Opsional)</label>
+<input type="text" 
+       id="customer_search" 
+       class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
+       placeholder="Ketik nama customer atau biarkan kosong..."
+       autocomplete="off">
     
     <!-- Hidden fields untuk data customer -->
     <input type="hidden" name="customer_id" id="customer_id" value="{{ old('customer_id') }}">
@@ -218,22 +218,18 @@
                         <h2 class="text-lg font-semibold mb-4 text-gray-800">Item Order</h2>
                         <div id="items-container" class="space-y-4">
                             <div class="item-row grid md:grid-cols-5 gap-4">
-                                <div>
-                                    <label class="block font-medium mb-1">Produk</label>
-                                    <select name="items[0][product_id]" class="product-select border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
-                                        <option value="">Pilih Produk</option>
-                                        @foreach($products as $product)
-                                            <option value="{{ $product->id }}"
-                                                    data-name="{{ $product->name }}"
-                                                    data-sku="{{ $product->sku }}"
-                                                    data-price="{{ $product->price }}">{{ $product->name }}</option>
-                                        @endforeach
-                                    </select>
-                                    <input type="hidden" name="items[0][product_name]" class="product-name">
-                                    @error('items.0.product_name')
-                                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                                    @enderror
-                                </div>
+                            <div class="relative">
+    <label class="block font-medium mb-1">Produk</label>
+    <input type="text" 
+           class="product-search border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
+           placeholder="Ketik nama produk, SKU, atau barcode..."
+           autocomplete="off">
+    <input type="hidden" name="items[0][product_id]" class="product-id">
+    <input type="hidden" name="items[0][product_name]" class="product-name">
+    
+    <!-- Dropdown untuk hasil search -->
+    <div class="product-results hidden absolute z-20 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto"></div>
+</div>
                                 <div>
                                     <label class="block font-medium mb-1">SKU</label>
                                     <input type="text" name="items[0][sku]" class="sku border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" readonly>
@@ -344,60 +340,128 @@ document.addEventListener('DOMContentLoaded', function () {
         updatePaymentStatus();
     }
 
-    // --- Ketika pilih produk: isi sku, nama, harga otomatis ---
-    // Delegated event listener untuk select produk (termasuk row awal & row dinamis)
-    itemsContainer.addEventListener('change', function (e) {
-        const target = e.target;
-        if (target.classList.contains('product-select')) {
-            const row = target.closest('.item-row');
-            const opt = target.options[target.selectedIndex];
-            const price = opt && opt.dataset.price ? parseFloat(opt.dataset.price) : 0;
-            const sku = opt && opt.dataset.sku ? opt.dataset.sku : '';
-            const name = opt && (opt.dataset.name || opt.text) ? (opt.dataset.name || opt.text) : '';
+    // === PRODUCT SEARCH AUTCOMPLETE FUNCTION ===
+    function initializeProductSearch(row) {
+        const productSearch = row.querySelector('.product-search');
+        const productResults = row.querySelector('.product-results');
+        const productIdInput = row.querySelector('.product-id');
+        const productNameInput = row.querySelector('.product-name');
+        const skuInput = row.querySelector('.sku');
+        const priceInput = row.querySelector('.sale-price');
 
-            // set fields jika ada
-            const nameField = row.querySelector('.product-name');
-            if (nameField) nameField.value = name;
+        if (!productSearch) return;
 
-            const skuField = row.querySelector('.sku');
-            if (skuField) skuField.value = sku;
-
-            const priceField = row.querySelector('.sale-price');
-            if (priceField) priceField.value = price > 0 ? parseFloat(price).toFixed(2) : '';
-
-            updateGrandTotal();
-
-            if (price <= 0) {
-                // beri peringatan tapi jangan spam bila user memilih option kosong
-                if (opt && opt.value) {
-                    alert('Harga produk tidak valid atau kosong. Harap periksa data produk di database.');
-                }
+        // Search products ketika user mengetik
+        productSearch.addEventListener('input', function() {
+            const searchTerm = this.value.trim();
+            
+            if (searchTerm.length < 2) {
+                productResults.classList.add('hidden');
+                return;
             }
-        }
 
+            // AJAX search ke server
+            fetch(`/owner/products/search?q=${encodeURIComponent(searchTerm)}`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Network error');
+                    return response.json();
+                })
+                .then(products => {
+                    productResults.innerHTML = '';
+                    
+                    if (products.length === 0) {
+                        const noResult = document.createElement('div');
+                        noResult.className = 'p-2 text-gray-500';
+                        noResult.textContent = 'Produk tidak ditemukan';
+                        productResults.appendChild(noResult);
+                        productResults.classList.remove('hidden');
+                        return;
+                    }
+
+                    products.forEach(product => {
+                        const div = document.createElement('div');
+                        div.className = 'p-2 hover:bg-gray-100 cursor-pointer product-option border-b';
+                        div.innerHTML = `
+                            <div class="font-medium">${product.name}</div>
+                            <div class="text-sm text-gray-600">
+                                SKU: ${product.sku} | Stok: ${product.stock_qty} | Harga: Rp ${parseFloat(product.price).toLocaleString('id-ID')}
+                            </div>
+                        `;
+                        div.setAttribute('data-id', product.id);
+                        div.setAttribute('data-name', product.name);
+                        div.setAttribute('data-sku', product.sku);
+                        div.setAttribute('data-price', product.price);
+                        div.setAttribute('data-stock', product.stock_qty);
+                        
+                        div.addEventListener('click', function() {
+                            // Set values ke form
+                            productIdInput.value = product.id;
+                            productNameInput.value = product.name;
+                            productSearch.value = product.name;
+                            if (skuInput) skuInput.value = product.sku;
+                            if (priceInput) priceInput.value = parseFloat(product.price).toFixed(2);
+                            
+                            // Sembunyikan dropdown
+                            productResults.classList.add('hidden');
+                            
+                            // Trigger change event untuk update total
+                            if (priceInput) {
+                                priceInput.dispatchEvent(new Event('input'));
+                            }
+                        });
+                        
+                        productResults.appendChild(div);
+                    });
+                    
+                    productResults.classList.remove('hidden');
+                })
+                .catch(error => {
+                    console.error('Error searching products:', error);
+                    productResults.innerHTML = '<div class="p-2 text-red-500">Error loading products</div>';
+                    productResults.classList.remove('hidden');
+                });
+        });
+
+        // Sembunyikan dropdown ketika klik outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.relative')) {
+                productResults.classList.add('hidden');
+            }
+        });
+
+        // Focus handling
+        productSearch.addEventListener('focus', function() {
+            if (this.value.trim().length >= 2) {
+                this.dispatchEvent(new Event('input'));
+            }
+        });
+    }
+
+    // --- Event listener untuk perubahan harga, qty, discount ---
+    itemsContainer.addEventListener('input', function (e) {
+        const target = e.target;
         // perubahan qty / harga / discount juga update total
         if (target.classList.contains('qty') || target.classList.contains('sale-price') || target.classList.contains('discount')) {
             updateGrandTotal();
         }
     });
 
-    // --- Add item (gunakan template yang sama seperti layout kamu) ---
+    // --- Add item dengan template SEARCH INPUT ---
     document.getElementById('add-item').addEventListener('click', function () {
         const newRow = document.createElement('div');
         newRow.className = 'item-row grid md:grid-cols-5 gap-4 mt-4';
         newRow.innerHTML = `
-            <div>
+            <div class="relative">
                 <label class="block font-medium mb-1">Produk</label>
-                <select name="items[${itemIndex}][product_id]" class="product-select border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
-                    <option value="">Pilih Produk</option>
-                    @foreach($products as $product)
-                        <option value="{{ $product->id }}"
-                                data-name="{{ $product->name }}"
-                                data-sku="{{ $product->sku }}"
-                                data-price="{{ $product->price }}">{{ $product->name }}</option>
-                    @endforeach
-                </select>
+                <input type="text" 
+                       class="product-search border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
+                       placeholder="Ketik nama produk, SKU, atau barcode..."
+                       autocomplete="off">
+                <input type="hidden" name="items[${itemIndex}][product_id]" class="product-id">
                 <input type="hidden" name="items[${itemIndex}][product_name]" class="product-name">
+                
+                <!-- Dropdown untuk hasil search -->
+                <div class="product-results hidden absolute z-20 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto"></div>
             </div>
             <div>
                 <label class="block font-medium mb-1">SKU</label>
@@ -419,9 +483,11 @@ document.addEventListener('DOMContentLoaded', function () {
         `;
         itemsContainer.appendChild(newRow);
         itemIndex++;
-        // fokus ke select produk barunya (opsional)
-        const selects = newRow.querySelectorAll('.product-select');
-        if (selects.length) selects[0].focus();
+        
+        // Initialize product search untuk row baru
+        setTimeout(() => {
+            initializeProductSearch(newRow);
+        }, 100);
     });
 
     // --- Remove item (handle ikon di dalam button juga) ---
@@ -556,6 +622,12 @@ document.addEventListener('DOMContentLoaded', function () {
             // kalau lolos semua, biarkan submit
         });
     }
+
+    // Initialize product search untuk semua row yang sudah ada
+    document.querySelectorAll('.item-row').forEach(row => {
+        initializeProductSearch(row);
+    });
+
     // Jalankan inisialisasi awal
     updateGrandTotal();
     // pastikan payment method render sesuai awal

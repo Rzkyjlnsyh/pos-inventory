@@ -49,9 +49,9 @@
 </head>
 <body class="bg-gray-100">
 <div class="flex">
-    <x-navbar-admin />
+    <x-navbar-kepala-toko />
     <div class="flex-1 lg:w-5/6">
-        <x-navbar-top-admin />
+        <x-navbar-top-kepala-toko />
         <div class="p-4 lg:p-8">
             <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
                 <h1 class="text-2xl font-semibold text-gray-800 mb-4">Buat Sales Order</h1>
@@ -69,7 +69,7 @@
                         {{ session('error') }}
                     </div>
                 @endif
-                <form action="{{ route('admin.sales.store') }}" method="POST" id="soForm" enctype="multipart/form-data">
+                <form action="{{ route('kepala-toko.sales.store') }}" method="POST" id="soForm" enctype="multipart/form-data">
                     @csrf
                     <div class="grid md:grid-cols-2 gap-4 mb-4">
                         <div>
@@ -361,7 +361,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             // AJAX search ke server
-            fetch(`/admin/products/search?q=${encodeURIComponent(searchTerm)}`)
+            fetch(`/kepala-toko/products/search?q=${encodeURIComponent(searchTerm)}`)
                 .then(response => {
                     if (!response.ok) throw new Error('Network error');
                     return response.json();

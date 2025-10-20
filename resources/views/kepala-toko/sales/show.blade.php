@@ -13,16 +13,16 @@
 </head>
 <body class="bg-gray-100">
 <div class="flex">
-    <x-navbar-owner />
+    <x-navbar-kepala-toko />
     <div class="flex-1 lg:w-5/6">
-        <x-navbar-top-owner />
+        <x-navbar-top-kepala-toko />
         <div class="p-4 lg:p-8">
             <!-- Debug Info -->
             <!-- <div class="bg-gray-100 p-4 rounded-xl mb-6">
                 <h4 class="font-semibold text-gray-700">Debug Info</h4>
                 <p class="text-sm text-gray-600">
                     Active Shift: {{ $activeShift ? 'Yes (ID: ' . $activeShift->id . ')' : 'No' }}<br>
-                    User Role: {{ Auth::user()->hasRole('owner') ? 'Owner' : 'Other' }}<br>
+                    User Role: {{ Auth::user()->hasRole('kepala-toko') ? 'kepala-toko' : 'Other' }}<br>
                     SO Status: {{ $salesOrder->status }}<br>
                     Approved By: {{ $salesOrder->approved_by ? $salesOrder->approver->name : 'Not Approved' }}<br>
                     Paid Total: Rp {{ number_format($salesOrder->paid_total, 0, ',', '.') }}<br>
@@ -38,58 +38,58 @@
                         <p class="text-sm text-gray-500 mt-1">SO Number: {{ $salesOrder->so_number }}</p>
                     </div>
                     <div class="flex space-x-2">
-                        <a href="{{ route('owner.sales.index') }}"
+                        <a href="{{ route('kepala-toko.sales.index') }}"
                            class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded shadow">
                             <i class="bi bi-arrow-left"></i> Kembali
                         </a>
-                        @if($salesOrder->isEditable() && $activeShift && Auth::user()->hasRole('owner'))
-                            <a href="{{ route('owner.sales.edit', $salesOrder) }}"
+                        @if($salesOrder->isEditable() && $activeShift && Auth::user()->hasRole('kepala_toko'))
+                            <a href="{{ route('kepala-toko.sales.edit', $salesOrder) }}"
                                class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded shadow">
                                 <i class="bi bi-pencil"></i> Edit
                             </a>
                         @endif
-                        @if($salesOrder->status === 'pending' && $salesOrder->approved_by === null && $activeShift && Auth::user()->hasRole('owner'))
-                            <form action="{{ route('owner.sales.approve', $salesOrder) }}" method="POST">
+                        @if($salesOrder->status === 'pending' && $salesOrder->approved_by === null && $activeShift && Auth::user()->hasRole('kepala_toko'))
+                            <form action="{{ route('kepala-toko.sales.approve', $salesOrder) }}" method="POST">
                                 @csrf
                                 <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow">
                                     <i class="bi bi-check-circle"></i> Approve
                                 </button>
                             </form>
                         @endif
-                        @if($salesOrder->status === 'pending' && $salesOrder->approved_by !== null && $salesOrder->paid_total >= $salesOrder->grand_total * 0.5 && $activeShift && Auth::user()->hasRole('owner'))
-                            <form action="{{ route('owner.sales.startProcess', $salesOrder) }}" method="POST">
+                        @if($salesOrder->status === 'pending' && $salesOrder->approved_by !== null && $salesOrder->paid_total >= $salesOrder->grand_total * 0.5 && $activeShift && Auth::user()->hasRole('kepala_toko'))
+                            <form action="{{ route('kepala-toko.sales.startProcess', $salesOrder) }}" method="POST">
                                 @csrf
                                 <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow">
                                     <i class="bi bi-play-circle"></i> Mulai Proses
                                 </button>
                             </form>
                         @endif
-                        @if($salesOrder->order_type === 'jahit_sendiri' && $salesOrder->status === 'request_kain' && $activeShift && Auth::user()->hasRole('owner'))
-                            <form action="{{ route('owner.sales.processJahit', $salesOrder) }}" method="POST">
+                        @if($salesOrder->order_type === 'jahit_sendiri' && $salesOrder->status === 'request_kain' && $activeShift && Auth::user()->hasRole('kepala_toko'))
+                            <form action="{{ route('kepala-toko.sales.processJahit', $salesOrder) }}" method="POST">
                                 @csrf
                                 <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow">
                                     <i class="bi bi-scissors"></i> Proses Jahit
                                 </button>
                             </form>
                         @endif
-                        @if($salesOrder->order_type === 'jahit_sendiri' && $salesOrder->status === 'proses_jahit' && $activeShift && Auth::user()->hasRole('owner'))
-                            <form action="{{ route('owner.sales.markAsJadi', $salesOrder) }}" method="POST">
+                        @if($salesOrder->order_type === 'jahit_sendiri' && $salesOrder->status === 'proses_jahit' && $activeShift && Auth::user()->hasRole('kepala_toko'))
+                            <form action="{{ route('kepala-toko.sales.markAsJadi', $salesOrder) }}" method="POST">
                                 @csrf
                                 <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow">
                                     <i class="bi bi-check-circle"></i> Tandai Jadi
                                 </button>
                             </form>
                         @endif
-                        @if(($salesOrder->order_type === 'jahit_sendiri' && $salesOrder->status === 'jadi') || ($salesOrder->order_type === 'beli_jadi' && $salesOrder->status === 'di proses') && $activeShift && Auth::user()->hasRole('owner'))
-                            <form action="{{ route('owner.sales.markAsDiterimaToko', $salesOrder) }}" method="POST">
+                        @if(($salesOrder->order_type === 'jahit_sendiri' && $salesOrder->status === 'jadi') || ($salesOrder->order_type === 'beli_jadi' && $salesOrder->status === 'di proses') && $activeShift && Auth::user()->hasRole('kepala_toko'))
+                            <form action="{{ route('kepala-toko.sales.markAsDiterimaToko', $salesOrder) }}" method="POST">
                                 @csrf
                                 <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow">
                                     <i class="bi bi-shop"></i> Diterima Toko
                                 </button>
                             </form>
                         @endif
-                        @if($salesOrder->status === 'diterima_toko' && $salesOrder->remaining_amount == 0 && $activeShift && Auth::user()->hasRole('owner'))
-                            <form action="{{ route('owner.sales.complete', $salesOrder) }}" method="POST">
+                        @if($salesOrder->status === 'diterima_toko' && $salesOrder->remaining_amount == 0 && $activeShift && Auth::user()->hasRole('kepala_toko'))
+                            <form action="{{ route('kepala-toko.sales.complete', $salesOrder) }}" method="POST">
                                 @csrf
                                 <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow">
                                     <i class="bi bi-check2-all"></i> Selesaikan
@@ -102,7 +102,7 @@
 
             @if(!$activeShift)
                 <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-6">
-                    Shift belum dimulai. Anda tidak bisa menambah pembayaran atau melakukan aksi lain. Silakan mulai shift terlebih dahulu di <a href="{{ route('owner.shift.dashboard') }}" class="underline">Dashboard Shift</a>.
+                    Shift belum dimulai. Anda tidak bisa menambah pembayaran atau melakukan aksi lain. Silakan mulai shift terlebih dahulu di <a href="{{ route('kepala-toko.shift.dashboard') }}" class="underline">Dashboard Shift</a>.
                 </div>
             @endif
 
@@ -194,7 +194,6 @@
                         <div class="flex justify-between"><span class="text-gray-600">SO Number:</span><span class="font-mono font-semibold">{{ $salesOrder->so_number }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-600">Tipe Order:</span><span class="capitalize">{{ str_replace('_', ' ', $salesOrder->order_type) }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-600">Tanggal Order:</span><span>{{ \Carbon\Carbon::parse($salesOrder->order_date)->format('d/m/Y') }}</span></div>
-                        <div class="flex justify-between"><span class="text-gray-600">Tanggal Deadline:</span><span>{{ \Carbon\Carbon::parse($salesOrder->deadline)->format('d/m/Y') }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-600">Customer:</span><span>{{ $salesOrder->customer ? $salesOrder->customer->name : 'Umum' }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-600">Dibuat Oleh:</span><span>{{ $salesOrder->creator->name ?? 'System' }}</span></div>
                         @if($salesOrder->approved_by)
@@ -223,10 +222,10 @@
                 </div>
             </div>
 
-            @if($salesOrder->status !== 'selesai' && $activeShift && Auth::user()->hasRole('owner'))
+            @if($salesOrder->status !== 'selesai' && $activeShift && Auth::user()->hasRole('kepala_toko'))
                 <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
                     <h2 class="text-lg font-semibold mb-4 text-gray-800">Tambah Pembayaran</h2>
-                    <form action="{{ route('owner.sales.addPayment', $salesOrder) }}" method="POST" enctype="multipart/form-data" id="paymentForm">
+                    <form action="{{ route('kepala-toko.sales.addPayment', $salesOrder) }}" method="POST" enctype="multipart/form-data" id="paymentForm">
                         @csrf
                         <div class="grid md:grid-cols-2 gap-4 mb-4">
                             <div>
@@ -363,9 +362,9 @@
                             @endif
                             @if($payment->proof_path)
                                 <br><a href="{{ Storage::url($payment->proof_path) }}" target="_blank" class="text-blue-500 text-xs">Lihat Bukti</a>
-                            @elseif(in_array($payment->method, ['transfer', 'split']) && $activeShift && Auth::user()->hasRole('owner'))
+                            @elseif(in_array($payment->method, ['transfer', 'split']) && $activeShift && Auth::user()->hasRole('kepala_toko'))
                                 <br>
-                                <form action="{{ route('owner.sales.uploadProof', ['salesOrder' => $salesOrder, 'payment' => $payment]) }}" method="POST" enctype="multipart/form-data">
+                                <form action="{{ route('kepala-toko.sales.uploadProof', ['salesOrder' => $salesOrder, 'payment' => $payment]) }}" method="POST" enctype="multipart/form-data">
                                     @csrf
                                     <input type="file" name="proof_path" accept=".jpg,.jpeg,.png,.pdf" class="border rounded px-3 py-2 w-full mt-2">
                                     <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs mt-2">
@@ -382,7 +381,7 @@
                             <button onclick="printPaymentNota({{ $payment->id }})" class="text-green-600 hover:underline" title="Print Langsung">
             <i class="bi bi-printer"></i>
         </button>
-                                <a href="{{ route('owner.sales.printNota', $payment) }}" class="text-blue-600 hover:underline" title="Download PDF">
+                                <a href="{{ route('kepala-toko.sales.printNota', $payment) }}" class="text-blue-600 hover:underline" title="Download PDF">
                                     <i class="bi bi-download"></i>
                                 </a>
                             </div>

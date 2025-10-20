@@ -103,6 +103,11 @@
                                     <div class="text-sm text-gray-500">Tanggal Pembelian</div>
                                     <div>{{ \Carbon\Carbon::parse($purchase->order_date)->format('d M Y') }}</div>
                                 </div>
+                                @if($purchase->deadline)
+    <div>
+        <strong>Deadline:</strong> {{ \Carbon\Carbon::parse($purchase->deadline)->format('d M Y') }}
+    </div>
+    @endif
                                 <div>
                                     <div class="text-sm text-gray-500">Supplier</div>
                                     <div>{{ $purchase->supplier?->name ?? '-' }}</div>
@@ -162,6 +167,38 @@
                                 </table>
                             </div>
                         </div>
+                        <!-- TAMBAH SECTION RIWAYAT AKTIVITAS -->
+<div class="bg-white p-6 rounded-xl shadow-lg mt-6">
+    <h2 class="text-lg font-semibold mb-4 text-gray-800">Riwayat Aktivitas</h2>
+    <div class="overflow-x-auto">
+        <table class="w-full table-auto border-collapse">
+            <thead>
+                <tr class="bg-gray-50 text-left text-sm font-semibold text-gray-600">
+                    <th class="px-4 py-2 border">Waktu</th>
+                    <th class="px-4 py-2 border">Aksi</th>
+                    <th class="px-4 py-2 border">Deskripsi</th>
+                    <th class="px-4 py-2 border">Oleh</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($purchase->logs as $log)
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="px-4 py-2 border">{{ \Carbon\Carbon::parse($log->created_at)->format('d/m/Y H:i') }}</td>
+                        <td class="px-4 py-2 border">
+                            <span class="capitalize">{{ str_replace('_', ' ', $log->action) }}</span>
+                        </td>
+                        <td class="px-4 py-2 border">{{ $log->description }}</td>
+                        <td class="px-4 py-2 border">{{ $log->user->name ?? 'System' }}</td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="4" class="text-center text-gray-500 px-4 py-4">Belum ada log aktivitas</td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+</div>
 
                         <!-- Document Files -->
                         @if($purchase->status !== 'draft' && ($purchase->invoice_file || $purchase->payment_proof_file))
@@ -283,6 +320,14 @@
                             <h3 class="text-lg font-semibold text-gray-800 mb-4">Aksi</h3>
                             
                             <div class="space-y-3">
+
+            <!-- Tambah di bagian action buttons -->
+            @if(in_array($purchase->status, ['draft', 'pending', 'approved']))
+<a href="{{ route('admin.purchases.edit', $purchase) }}" class="w-full text-white rounded">
+    <div class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-center"><i class="bi bi-pencil"></i> Edit</div>
+</a>
+@endif
+
     <!-- Draft: Submit -->
     @if($purchase->status === 'draft')
         <form method="POST" action="{{ route('admin.purchases.submit', $purchase) }}">

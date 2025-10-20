@@ -198,9 +198,11 @@ class PurchaseOrder extends Model
         };
     }
 
-    public function getTypeLabel(): string
+    public function getTypeLabel(?string $type = null): string
     {
-        return match($this->purchase_type) {
+        $type = $type ?? $this->purchase_type;
+    
+        return match ($type) {
             self::TYPE_KAIN => 'Pembelian Kain',
             self::TYPE_PRODUK_JADI => 'Pembelian Produk Jadi',
             default => 'Unknown Type'

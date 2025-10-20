@@ -52,6 +52,8 @@ Route::middleware(['auth', 'owner'])->prefix('owner')->name('owner.')->group(fun
     Route::get('catalog/products/search', [ProductOwnerController::class, 'search'])->name('catalog.products.search');
     Route::post('owner/product/import', [ProductOwnerController::class, 'import'])->name('product.import');
     Route::get('owner/product/download-template', [ProductOwnerController::class, 'downloadTemplate'])->name('product.download-template');
+    // Dalam group owner
+    Route::get('/products/search', [ProductOwnerController::class, 'search'])->name('products.search');
 
     // Categories
     Route::resource('categories', CategoryController::class)
@@ -181,6 +183,8 @@ Route::middleware(['check.shift'])->group(function () {
     Route::get('contacts/suppliers/template', [ContactController::class, 'downloadSupplierTemplate'])->name('contacts.suppliers.template');
 });
 
+// route usertype lain 
+
 // Finance routes
 Route::middleware(['auth', 'finance'])->prefix('finance')->name('finance.')->group(function () {
     Route::get('/', [\App\Http\Controllers\Finance\FinanceController::class, 'index'])->name('index');
@@ -271,6 +275,7 @@ Route::middleware(['auth', 'finance', 'check.shift'])->group(function () {
 Route::middleware(['auth', 'kepala_toko'])->prefix('kepala-toko')->name('kepala-toko.')->group(function () {
     Route::view('/', 'kepala-toko.dashboard')->name('index');
     Route::get('dashboard', fn() => view('kepala-toko.dashboard'))->name('dashboard');
+    Route::get('/products/search', [App\Http\Controllers\KepalaToko\ProductKepalaTokoController::class, 'search'])->name('products.search');
 
     // Contacts (Customer & Supplier)
     Route::get('contacts', [KepalaTokoContactController::class, 'index'])->name('contacts.index');
@@ -328,7 +333,6 @@ Route::middleware(['auth', 'kepala_toko'])->prefix('kepala-toko')->name('kepala-
     });
 
     // Shift routes
-    // Shift routes
     Route::get('shift/dashboard', [App\Http\Controllers\KepalaToko\ShiftController::class, 'dashboard'])->name('shift.dashboard');
     Route::post('shift/start', [App\Http\Controllers\KepalaToko\ShiftController::class, 'start'])->name('shift.start');
     Route::post('shift/end', [App\Http\Controllers\KepalaToko\ShiftController::class, 'end'])->name('shift.end');
@@ -342,7 +346,22 @@ Route::middleware(['auth', 'kepala_toko'])->prefix('kepala-toko')->name('kepala-
     Route::get('/shift/{shift}/download-summary', [App\Http\Controllers\KepalaToko\ShiftController::class, 'downloadSummary'])->name('shift.download-summary');
     Route::get('/shift/{shift}/print-preview', [App\Http\Controllers\KepalaToko\ShiftController::class, 'printPreview'])->name('shift.print-preview');
     Route::get('/shift/{shift}/print-summary', [App\Http\Controllers\KepalaToko\ShiftController::class, 'printSummary'])->name('shift.print-summary');
-            Route::post('shift/income', [ShiftController::class, 'income'])->name('shift.income');
+    Route::post('shift/income', [ShiftController::class, 'income'])->name('shift.income');
+
+    Route::middleware(['auth', 'kepala_toko', 'check.shift'])->group(function () {
+        Route::resource('sales', \App\Http\Controllers\KepalaToko\SalesOrderController::class)
+            ->parameters(['sales' => 'salesOrder']);
+        Route::post('/sales/{salesOrder}/approve', [\App\Http\Controllers\KepalaToko\SalesOrderController::class, 'approve'])->name('sales.approve');
+        Route::post('/sales/{salesOrder}/addPayment', [\App\Http\Controllers\KepalaToko\SalesOrderController::class, 'addPayment'])->name('sales.addPayment');
+        Route::post('/sales/{salesOrder}/startProcess', [\App\Http\Controllers\KepalaToko\SalesOrderController::class, 'startProcess'])->name('sales.startProcess');
+        Route::post('/sales/{salesOrder}/processJahit', [\App\Http\Controllers\KepalaToko\SalesOrderController::class, 'processJahit'])->name('sales.processJahit');
+        Route::post('/sales/{salesOrder}/markAsJadi', [\App\Http\Controllers\KepalaToko\SalesOrderController::class, 'markAsJadi'])->name('sales.markAsJadi');
+        Route::post('/sales/{salesOrder}/markAsDiterimaToko', [\App\Http\Controllers\KepalaToko\SalesOrderController::class, 'markAsDiterimaToko'])->name('sales.markAsDiterimaToko');
+        Route::post('/sales/{salesOrder}/complete', [\App\Http\Controllers\KepalaToko\SalesOrderController::class, 'complete'])->name('sales.complete');
+        Route::get('/payments/{payment}/nota', [\App\Http\Controllers\KepalaToko\SalesOrderController::class, 'printNota'])->name('sales.printNota');
+        Route::get('/payments/{payment}/nota-direct', [\App\Http\Controllers\KepalaToko\SalesOrderController::class, 'printNotaDirect'])->name('sales.printNotaDirect');
+        Route::post('/sales/{salesOrder}/payment/{payment}/upload-proof', [\App\Http\Controllers\KepalaToko\SalesOrderController::class, 'uploadProof'])->name('sales.uploadProof');
+    });
 });
 
 // Admin routes
@@ -359,6 +378,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('catalog/products/search', [\App\Http\Controllers\Admin\ProductAdminController::class, 'search'])->name('catalog.products.search');
     Route::post('admin/product/import', [\App\Http\Controllers\Admin\ProductAdminController::class, 'import'])->name('product.import');
     Route::get('admin/product/download-template', [\App\Http\Controllers\Admin\ProductAdminController::class, 'downloadTemplate'])->name('product.download-template');
+    Route::get('/products/search', [\App\Http\Controllers\Admin\ProductAdminController::class, 'search'])->name('products.search');
 
     // Categories
     Route::resource('categories', CategoryController::class)
@@ -412,6 +432,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         Route::post('{purchase}/submit', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'submit'])->name('submit');
         Route::post('{purchase}/update-status', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'updateWorkflowStatus'])->name('update-status');
         Route::patch('{purchase}/cancel', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'cancel'])->name('cancel');
+        Route::get('purchases/{purchase}/edit', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'edit'])->name('edit');
+        Route::put('purchases/{purchase}', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'update'])->name('update');
     });
     Route::prefix('purchase-returns')->name('purchase-returns.')->group(function () {
         Route::get('/', [App\Http\Controllers\Admin\PurchaseReturnController::class, 'index'])->name('index');

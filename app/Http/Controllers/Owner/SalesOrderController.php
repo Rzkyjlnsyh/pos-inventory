@@ -107,10 +107,6 @@ class SalesOrderController extends Controller
             'proof_path' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:2048'],
         ]);
     
-        // === VALIDASI CUSTOMER - TAMBAH INI ===
-        if (empty($validated['customer_id']) && empty($validated['customer_name'])) {
-            return back()->withErrors(['customer_name' => 'Pilih customer dari dropdown atau ketik nama customer baru.'])->withInput();
-        }
     
         \Log::info('Validated data', $validated);
     
@@ -156,8 +152,8 @@ class SalesOrderController extends Controller
         try {
             $salesOrder = DB::transaction(function () use ($validated, $request, $cashAmount, $transferAmount, $paymentAmount, $grandTotal, $activeShift, $status, $subtotal, $discountTotal) {
                 // === AUTO CREATE CUSTOMER LOGIC - PERBAIKI INI ===
-                $customerId = $validated['customer_id'];
-                
+                $customerId = $validated['customer_id'] ?? null;
+
                 if (empty($customerId) && !empty($validated['customer_name'])) {
                     // Cek dulu apakah customer dengan nama yang sama sudah ada
                     $existingCustomer = Customer::where('name', $validated['customer_name'])->first();

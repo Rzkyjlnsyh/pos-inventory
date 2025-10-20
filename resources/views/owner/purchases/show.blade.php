@@ -105,10 +105,11 @@
                                     <div class="text-sm text-gray-500">Tanggal Pembelian</div>
                                     <div>{{ \Carbon\Carbon::parse($purchase->order_date)->format('d M Y') }}</div>
                                 </div>
-                                <div>
-                                    <div class="text-sm text-gray-500">Tanggal Deadline</div>
-                                    <div>{{ \Carbon\Carbon::parse($purchase->deadline)->format('d M Y') }}</div>
-                                </div>
+                                @if($purchase->deadline)
+    <div>
+        <strong>Deadline:</strong> {{ \Carbon\Carbon::parse($purchase->deadline)->format('d M Y') }}
+    </div>
+    @endif
                                 <div>
                                     <div class="text-sm text-gray-500">Supplier</div>
                                     <div>{{ $purchase->supplier?->name ?? '-' }}</div>

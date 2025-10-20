@@ -126,19 +126,20 @@ class ProductFinanceController extends Controller implements FromArray, WithHead
 
     public function search(Request $request)
     {
-        $q = $request->get('q');
-        $products = Product::query()
-            ->where('is_active', true)
-            ->when($q, function ($query) use ($q) {
-                $query->where(function ($subQuery) use ($q) {
-                    $subQuery->where('name', 'like', "%$q%")
-                             ->orWhere('sku', 'like', "%$q%")
-                             ->orWhere('barcode', 'like', "%$q%");
-                });
+        $query = $request->get('q');
+        
+        $products = Product::where('is_active', true)
+            ->where('price', '>', 0)
+            ->where(function($q) use ($query) {
+                $q->where('name', 'like', "%{$query}%")
+                  ->orWhere('sku', 'like', "%{$query}%")
+                  ->orWhere('barcode', 'like', "%{$query}%");
             })
+            ->select('id', 'name', 'sku', 'barcode', 'price', 'stock_qty')
             ->orderBy('name')
-            ->limit(20)
-            ->get(['id', 'name', 'sku', 'cost_price', 'price']);
+            ->limit(10)
+            ->get();
+        
         return response()->json($products);
     }
 

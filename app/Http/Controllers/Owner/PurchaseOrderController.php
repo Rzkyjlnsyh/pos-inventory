@@ -168,94 +168,161 @@ class PurchaseOrderController extends Controller
     }
 
     // UPDATE UPDATE METHOD - TAMBAH LOG UPDATE
-    public function update(Request $request, PurchaseOrder $purchase): RedirectResponse
-    {
-        $validated = $request->validate([
-            'order_date' => ['required','date'],
-            'deadline' => ['nullable','date'],
-            'supplier_id' => ['nullable','exists:suppliers,id'],
-            'supplier_name' => ['nullable','string','max:255'],
-            'purchase_type' => ['required','in:kain,produk_jadi'],
-            'items' => ['required','array','min:1'],
-            'items.*.product_id' => ['nullable','exists:products,id'],
-            'items.*.product_name' => ['required','string','max:255'],
-            'items.*.sku' => ['nullable','string','max:100'],
-            'items.*.cost_price' => ['required','numeric','min:0'],
-            'items.*.qty' => ['required','integer','min:1'],
-            'items.*.discount' => ['nullable','numeric','min:0'],
-        ]);
+// UPDATE UPDATE METHOD - FIX LOG YANG LEBIH DETAIL
+public function update(Request $request, PurchaseOrder $purchase): RedirectResponse
+{
+    $validated = $request->validate([
+        'order_date' => ['required','date'],
+        'deadline' => ['nullable','date'],
+        'supplier_id' => ['nullable','exists:suppliers,id'],
+        'supplier_name' => ['nullable','string','max:255'],
+        'purchase_type' => ['required','in:kain,produk_jadi'],
+        'items' => ['required','array','min:1'],
+        'items.*.product_id' => ['nullable','exists:products,id'],
+        'items.*.product_name' => ['required','string','max:255'],
+        'items.*.sku' => ['nullable','string','max:100'],
+        'items.*.cost_price' => ['required','numeric','min:0'],
+        'items.*.qty' => ['required','integer','min:1'],
+        'items.*.discount' => ['nullable','numeric','min:0'],
+    ]);
 
-        $supplierId = $validated['supplier_id'] ?? null;
-        if (!$supplierId) {
-            if (!empty($validated['supplier_name'])) {
-                $supplier = Supplier::firstOrCreate(
-                    ['name' => $validated['supplier_name']],
-                    ['is_active' => true]
-                );
-                $supplierId = $supplier->id;
-            } else {
-                return back()->withErrors(['supplier_id' => 'Pilih supplier atau isi nama supplier.'])->withInput();
-            }
+    $supplierId = $validated['supplier_id'] ?? null;
+    if (!$supplierId) {
+        if (!empty($validated['supplier_name'])) {
+            $supplier = Supplier::firstOrCreate(
+                ['name' => $validated['supplier_name']],
+                ['is_active' => true]
+            );
+            $supplierId = $supplier->id;
+        } else {
+            return back()->withErrors(['supplier_id' => 'Pilih supplier atau isi nama supplier.'])->withInput();
         }
-
-        DB::transaction(function () use ($purchase, $validated, $supplierId) {
-            $oldData = $purchase->getOriginal();
-            
-            $subtotal = 0; $discountTotal = 0; $grandTotal = 0;
-            foreach ($validated['items'] as $item) {
-                $line = ((float)$item['cost_price'] * (int)$item['qty']);
-                $disc = (float)($item['discount'] ?? 0);
-                $subtotal += $line;
-                $discountTotal += $disc;
-            }
-            $grandTotal = $subtotal - $discountTotal;
-
-            $purchase->update([
-                'order_date' => $validated['order_date'],
-                'deadline' => $validated['deadline'] ?? null,
-                'supplier_id' => $supplierId,
-                'purchase_type' => $validated['purchase_type'],
-                'subtotal' => $subtotal,
-                'discount_total' => $discountTotal,
-                'grand_total' => $grandTotal,
-            ]);
-
-            // Hapus items lama dan buat yang baru
-            $purchase->items()->delete();
-            foreach ($validated['items'] as $item) {
-                $line = ((float)$item['cost_price'] * (int)$item['qty']) - (float)($item['discount'] ?? 0);
-                PurchaseOrderItem::create([
-                    'purchase_order_id' => $purchase->id,
-                    'product_id' => $item['product_id'] ?? null,
-                    'product_name' => $item['product_name'],
-                    'sku' => $item['sku'] ?? null,
-                    'cost_price' => $item['cost_price'],
-                    'qty' => $item['qty'],
-                    'discount' => $item['discount'] ?? 0,
-                    'line_total' => $line,
-                ]);
-            }
-
-            // TAMBAH LOG UPDATE
-            $changes = [];
-            if ($oldData['order_date'] != $validated['order_date']) {
-                $changes[] = "Tanggal order diubah";
-            }
-            if ($oldData['purchase_type'] != $validated['purchase_type']) {
-                $changes[] = "Tipe pembelian diubah dari {$oldData['purchase_type']} ke {$validated['purchase_type']}";
-            }
-            if ($oldData['grand_total'] != $grandTotal) {
-                $changes[] = "Total diubah dari Rp " . number_format($oldData['grand_total'], 0, ',', '.') . " ke Rp " . number_format($grandTotal, 0, ',', '.');
-            }
-            
-            if (!empty($changes)) {
-                $this->logAction($purchase, 'updated', "Purchase order diupdate: " . implode(', ', $changes));
-            }
-        });
-
-        return redirect()->route('owner.purchases.show', $purchase)->with('success', 'Purchase order berhasil diupdate.');
     }
 
+    DB::transaction(function () use ($purchase, $validated, $supplierId) {
+        // SIMPAN DATA LAMA SEBELUM UPDATE
+        $oldData = $purchase->getOriginal();
+        $oldItems = $purchase->items->toArray();
+        
+        $subtotal = 0; $discountTotal = 0; $grandTotal = 0;
+        foreach ($validated['items'] as $item) {
+            $line = ((float)$item['cost_price'] * (int)$item['qty']);
+            $disc = (float)($item['discount'] ?? 0);
+            $subtotal += $line;
+            $discountTotal += $disc;
+        }
+        $grandTotal = $subtotal - $discountTotal;
+
+        $purchase->update([
+            'order_date' => $validated['order_date'],
+            'deadline' => $validated['deadline'] ?? null,
+            'supplier_id' => $supplierId,
+            'purchase_type' => $validated['purchase_type'],
+            'subtotal' => $subtotal,
+            'discount_total' => $discountTotal,
+            'grand_total' => $grandTotal,
+        ]);
+
+        // Hapus items lama dan buat yang baru
+        $purchase->items()->delete();
+        foreach ($validated['items'] as $item) {
+            $line = ((float)$item['cost_price'] * (int)$item['qty']) - (float)($item['discount'] ?? 0);
+            PurchaseOrderItem::create([
+                'purchase_order_id' => $purchase->id,
+                'product_id' => $item['product_id'] ?? null,
+                'product_name' => $item['product_name'],
+                'sku' => $item['sku'] ?? null,
+                'cost_price' => $item['cost_price'],
+                'qty' => $item['qty'],
+                'discount' => $item['discount'] ?? 0,
+                'line_total' => $line,
+            ]);
+        }
+
+// === FIXED LOG UPDATE - DETEKSI HANYA PERUBAHAN YANG REAL ===
+$changes = [];
+
+// 1. Deteksi perubahan header - PAKAI FORMAT YANG SAMA
+$oldDate = Carbon::parse($oldData['order_date'])->format('Y-m-d');
+$newDate = Carbon::parse($validated['order_date'])->format('Y-m-d');
+if ($oldDate != $newDate) {
+    $changes[] = "Tanggal order dari " . Carbon::parse($oldData['order_date'])->format('d/m/Y') . " ke " . Carbon::parse($validated['order_date'])->format('d/m/Y');
+}
+
+// Deadline - handle null values
+$oldDeadline = $oldData['deadline'] ? Carbon::parse($oldData['deadline'])->format('Y-m-d') : null;
+$newDeadline = $validated['deadline'] ? Carbon::parse($validated['deadline'])->format('Y-m-d') : null;
+if ($oldDeadline != $newDeadline) {
+    if ($oldDeadline && $newDeadline) {
+        $changes[] = "Deadline dari " . Carbon::parse($oldData['deadline'])->format('d/m/Y') . " ke " . Carbon::parse($validated['deadline'])->format('d/m/Y');
+    } elseif ($newDeadline) {
+        $changes[] = "Deadline ditambahkan: " . Carbon::parse($validated['deadline'])->format('d/m/Y');
+    } elseif ($oldDeadline) {
+        $changes[] = "Deadline dihapus";
+    }
+}
+
+if ($oldData['purchase_type'] != $validated['purchase_type']) {
+    $oldType = $purchase->getTypeLabel($oldData['purchase_type']);
+    $newType = $purchase->getTypeLabel($validated['purchase_type']);
+    $changes[] = "Tipe pembelian dari {$oldType} ke {$newType}";
+}
+
+// Total - bandingkan numeric value, bukan string
+if ((float)$oldData['grand_total'] != (float)$grandTotal) {
+    $changes[] = "Total dari Rp " . number_format($oldData['grand_total'], 0, ',', '.') . " ke Rp " . number_format($grandTotal, 0, ',', '.');
+}
+
+// 2. Deteksi perubahan items (qty, harga, diskon)
+$itemChanges = [];
+$newItems = $validated['items'];
+
+// Bandingkan items lama dan baru
+foreach ($newItems as $index => $newItem) {
+    $oldItem = $oldItems[$index] ?? null;
+    
+    if ($oldItem) {
+        // Item existing - cek perubahan
+        if ((int)$oldItem['qty'] != (int)$newItem['qty']) {
+            $itemChanges[] = "Qty {$newItem['product_name']} dari {$oldItem['qty']} ke {$newItem['qty']}";
+        }
+        if ((float)$oldItem['cost_price'] != (float)$newItem['cost_price']) {
+            $itemChanges[] = "Harga {$newItem['product_name']} dari Rp " . number_format($oldItem['cost_price'], 0, ',', '.') . " ke Rp " . number_format($newItem['cost_price'], 0, ',', '.');
+        }
+        if ((float)($oldItem['discount'] ?? 0) != (float)($newItem['discount'] ?? 0)) {
+            $oldDisc = number_format($oldItem['discount'] ?? 0, 0, ',', '.');
+            $newDisc = number_format($newItem['discount'] ?? 0, 0, ',', '.');
+            $itemChanges[] = "Diskon {$newItem['product_name']} dari Rp {$oldDisc} ke Rp {$newDisc}";
+        }
+    } else {
+        // Item baru
+        $itemChanges[] = "Item baru: {$newItem['product_name']} (Qty: {$newItem['qty']})";
+    }
+}
+
+// Cek item yang dihapus
+if (count($oldItems) > count($newItems)) {
+    for ($i = count($newItems); $i < count($oldItems); $i++) {
+        $itemChanges[] = "Item dihapus: {$oldItems[$i]['product_name']}";
+    }
+}
+
+// Gabungkan semua perubahan
+$allChanges = array_merge($changes, $itemChanges);
+
+if (!empty($allChanges)) {
+    $this->logAction($purchase, 'updated', 
+        "Purchase order diupdate: " . implode(', ', $allChanges)
+    );
+} else {
+    $this->logAction($purchase, 'updated', 
+        "Purchase order diupdate (tidak ada perubahan data)"
+    );
+}
+    });
+
+    return redirect()->route('owner.purchases.show', $purchase)->with('success', 'Purchase order berhasil diupdate.');
+}
     // UPDATE SUBMIT METHOD - TAMBAH LOG
     public function submit(PurchaseOrder $purchase): RedirectResponse
     {
@@ -350,7 +417,7 @@ class PurchaseOrderController extends Controller
         return back()->with('success', "Status berhasil diupdate ke: {$statusLabel}");
     }
 
-    private function handleKainSelesai(PurchaseOrder $purchase): void
+    public function handleKainSelesai(PurchaseOrder $purchase): void
     {
         DB::transaction(function () use ($purchase) {
             // Create Stock In untuk kain yang sudah selesai (printing + jahit)
@@ -396,7 +463,7 @@ class PurchaseOrderController extends Controller
         });
     }
 
-    private function handleProdukJadiSelesai(PurchaseOrder $purchase): void
+    public function handleProdukJadiSelesai(PurchaseOrder $purchase): void
     {
         DB::transaction(function () use ($purchase) {
             // Create Stock In untuk produk jadi

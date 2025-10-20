@@ -4,12 +4,24 @@ namespace App\Http\Controllers\Finance;
 
 use App\Http\Controllers\Owner\PurchaseOrderController as BaseController;
 use App\Models\PurchaseOrder;
+use App\Models\PurchaseOrderLog;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Auth;
 
 class PurchaseOrderController extends BaseController
 {
+    private function logAction(PurchaseOrder $purchaseOrder, string $action, string $description): void
+    {
+        PurchaseOrderLog::create([
+            'purchase_order_id' => $purchaseOrder->id,
+            'user_id' => Auth::id(),
+            'action' => $action,
+            'description' => $description,
+            'created_at' => now(),
+        ]);
+    }
     public function show(PurchaseOrder $purchase): View
     {
         // Authorization untuk finance
