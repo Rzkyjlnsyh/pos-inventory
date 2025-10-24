@@ -21,7 +21,7 @@ return new class extends Migration {
 
             $table->dateTime('paid_at')->nullable();
             $table->string('reference')->nullable(); // no. ref / keterangan bank / nomor nota
-            $table->string('proof_path')->nullable(); // path bukti bayar (opsional utk cash, disarankan utk transfer/split)
+            $table->string('proof_path')->nullable(); // path bukti bayar 
             $table->text('note')->nullable();
 
             $table->foreignId('created_by')->constrained('users');

@@ -535,4 +535,10 @@ class SalesOrderController extends Controller
             'autoPrint' => true,
         ]);
     }
+    public function printNota(Payment $payment): \Illuminate\Http\Response
+    {
+        $salesOrder = $payment->salesOrder;
+        $pdf = Pdf::loadView('finance.sales.nota', compact('salesOrder', 'payment'));
+        return $pdf->download('nota_' . $salesOrder->so_number . '_payment_' . $payment->id . '.pdf');
+    }
 }

@@ -19,6 +19,7 @@ class Payment extends Model
         'transfer_amount',
         'paid_at',
         'reference',
+        'reference_number',
         'proof_path',
         'note',
         'created_by',

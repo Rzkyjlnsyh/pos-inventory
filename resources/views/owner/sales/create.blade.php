@@ -134,7 +134,7 @@
         <div class="grid md:grid-cols-2 gap-4">
             <div>
                 <label class="block font-medium mb-1">Nama Customer Baru *</label>
-                <input type="text" id="new_customer_name" class="border rounded px-3 py-2 w-full" placeholder="Nama customer baru" required>
+                <input type="text" id="new_customer_name" class="border rounded px-3 py-2 w-full" placeholder="Nama customer baru">
             </div>
             <div>
                 <label class="block font-medium mb-1">Nomor Telepon</label>
@@ -197,13 +197,26 @@
             </div>
         </div>
         <div id="proof-field" class="mt-4 hidden md:col-span-2">
+    <div class="grid md:grid-cols-2 gap-4">
+        <div>
             <label for="proof_path" class="block font-medium mb-1">Bukti Transfer (jpg, png, pdf, opsional)</label>
             <input type="file" name="proof_path" id="proof_path" accept=".jpg,.jpeg,.png,.pdf" class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
-            <p class="text-sm text-gray-600 mt-1">Opsional untuk metode transfer atau split</p>
+            <p class="text-sm text-gray-600 mt-1">Upload bukti transfer (opsional)</p>
             @error('proof_path')
                 <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
             @enderror
         </div>
+        <div>
+            <label for="reference_number" class="block font-medium mb-1">No Referensi Transfer (Opsional)</label>
+            <input type="text" name="reference_number" id="reference_number" class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" placeholder="Contoh: TRF123456789" value="{{ old('reference_number') }}">
+            <p class="text-sm text-gray-600 mt-1">No referensi bank atau keterangan</p>
+            @error('reference_number')
+                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+            @enderror
+        </div>
+    </div>
+    <p class="text-sm text-gray-600 mt-2">⚠️ Untuk transfer/split, wajib mengisi salah satu: Bukti Transfer atau No Referensi</p>
+</div>
         <div>
             <label for="paid_at" class="block font-medium mb-1">Tanggal Pembayaran</label>
             <input type="datetime-local" name="paid_at" id="paid_at" value="{{ old('paid_at', now()->format('Y-m-d\TH:i')) }}" class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
@@ -527,17 +540,22 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function updateProofRequired(method) {
-        // proof-field adalah wrapper, proof input id = proof_path
-        const proofInput = document.getElementById('proof_path');
-        if (!proofInput) return;
-        if (method === 'transfer' || method === 'split') {
-            proofInput.required = true;
-            if (proofField) proofField.classList.remove('hidden');
-        } else {
-            proofInput.required = false;
-            if (proofField) proofField.classList.add('hidden');
-        }
+    const proofInput = document.getElementById('proof_path');
+    const referenceInput = document.getElementById('reference_number');
+    
+    if (!proofInput || !referenceInput) return;
+    
+    if (method === 'transfer' || method === 'split') {
+        // Untuk transfer/split, bukti dan referensi jadi opsional (salah satu wajib)
+        proofInput.required = false;
+        referenceInput.required = false;
+        if (proofField) proofField.classList.remove('hidden');
+    } else {
+        proofInput.required = false;
+        referenceInput.required = false;
+        if (proofField) proofField.classList.add('hidden');
     }
+}
 
     function updatePaymentStatus() {
         const amount = parseFloat(paymentAmount.value) || 0;
@@ -577,34 +595,22 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             // validasi payment split/proof/dp checks
-            const method = paymentMethod.value;
-            const amount = parseFloat(paymentAmount.value) || 0;
-            if (method === 'split') {
-                const c = parseFloat(cashAmount.value) || 0;
-                const t = parseFloat(transferAmount.value) || 0;
-                if ((c + t).toFixed(2) != amount.toFixed(2)) {
-                    e.preventDefault();
-                    alert('Jumlah total harus sama dengan cash + transfer.');
-                    return;
-                }
-                if (t > 0) {
-                    const proof = document.getElementById('proof_path');
-                    if (proof && (!proof.files || !proof.files[0])) {
-                        e.preventDefault();
-                        alert('Bukti pembayaran wajib untuk transfer di metode split.');
-                        return;
-                    }
-                }
-            } else if (method === 'transfer') {
-                if (amount > 0) {
-                    const proof = document.getElementById('proof_path');
-                    if (proof && (!proof.files || !proof.files[0])) {
-                        e.preventDefault();
-                        alert('Bukti pembayaran wajib untuk metode transfer.');
-                        return;
-                    }
-                }
-            }
+const method = paymentMethod.value;
+const amount = parseFloat(paymentAmount.value) || 0;
+
+if (method === 'split' || method === 'transfer') {
+    const proof = document.getElementById('proof_path');
+    const reference = document.getElementById('reference_number');
+    
+    const hasProof = proof && proof.files && proof.files[0];
+    const hasReference = reference && reference.value.trim() !== '';
+    
+    if (!hasProof && !hasReference) {
+        e.preventDefault();
+        alert('Untuk metode transfer/split, wajib upload bukti transfer atau isi no referensi.');
+        return;
+    }
+}
 
             if (amount > 0) {
                 if (paymentStatus.value === 'dp' && amount < (grandTotal * 0.5)) {

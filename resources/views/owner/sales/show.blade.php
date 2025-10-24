@@ -276,14 +276,17 @@
                                     <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                                 @enderror
                             </div>
+                            
                             <div>
-                                <label for="reference" class="block font-medium mb-1">No. Referensi (opsional)</label>
-                                <input type="text" name="reference" id="reference" value="{{ old('reference') }}"
-                                       class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
-                                @error('reference')
-                                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                                @enderror
-                            </div>
+        <label for="reference_number" class="block font-medium mb-1">No Referensi Transfer (Opsional)</label>
+        <input type="text" name="reference_number" id="reference_number" 
+               class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
+               placeholder="Contoh: TRF123456789" value="{{ old('reference_number') }}">
+        <p class="text-sm text-gray-600 mt-1">No referensi bank atau keterangan</p>
+        @error('reference_number')
+            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+        @enderror
+    </div>
                             <div>
                                 <label for="proof_path" class="block font-medium mb-1">Bukti Pembayaran (opsional)</label>
                                 <input type="file" name="proof_path" id="proof_path" accept=".jpg,.jpeg,.png,.pdf"
@@ -357,26 +360,35 @@
                             </small>
                         </td>
                         <td class="px-4 py-2 border">
-                            {{ $payment->note ?? '-' }}
-                            @if($payment->reference)
-                                <br><small class="text-gray-500">Ref: {{ $payment->reference }}</small>
-                            @endif
-                            @if($payment->proof_path)
-                                <br><a href="{{ Storage::url($payment->proof_path) }}" target="_blank" class="text-blue-500 text-xs">Lihat Bukti</a>
-                            @elseif(in_array($payment->method, ['transfer', 'split']) && $activeShift && Auth::user()->hasRole('owner'))
-                                <br>
-                                <form action="{{ route('owner.sales.uploadProof', ['salesOrder' => $salesOrder, 'payment' => $payment]) }}" method="POST" enctype="multipart/form-data">
-                                    @csrf
-                                    <input type="file" name="proof_path" accept=".jpg,.jpeg,.png,.pdf" class="border rounded px-3 py-2 w-full mt-2">
-                                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs mt-2">
-                                        Upload Bukti
-                                    </button>
-                                    @error('proof_path')
-                                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                                    @enderror
-                                </form>
-                            @endif
-                        </td>
+    {{-- Tampilkan No Referensi jika ada --}}
+    @if($payment->reference_number)
+        No Ref: {{ $payment->reference_number }}<br>
+    @endif
+
+    {{-- Tampilkan Note jika ada --}}
+    @if($payment->note)
+        <small class="text-gray-600">{{ $payment->note }}</small><br>
+    @endif
+
+    {{-- Tampilkan Link Bukti jika sudah upload --}}
+    @if($payment->proof_path)
+        <a href="{{ route('owner.sales.payment-proof', $payment) }}" target="_blank" class="text-blue-500 text-xs hover:underline inline-flex items-center">
+            <i class="bi bi-file-earmark-image mr-1"></i> Lihat Bukti
+        </a>
+    @elseif(in_array($payment->method, ['transfer', 'split']) && $activeShift && Auth::user()->hasRole('owner'))
+        {{-- Form Upload Bukti jika belum ada bukti --}}
+        <form action="{{ route('owner.sales.uploadProof', ['salesOrder' => $salesOrder, 'payment' => $payment]) }}" method="POST" enctype="multipart/form-data" class="upload-proof-form mt-2">
+            @csrf
+            <input type="file" name="proof_path" accept=".jpg,.jpeg,.png,.pdf" class="border rounded px-2 py-1 text-xs w-full" required>
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs mt-1 w-full">
+                <i class="bi bi-upload"></i> Upload Bukti
+            </button>
+            @error('proof_path')
+                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+            @enderror
+        </form>
+    @endif
+</td>
                         <td class="px-4 py-2 border text-center">
                             <div class="flex justify-center gap-2">
                             <button onclick="printPaymentNota({{ $payment->id }})" class="text-green-600 hover:underline" title="Print Langsung">
@@ -515,6 +527,7 @@
 </div>
 
 <script>
+<script>
     function toggleSidebar() {
         document.getElementById('sidebar').classList.toggle('-translate-x-full');
     }
@@ -529,6 +542,7 @@
     document.addEventListener('DOMContentLoaded', function () {
         const paymentMethod = '{{ $salesOrder->payment_method }}';
         const proofInput = document.getElementById('proof_path');
+        const referenceInput = document.getElementById('reference_number');
         const form = document.getElementById('paymentForm');
 
         const splitFields = document.getElementById('split-payment-fields');
@@ -540,6 +554,7 @@
                 document.getElementById('cash_amount').value = 0;
                 document.getElementById('transfer_amount').value = 0;
                 document.getElementById('proof_path').value = '';
+                document.getElementById('reference_number').value = '';
             }
             updatePaymentAmount();
             updateProofRequired(this.value);
@@ -553,8 +568,18 @@
             document.getElementById('payment_amount').value = total.toFixed(2);
         }
 
+        // === PERBAIKAN: Function updateProofRequired yang baru ===
         function updateProofRequired(method) {
-            proofInput.required = (method === 'transfer' || method === 'split');
+            if (!proofInput || !referenceInput) return;
+            
+            if (method === 'transfer' || method === 'split') {
+                // Untuk transfer/split, bukti dan referensi jadi opsional (salah satu wajib)
+                proofInput.required = false;
+                referenceInput.required = false;
+            } else {
+                proofInput.required = false;
+                referenceInput.required = false;
+            }
         }
 
         updateProofRequired(paymentMethod);
@@ -562,14 +587,36 @@
         document.getElementById('cash_amount')?.addEventListener('input', updatePaymentAmount);
         document.getElementById('transfer_amount')?.addEventListener('input', updatePaymentAmount);
 
-        form.addEventListener('submit', function (e) {
-            const method = document.getElementById('payment_method').value;
-            if ((method === 'transfer' || method === 'split') && !proofInput.files.length) {
-                e.preventDefault();
-                alert('Harap unggah bukti pembayaran untuk metode ' + method);
-            }
-        });
+        // === PERBAIKAN: Submit validation yang baru ===
+        // form.addEventListener('submit', function (e) {
+        //     const method = document.getElementById('payment_method').value;
+            
+        //     if (method === 'transfer' || method === 'split') {
+        //         const proof = document.getElementById('proof_path');
+        //         const reference = document.getElementById('reference_number');
+                
+        //         const hasProof = proof && proof.files && proof.files[0];
+        //         const hasReference = reference && reference.value.trim() !== '';
+                
+        //         // Validasi baru: wajib bukti ATAU no referensi
+        //         if (!hasProof && !hasReference) {
+        //             e.preventDefault();
+        //             alert('Untuk metode transfer/split, wajib upload bukti transfer atau isi no referensi.');
+        //             return;
+        //         }
+        //     }
+        // });
     });
+    document.addEventListener('submit', function(e) {
+    if (e.target.classList.contains('upload-proof-form')) {
+        const fileInput = e.target.querySelector('input[type="file"]');
+        if (!fileInput.files.length) {
+            e.preventDefault();
+            alert('Harap pilih file bukti terlebih dahulu.');
+            return;
+        }
+    }
+});
     function printPaymentNota(paymentId) {
     // Tampilkan loading
     const printBtn = event.target;

@@ -105,6 +105,7 @@ class SalesOrderController extends Controller
             'transfer_amount' => ['nullable', 'numeric', 'min:0'],
             'paid_at' => ['nullable', 'date'],
             'proof_path' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:2048'],
+            'reference_number' => ['nullable', 'string', 'max:100'], // TAMBAH INI
         ]);
     
     
@@ -211,11 +212,23 @@ class SalesOrderController extends Controller
     
                 if ($paymentAmount > 0) {
                     $proofPath = $request->hasFile('proof_path')
-                        ? $request->file('proof_path')->store('payment-proofs', 'public')
-                        : null;
-    
+                    ? $request->file('proof_path')->store('payment-proofs', 'public')  // ✅ PASTIKAN 'public'
+                    : null;
+                
+                    // VALIDASI: Untuk transfer/split, wajib bukti ATAU no referensi
+                    if (in_array($validated['payment_method'], ['transfer', 'split'])) {
+                        $hasProof = $request->hasFile('proof_path');
+                        $hasReference = !empty($validated['reference_number']);
+                        
+                        if (!$hasProof && !$hasReference) {
+                            return back()->withErrors([
+                                'proof_path' => 'Untuk metode transfer/split, wajib upload bukti transfer atau isi no referensi.'
+                            ])->withInput();
+                        }
+                    }
+                
                     $paymentCategory = ($paymentAmount >= $grandTotal) ? 'pelunasan' : 'dp';
-    
+                
                     $payment = Payment::create([
                         'sales_order_id' => $salesOrder->id,
                         'method' => $validated['payment_method'],
@@ -226,6 +239,7 @@ class SalesOrderController extends Controller
                         'transfer_amount' => $transferAmount,
                         'paid_at' => $validated['paid_at'] ?? now(),
                         'proof_path' => $proofPath,
+                        'reference_number' => $validated['reference_number'] ?? null, // TAMBAH INI
                         'created_by' => Auth::id(),
                     ]);
     
@@ -318,6 +332,7 @@ class SalesOrderController extends Controller
             'transfer_amount' => ['nullable', 'numeric', 'min:0'],
             'paid_at' => ['nullable', 'date'],
             'proof_path' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:2048'],
+            'reference_number' => ['nullable', 'string', 'max:100'], // TAMBAH INI
         ]);
 
         foreach ($request->items as $index => $item) {
@@ -391,13 +406,25 @@ class SalesOrderController extends Controller
 
                 if ($paymentAmount > 0) {
                     $proofPath = $request->hasFile('proof_path')
-                        ? $request->file('proof_path')->store('payment-proofs', 'public')
-                        : null;
-
+                    ? $request->file('proof_path')->store('payment-proofs', 'public')  // ✅ PASTIKAN 'public'
+                    : null;
+                
+                    // VALIDASI: Untuk transfer/split, wajib bukti ATAU no referensi
+                    if (in_array($validated['payment_method'], ['transfer', 'split'])) {
+                        $hasProof = $request->hasFile('proof_path');
+                        $hasReference = !empty($validated['reference_number']);
+                        
+                        if (!$hasProof && !$hasReference) {
+                            return back()->withErrors([
+                                'proof_path' => 'Untuk metode transfer/split, wajib upload bukti transfer atau isi no referensi.'
+                            ])->withInput();
+                        }
+                    }
+                
                     $paymentCategory = ($paymentAmount >= $grandTotal) ? 'pelunasan' : 'dp';
-
+                
                     $latestPayment = Payment::where('sales_order_id', $salesOrder->id)->latest('created_at')->first();
-
+                
                     if ($latestPayment) {
                         $latestPayment->update([
                             'method' => $validated['payment_method'],
@@ -408,12 +435,9 @@ class SalesOrderController extends Controller
                             'transfer_amount' => $transferAmount,
                             'paid_at' => $validated['paid_at'] ?? now(),
                             'proof_path' => $proofPath ?? $latestPayment->proof_path,
+                            'reference_number' => $validated['reference_number'] ?? $latestPayment->reference_number, // TAMBAH INI
                             'created_by' => Auth::id(),
                         ]);
-
-                        \Log::info('Payment updated in update', ['payment_id' => $latestPayment->id, 'amount' => $paymentAmount, 'proof_path' => $proofPath ?? 'none']);
-
-                        $this->logAction($salesOrder, 'payment_updated', "Pembayaran diperbarui: {$paymentCategory}, Jumlah: Rp " . number_format($paymentAmount, 0, ',', '.') . ", Metode: {$validated['payment_method']}" . ($proofPath ? "" : ", tanpa bukti"));
                     } else {
                         $payment = Payment::create([
                             'sales_order_id' => $salesOrder->id,
@@ -425,6 +449,7 @@ class SalesOrderController extends Controller
                             'transfer_amount' => $transferAmount,
                             'paid_at' => $validated['paid_at'] ?? now(),
                             'proof_path' => $proofPath,
+                            'reference_number' => $validated['reference_number'] ?? null, // TAMBAH INI
                             'created_by' => Auth::id(),
                         ]);
 

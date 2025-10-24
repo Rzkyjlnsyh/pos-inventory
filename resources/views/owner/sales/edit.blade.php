@@ -121,13 +121,29 @@
             </div>
         </div>
         <div id="proof-field" class="mt-4 hidden md:col-span-2">
+    <div class="grid md:grid-cols-2 gap-4">
+        <div>
             <label for="proof_path" class="block font-medium mb-1">Bukti Transfer (jpg, png, pdf, opsional)</label>
             <input type="file" name="proof_path" id="proof_path" accept=".jpg,.jpeg,.png,.pdf" class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
-            <p class="text-sm text-gray-600 mt-1">Opsional untuk metode transfer atau split</p>
+            <p class="text-sm text-gray-600 mt-1">Upload bukti transfer (opsional)</p>
             @error('proof_path')
                 <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
             @enderror
         </div>
+        <div>
+            <label for="reference_number" class="block font-medium mb-1">No Referensi Transfer (Opsional)</label>
+            <input type="text" name="reference_number" id="reference_number" 
+                   class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
+                   placeholder="Contoh: TRF123456789" 
+                   value="{{ old('reference_number', $salesOrder->payments->first()->reference_number ?? '') }}">
+            <p class="text-sm text-gray-600 mt-1">No referensi bank atau keterangan</p>
+            @error('reference_number')
+                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+            @enderror
+        </div>
+    </div>
+    <p class="text-sm text-gray-600 mt-2">⚠️ Untuk transfer/split, wajib mengisi salah satu: Bukti Transfer atau No Referensi</p>
+</div>
         <div>
             <label for="paid_at" class="block font-medium mb-1">Tanggal Pembayaran</label>
             <input type="datetime-local" name="paid_at" id="paid_at" value="{{ old('paid_at', now()->format('Y-m-d\TH:i')) }}" class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
@@ -251,9 +267,24 @@
         }
     }
 
+    // === PERBAIKAN: Function updateProofRequired yang baru ===
     function updateProofRequired(method) {
+        const proofInput = document.getElementById('proof_path');
+        const referenceInput = document.getElementById('reference_number');
         const proofField = document.getElementById('proof-field');
-        proofField.classList.toggle('hidden', !(method === 'transfer' || method === 'split'));
+        
+        if (!proofInput || !referenceInput || !proofField) return;
+        
+        if (method === 'transfer' || method === 'split') {
+            // Untuk transfer/split, bukti dan referensi jadi opsional (salah satu wajib)
+            proofInput.required = false;
+            referenceInput.required = false;
+            proofField.classList.remove('hidden');
+        } else {
+            proofInput.required = false;
+            referenceInput.required = false;
+            proofField.classList.add('hidden');
+        }
     }
 
     document.getElementById('add-item').addEventListener('click', function () {
@@ -334,6 +365,7 @@
         }
         if (this.value !== 'transfer' && this.value !== 'split') {
             document.getElementById('proof_path').value = '';
+            document.getElementById('reference_number').value = '';
         }
         updatePaymentAmount();
         updateProofRequired(this.value);
@@ -344,6 +376,7 @@
     document.getElementById('cash_amount').addEventListener('input', updatePaymentAmount);
     document.getElementById('transfer_amount').addEventListener('input', updatePaymentAmount);
 
+    // === PERBAIKAN: Submit validation yang baru ===
     document.getElementById('soForm').addEventListener('submit', function (e) {
         console.log('Form submitted, validating...');
         const salePriceInputs = document.querySelectorAll('.sale-price');
@@ -364,6 +397,22 @@
         console.log('Payment amount:', paymentAmount, 'Method:', paymentMethod);
 
         if (paymentAmount > 0) {
+            // === VALIDASI BARU: Untuk transfer/split, wajib bukti ATAU no referensi ===
+            if (paymentMethod === 'split' || paymentMethod === 'transfer') {
+                const proof = document.getElementById('proof_path');
+                const reference = document.getElementById('reference_number');
+                
+                const hasProof = proof && proof.files && proof.files[0];
+                const hasReference = reference && reference.value.trim() !== '';
+                
+                if (!hasProof && !hasReference) {
+                    e.preventDefault();
+                    alert('Untuk metode transfer/split, wajib upload bukti transfer atau isi no referensi.');
+                    console.log('Validation failed: No proof or reference for transfer/split');
+                    return;
+                }
+            }
+
             if (paymentMethod === 'split') {
                 const cashAmount = parseFloat(document.getElementById('cash_amount').value) || 0;
                 const transferAmount = parseFloat(document.getElementById('transfer_amount').value) || 0;
