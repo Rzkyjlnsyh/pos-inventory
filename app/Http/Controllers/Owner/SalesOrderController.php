@@ -374,10 +374,34 @@ class SalesOrderController extends Controller
 
         try {
             DB::transaction(function () use ($salesOrder, $validated, $request, $cashAmount, $transferAmount, $paymentAmount, $grandTotal, $subtotal, $discountTotal) {
+                $customerId = $validated['customer_id'] ?? null;
+
+if (empty($customerId) && !empty($validated['customer_name'])) {
+    // Cek dulu apakah customer dengan nama yang sama sudah ada
+    $existingCustomer = Customer::where('name', $validated['customer_name'])->first();
+    
+    if ($existingCustomer) {
+        // Gunakan customer yang sudah ada
+        $customerId = $existingCustomer->id;
+        \Log::info('Using existing customer', ['customer_id' => $customerId, 'name' => $existingCustomer->name]);
+    } else {
+        // Buat customer baru
+        $customer = Customer::create([
+            'name' => $validated['customer_name'],
+            'phone' => $validated['customer_phone'] ?? null,
+            'email' => null,
+            'address' => null,
+            'notes' => 'Auto-created from sales order edit',
+            'is_active' => true,
+        ]);
+        $customerId = $customer->id;
+        \Log::info('Auto-created customer in update', ['customer_id' => $customerId, 'name' => $customer->name, 'phone' => $customer->phone]);
+    }
+}
                 $salesOrder->update([
                     'order_type' => $validated['order_type'],
                     'order_date' => $validated['order_date'],
-                    'customer_id' => $validated['customer_id'] ?? null,
+                    'customer_id' => $customerId ?? null,
                     'deadline' => $validated['deadline'] ?? null, // tambah ini
                     'subtotal' => $subtotal,
                     'discount_total' => $discountTotal,
@@ -654,30 +678,36 @@ class SalesOrderController extends Controller
         if ($shiftCheck !== true) {
             return $shiftCheck;
         }
-
+    
         if ($salesOrder->status !== 'pending') {
             \Log::warning('Attempt to start process on non-pending SO: ' . $salesOrder->so_number);
             return back()->withErrors(['status' => 'Hanya pending yang bisa dimulai prosesnya.']);
         }
-
+    
         if ($salesOrder->approved_by === null) {
             \Log::warning('SO not approved: ' . $salesOrder->so_number);
             return back()->withErrors(['status' => 'Sales order harus di-approve terlebih dahulu.']);
         }
-
+    
         if ($salesOrder->paid_total < $salesOrder->grand_total * 0.5) {
             \Log::warning('Insufficient payment for SO: ' . $salesOrder->so_number, ['paid_total' => $salesOrder->paid_total, 'grand_total' => $salesOrder->grand_total]);
             return back()->withErrors(['payment' => 'Pembayaran minimal 50% untuk mulai proses.']);
         }
-
+    
+        // ✅ PERBAIKAN: Untuk transfer/split, boleh proof_path ATAU reference_number
         if (in_array($salesOrder->payment_method, ['transfer', 'split'])) {
-            $paymentsWithoutProof = $salesOrder->payments()->whereNull('proof_path')->count();
+            $paymentsWithoutProof = $salesOrder->payments()
+                ->where(function($q) {
+                    $q->whereNull('proof_path')->whereNull('reference_number');
+                })
+                ->count();
+            
             if ($paymentsWithoutProof > 0) {
-                \Log::warning('Missing proof for transfer/split payments in SO: ' . $salesOrder->so_number);
-                return back()->withErrors(['payment' => 'Semua pembayaran untuk metode transfer atau split harus memiliki bukti pembayaran.']);
+                \Log::warning('Missing proof AND reference for transfer/split payments in SO: ' . $salesOrder->so_number);
+                return back()->withErrors(['payment' => 'Semua pembayaran transfer/split harus memiliki bukti pembayaran ATAU no referensi.']);
             }
         }
-
+    
         try {
             DB::transaction(function () use ($salesOrder) {
                 $this->updateStockOnPayment($salesOrder);

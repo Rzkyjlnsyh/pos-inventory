@@ -56,14 +56,32 @@
                                 </button>
                             </form>
                         @endif
-                        @if($salesOrder->status === 'pending' && $salesOrder->approved_by !== null && $salesOrder->paid_total >= $salesOrder->grand_total * 0.5 && $activeShift && Auth::user()->hasRole('owner'))
-                            <form action="{{ route('owner.sales.startProcess', $salesOrder) }}" method="POST">
-                                @csrf
-                                <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow">
-                                    <i class="bi bi-play-circle"></i> Mulai Proses
-                                </button>
-                            </form>
-                        @endif
+@php
+    // Validasi payment: untuk transfer/split, boleh ada proof_path ATAU reference_number
+    $canStartProcess = $salesOrder->status === 'pending' 
+        && $salesOrder->approved_by !== null 
+        && $salesOrder->paid_total >= $salesOrder->grand_total * 0.5;
+    
+    if ($canStartProcess && in_array($salesOrder->payment_method, ['transfer', 'split'])) {
+        // Cek apakah semua payment punya bukti ATAU no referensi
+        $invalidPayments = $salesOrder->payments()
+            ->where(function($q) {
+                $q->whereNull('proof_path')->whereNull('reference_number');
+            })
+            ->count();
+        
+        $canStartProcess = $invalidPayments == 0;
+    }
+@endphp
+
+@if($canStartProcess && $activeShift && Auth::user()->hasRole('owner'))
+    <form action="{{ route('owner.sales.startProcess', $salesOrder) }}" method="POST">
+        @csrf
+        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow">
+            <i class="bi bi-play-circle"></i> Mulai Proses
+        </button>
+    </form>
+@endif
                         @if($salesOrder->order_type === 'jahit_sendiri' && $salesOrder->status === 'request_kain' && $activeShift && Auth::user()->hasRole('owner'))
                             <form action="{{ route('owner.sales.processJahit', $salesOrder) }}" method="POST">
                                 @csrf
@@ -143,18 +161,36 @@
                         Total Dibayar: Rp {{ number_format($salesOrder->paid_total, 0, ',', '.') }}<br>
                         Minimal 50% Grand Total: Rp {{ number_format($salesOrder->grand_total * 0.5, 0, ',', '.') }}<br>
                         @if(in_array($salesOrder->payment_method, ['transfer', 'split']))
-                            Bukti Pembayaran: {{ $salesOrder->payments()->whereNull('proof_path')->count() == 0 ? 'Semua pembayaran memiliki bukti' : 'Ada pembayaran tanpa bukti' }}<br>
-                        @endif
-                        @if($salesOrder->status === 'pending' && $salesOrder->approved_by && $salesOrder->paid_total >= $salesOrder->grand_total * 0.5 && ($salesOrder->payment_method === 'cash' || $salesOrder->payments()->whereNull('proof_path')->count() == 0))
-                            <span class="text-green-600">Tombol Mulai Proses harusnya muncul.</span>
-                        @elseif($salesOrder->status === 'pending')
-                            <span class="text-red-600">Tombol Mulai Proses tidak muncul karena: 
-                                {{ !$salesOrder->approved_by ? 'Belum di-approve. ' : '' }}
-                                {{ $salesOrder->paid_total < $salesOrder->grand_total * 0.5 ? 'Pembayaran kurang dari 50%. ' : '' }}
-                                @if(in_array($salesOrder->payment_method, ['transfer', 'split']) && $salesOrder->payments()->whereNull('proof_path')->count() > 0)
-                                    Ada pembayaran tanpa bukti.
-                                @endif
-                            </span>
+    @php
+        $paymentsWithoutProof = $salesOrder->payments()
+            ->where(function($q) {
+                $q->whereNull('proof_path')->whereNull('reference_number');
+            })
+            ->count();
+    @endphp
+    Bukti Pembayaran: {{ $paymentsWithoutProof == 0 ? 'Semua pembayaran valid (bukti/referensi)' : 'Ada pembayaran tanpa bukti DAN tanpa no referensi' }}<br>
+@endif
+@php
+    $paymentsValid = true;
+    if (in_array($salesOrder->payment_method, ['transfer', 'split'])) {
+        $paymentsValid = $salesOrder->payments()
+            ->where(function($q) {
+                $q->whereNull('proof_path')->whereNull('reference_number');
+            })
+            ->count() == 0;
+    }
+@endphp
+
+@if($salesOrder->status === 'pending' && $salesOrder->approved_by && $salesOrder->paid_total >= $salesOrder->grand_total * 0.5 && ($salesOrder->payment_method === 'cash' || $paymentsValid))
+    <span class="text-green-600">Tombol Mulai Proses harusnya muncul.</span>
+@elseif($salesOrder->status === 'pending')
+    <span class="text-red-600">Tombol Mulai Proses tidak muncul karena: 
+        {{ !$salesOrder->approved_by ? 'Belum di-approve. ' : '' }}
+        {{ $salesOrder->paid_total < $salesOrder->grand_total * 0.5 ? 'Pembayaran kurang dari 50%. ' : '' }}
+        @if(in_array($salesOrder->payment_method, ['transfer', 'split']) && !$paymentsValid)
+            Ada pembayaran tanpa bukti DAN tanpa no referensi.
+        @endif
+    </span>
                         @elseif($salesOrder->order_type === 'jahit_sendiri' && $salesOrder->status === 'request_kain')
                             <span class="text-green-600">Tombol Proses Jahit harusnya muncul.</span>
                         @elseif($salesOrder->order_type === 'jahit_sendiri' && $salesOrder->status === 'proses_jahit')
