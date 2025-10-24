@@ -559,7 +559,7 @@ class SalesOrderController extends Controller
         if ($shiftCheck !== true) {
             return $shiftCheck;
         }
-
+    
         $validated = $request->validate([
             'payment_amount' => ['required', 'numeric', 'min:0', function ($attribute, $value, $fail) use ($salesOrder) {
                 if ($salesOrder->paid_total == 0 && $value < $salesOrder->grand_total * 0.5) {
@@ -574,6 +574,7 @@ class SalesOrderController extends Controller
             'transfer_amount' => ['nullable', 'required_if:payment_method,split', 'numeric', 'min:0'],
             'paid_at' => ['required', 'date'],
             'proof_path' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:2048'],
+            'reference_number' => ['nullable', 'string', 'max:100'], // ✅ TAMBAH INI
             'reference' => ['nullable', 'string', 'max:100'],
             'note' => ['nullable', 'string', 'max:255'],
         ]);
@@ -582,10 +583,22 @@ class SalesOrderController extends Controller
             \Log::error('Invalid split payment amount', ['payment_amount' => $validated['payment_amount'], 'cash_amount' => $validated['cash_amount'], 'transfer_amount' => $validated['transfer_amount']]);
             return back()->withErrors(['payment_amount' => 'Jumlah total harus sama dengan jumlah cash + transfer.'])->withInput();
         }
-
-        if (($validated['payment_method'] === 'transfer' || ($validated['payment_method'] === 'split' && ($validated['transfer_amount'] ?? 0) > 0)) && !$request->hasFile('proof_path')) {
-            \Log::error('Missing proof of payment for transfer/split', ['payment_method' => $validated['payment_method'], 'transfer_amount' => $validated['transfer_amount']]);
-            return back()->withErrors(['proof_path' => 'Bukti wajib untuk metode transfer atau split dengan jumlah transfer.'])->withInput();
+    
+        // ✅ VALIDASI BARU: Untuk transfer/split, wajib bukti ATAU no referensi
+        if ($validated['payment_method'] === 'transfer' || ($validated['payment_method'] === 'split' && ($validated['transfer_amount'] ?? 0) > 0)) {
+            $hasProof = $request->hasFile('proof_path');
+            $hasReference = !empty($validated['reference_number']);
+            
+            if (!$hasProof && !$hasReference) {
+                \Log::error('Missing proof or reference for transfer/split', [
+                    'payment_method' => $validated['payment_method'], 
+                    'has_proof' => $hasProof,
+                    'has_reference' => $hasReference
+                ]);
+                return back()->withErrors([
+                    'proof_path' => 'Untuk metode transfer/split, wajib upload bukti transfer ATAU isi no referensi.'
+                ])->withInput();
+            }
         }
 
         try {
@@ -611,6 +624,7 @@ class SalesOrderController extends Controller
                     'transfer_amount' => $transferAmount,
                     'paid_at' => $validated['paid_at'],
                     'reference' => $validated['reference'] ?? null,
+                    'reference_number' => $validated['reference_number'] ?? null, // ✅ TAMBAH INI
                     'proof_path' => $proofPath,
                     'note' => $validated['note'] ?? null,
                     'created_by' => Auth::id(),

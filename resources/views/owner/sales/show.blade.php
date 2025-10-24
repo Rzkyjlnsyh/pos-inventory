@@ -241,14 +241,16 @@
                                 @enderror
                             </div>
                             <div>
-                                <label for="payment_amount" class="block font-medium mb-1">Jumlah Pembayaran</label>
-                                <input type="number" name="payment_amount" id="payment_amount" min="0" step="0.01"
-                                       required class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
-                                       value="{{ old('payment_amount', $salesOrder->remaining_amount) }}">
-                                @error('payment_amount')
-                                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                                @enderror
-                            </div>
+    <label for="payment_amount" class="block font-medium mb-1">Jumlah Pembayaran</label>
+    <input type="number" name="payment_amount" id="payment_amount" min="0" step="0.01"
+           required class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
+           placeholder="Sisa: Rp {{ number_format($salesOrder->remaining_amount, 0, ',', '.') }}"
+           value="{{ old('payment_amount') }}">
+    <p class="text-sm text-gray-600 mt-1">Sisa yang harus dibayar: <span class="font-semibold">Rp {{ number_format($salesOrder->remaining_amount, 0, ',', '.') }}</span></p>
+    @error('payment_amount')
+        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+    @enderror
+</div>
                             <div id="split-payment-fields" class="hidden col-span-2">
                                 <div class="grid md:grid-cols-2 gap-4">
                                     <div>
@@ -526,7 +528,6 @@
     </div>
 </div>
 
-<script>
 <script>
     function toggleSidebar() {
         document.getElementById('sidebar').classList.toggle('-translate-x-full');
