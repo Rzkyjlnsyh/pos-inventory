@@ -19,25 +19,26 @@ class CheckActiveShift
     public function handle(Request $request, Closure $next)
     {
         $user = Auth::user();
-        
-        // SEMUA USERTYPE: boleh akses READ (GET) tanpa shift aktif
+    
+        // OWNER: boleh akses SEMUA (GET/POST/PUT/DELETE) tanpa shift aktif
+        if ($user->hasRole('owner')) {
+            return $next($request);
+        }
+    
+        // ROLE LAIN: hanya boleh akses READ (GET) tanpa shift aktif
         if ($request->isMethod('get')) {
             return $next($request);
         }
     
         // Untuk ACTION (POST/PUT/DELETE): wajib shift aktif
         $activeShift = Shift::where('user_id', $user->id)->whereNull('end_time')->first();
-        
         if (!$activeShift) {
-            // Redirect ke halaman shift sesuai usertype
             $route = match($user->usertype) {
                 'admin' => 'admin.shift.dashboard',
                 'finance' => 'finance.shift.dashboard', 
                 'kepala_toko' => 'kepalatoko.shift.dashboard',
-                'owner' => 'owner.shift.dashboard',
                 default => 'dashboard'
             };
-            
             return redirect()->route($route)->with('error', 'Silakan mulai shift terlebih dahulu untuk melakukan aksi ini.');
         }
     

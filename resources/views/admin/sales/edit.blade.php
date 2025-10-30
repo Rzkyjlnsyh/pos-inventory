@@ -58,18 +58,55 @@
         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
     @enderror
 </div>
-                        <div>
-                            <label for="customer_id" class="block font-medium mb-1">Customer</label>
-                            <select name="customer_id" id="customer_id" class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
-                                <option value="">Guest</option>
-                                @foreach($customers as $customer)
-                                    <option value="{{ $customer->id }}" {{ old('customer_id', $salesOrder->customer_id) == $customer->id ? 'selected' : '' }}>{{ $customer->name }}</option>
-                                @endforeach
-                            </select>
-                            @error('customer_id')
-                                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                            @enderror
-                        </div>
+<!-- GANTI BAGIAN INI: -->
+<div class="relative">
+    <label for="customer_search" class="block font-medium mb-1">Customer (Opsional)</label>
+    <input type="text" 
+           id="customer_search" 
+           class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
+           placeholder="Ketik nama customer atau biarkan kosong..."
+           autocomplete="off"
+           value="{{ old('customer_name', $salesOrder->customer ? $salesOrder->customer->name : '') }}">
+    
+    <!-- Hidden fields untuk data customer -->
+    <input type="hidden" name="customer_id" id="customer_id" value="{{ old('customer_id', $salesOrder->customer_id) }}">
+    <input type="hidden" name="customer_name" id="customer_name" value="{{ old('customer_name', $salesOrder->customer ? $salesOrder->customer->name : '') }}">
+    <input type="hidden" name="customer_phone" id="customer_phone" value="{{ old('customer_phone', $salesOrder->customer ? $salesOrder->customer->phone : '') }}">
+    
+    <!-- Dropdown untuk existing customers -->
+    <div id="customer_dropdown" class="hidden absolute z-10 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto">
+        @foreach($customers as $customer)
+            <div class="p-2 hover:bg-gray-100 cursor-pointer customer-option"
+                 data-id="{{ $customer->id }}"
+                 data-name="{{ $customer->name }}"
+                 data-phone="{{ $customer->phone ?? '' }}">
+                {{ $customer->name }} @if($customer->phone)({{ $customer->phone }})@endif
+            </div>
+        @endforeach
+    </div>
+    
+    <!-- Info customer yang dipilih -->
+    <div id="selected_customer" class="mt-2 p-2 bg-blue-50 rounded {{ $salesOrder->customer ? '' : 'hidden' }}">
+        <span id="customer_display_name" class="font-medium">{{ $salesOrder->customer ? $salesOrder->customer->name : '' }}</span>
+        <span id="customer_display_phone" class="text-sm text-gray-600 ml-2">{{ $salesOrder->customer && $salesOrder->customer->phone ? '(' . $salesOrder->customer->phone . ')' : '' }}</span>
+        <button type="button" id="clear_customer" class="text-red-600 ml-2">✕</button>
+    </div>
+
+    <!-- Fields untuk customer baru -->
+    <div id="new_customer_fields" class="hidden mt-2">
+        <div class="grid md:grid-cols-2 gap-4">
+            <div>
+                <label class="block font-medium mb-1">Nama Customer Baru *</label>
+                <input type="text" id="new_customer_name" class="border rounded px-3 py-2 w-full" placeholder="Nama customer baru">
+            </div>
+            <div>
+                <label class="block font-medium mb-1">Nomor Telepon</label>
+                <input type="text" id="new_customer_phone" class="border rounded px-3 py-2 w-full" placeholder="Contoh: 08123456789">
+            </div>
+        </div>
+        <p class="text-sm text-gray-600 mt-1">* Customer baru akan otomatis dibuat</p>
+    </div>
+</div>
                         <div>
                             <label for="payment_method" class="block font-medium mb-1">Metode Pembayaran</label>
                             <select name="payment_method" id="payment_method" required class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
@@ -397,6 +434,98 @@
 
     updateGrandTotal();
     document.getElementById('payment_method').dispatchEvent(new Event('change'));
+    // === CUSTOMER SEARCH LOGIC - SAMA DENGAN CREATE ===
+const customerSearch = document.getElementById('customer_search');
+const customerDropdown = document.getElementById('customer_dropdown');
+const customerIdInput = document.getElementById('customer_id');
+const customerNameInput = document.getElementById('customer_name');
+const customerPhoneInput = document.getElementById('customer_phone');
+const selectedCustomerDiv = document.getElementById('selected_customer');
+const newCustomerFields = document.getElementById('new_customer_fields');
+const newCustomerName = document.getElementById('new_customer_name');
+const newCustomerPhone = document.getElementById('new_customer_phone');
+
+// Show dropdown when clicking search
+customerSearch.addEventListener('click', function() {
+    customerDropdown.classList.remove('hidden');
+});
+
+// Hide dropdown when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.relative')) {
+        customerDropdown.classList.add('hidden');
+    }
+});
+
+// Select existing customer
+customerDropdown.addEventListener('click', function(e) {
+    const customerOption = e.target.closest('.customer-option');
+    if (customerOption) {
+        const id = customerOption.getAttribute('data-id');
+        const name = customerOption.getAttribute('data-name');
+        const phone = customerOption.getAttribute('data-phone');
+        
+        customerIdInput.value = id;
+        customerNameInput.value = name;
+        customerPhoneInput.value = phone || '';
+        
+        // Show selected customer info
+        document.getElementById('customer_display_name').textContent = name;
+        document.getElementById('customer_display_phone').textContent = phone ? `(${phone})` : '';
+        selectedCustomerDiv.classList.remove('hidden');
+        
+        // Hide dropdown and clear search
+        customerDropdown.classList.add('hidden');
+        customerSearch.value = '';
+        newCustomerFields.classList.add('hidden');
+    }
+});
+
+// Clear customer selection
+document.getElementById('clear_customer').addEventListener('click', function() {
+    customerIdInput.value = '';
+    customerNameInput.value = '';
+    customerPhoneInput.value = '';
+    selectedCustomerDiv.classList.add('hidden');
+    newCustomerFields.classList.add('hidden');
+    customerSearch.value = '';
+    newCustomerName.value = '';
+    newCustomerPhone.value = '';
+});
+
+// Create new customer - show fields when typing
+customerSearch.addEventListener('input', function() {
+    const searchTerm = this.value.trim();
+    
+    if (searchTerm.length > 0) {
+        // Check if customer exists
+        const existingCustomer = Array.from(customerDropdown.querySelectorAll('.customer-option'))
+            .find(opt => opt.getAttribute('data-name').toLowerCase() === searchTerm.toLowerCase());
+        
+        if (!existingCustomer) {
+            // Show new customer fields
+            newCustomerName.value = searchTerm;
+            customerNameInput.value = searchTerm;
+            newCustomerFields.classList.remove('hidden');
+            
+            // Clear selected customer display
+            selectedCustomerDiv.classList.add('hidden');
+        } else {
+            newCustomerFields.classList.add('hidden');
+        }
+    } else {
+        newCustomerFields.classList.add('hidden');
+    }
+});
+
+// Sync new customer fields
+newCustomerName.addEventListener('input', function() {
+    customerNameInput.value = this.value;
+});
+
+newCustomerPhone.addEventListener('input', function() {
+    customerPhoneInput.value = this.value;
+});
 </script>
 </body>
 </html>

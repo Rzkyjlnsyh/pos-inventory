@@ -377,6 +377,22 @@ Route::middleware(['auth', 'kepala_toko'])->prefix('kepala-toko')->name('kepala-
         Route::get('/payments/{payment}/nota', [\App\Http\Controllers\KepalaToko\SalesOrderController::class, 'printNota'])->name('sales.printNota');
         Route::get('/payments/{payment}/nota-direct', [\App\Http\Controllers\KepalaToko\SalesOrderController::class, 'printNotaDirect'])->name('sales.printNotaDirect');
         Route::post('/sales/{salesOrder}/payment/{payment}/upload-proof', [\App\Http\Controllers\KepalaToko\SalesOrderController::class, 'uploadProof'])->name('sales.uploadProof');
+        // Tambahkan ini di DALAM group owner (sekitar line yang ada route sales)
+Route::get('/sales/payment-proof/{payment}', function (\App\Models\Payment $payment) {
+    // Cek apakah user punya akses
+    if (!Auth::check() || !Auth::user()->hasRole('kepala_toko')) {
+        abort(403, 'Unauthorized');
+    }
+
+    // Cek apakah file ada
+    if (!$payment->proof_path || !Storage::disk('public')->exists($payment->proof_path)) {
+        abort(404, 'File tidak ditemukan');
+    }
+
+    // Serve file
+    $path = Storage::disk('public')->path($payment->proof_path);
+    return response()->file($path);
+})->name('sales.payment-proof');
     });
 });
 

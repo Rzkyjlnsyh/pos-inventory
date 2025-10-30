@@ -105,6 +105,7 @@ class SalesOrderController extends Controller
             'transfer_amount' => ['nullable', 'numeric', 'min:0'],
             'paid_at' => ['nullable', 'date'],
             'proof_path' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:2048'],
+            'reference_number' => ['nullable', 'string', 'max:100'], // TAMBAH INI
         ]);
     
         // === VALIDASI CUSTOMER - TAMBAH INI ===
@@ -227,6 +228,7 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
                         'transfer_amount' => $transferAmount,
                         'paid_at' => $validated['paid_at'] ?? now(),
                         'proof_path' => $proofPath,
+                        'reference_number' => $validated['reference_number'] ?? null, // TAMBAH INI
                         'created_by' => Auth::id(),
                     ]);
     
@@ -305,6 +307,8 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
             'order_date' => ['required', 'date'],
             'deadline' => ['nullable', 'date'], // TAMBAH INI
             'customer_id' => ['nullable', 'exists:customers,id'],
+            'customer_name' => ['nullable', 'string', 'max:255'], // ✅ SUDAH ADA
+            'customer_phone' => ['nullable', 'string', 'max:20'],  // ✅ SUDAH ADA
             'payment_method' => ['required', 'in:cash,transfer,split'],
             'payment_status' => ['required', 'in:dp,lunas'],
             'items' => ['required', 'array', 'min:1'],
@@ -319,6 +323,7 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
             'transfer_amount' => ['nullable', 'numeric', 'min:0'],
             'paid_at' => ['nullable', 'date'],
             'proof_path' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:2048'],
+            'reference_number' => ['nullable', 'string', 'max:100'], // TAMBAH INI
         ]);
 
         foreach ($request->items as $index => $item) {
@@ -360,10 +365,34 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
 
         try {
             DB::transaction(function () use ($salesOrder, $validated, $request, $cashAmount, $transferAmount, $paymentAmount, $grandTotal, $subtotal, $discountTotal) {
+                $customerId = $validated['customer_id'] ?? null;
+
+if (empty($customerId) && !empty($validated['customer_name'])) {
+    // Cek dulu apakah customer dengan nama yang sama sudah ada
+    $existingCustomer = Customer::where('name', $validated['customer_name'])->first();
+    
+    if ($existingCustomer) {
+        // Gunakan customer yang sudah ada
+        $customerId = $existingCustomer->id;
+        \Log::info('Using existing customer', ['customer_id' => $customerId, 'name' => $existingCustomer->name]);
+    } else {
+        // Buat customer baru
+        $customer = Customer::create([
+            'name' => $validated['customer_name'],
+            'phone' => $validated['customer_phone'] ?? null,
+            'email' => null,
+            'address' => null,
+            'notes' => 'Auto-created from sales order edit',
+            'is_active' => true,
+        ]);
+        $customerId = $customer->id;
+        \Log::info('Auto-created customer in update', ['customer_id' => $customerId, 'name' => $customer->name, 'phone' => $customer->phone]);
+    }
+}
                 $salesOrder->update([
                     'order_type' => $validated['order_type'],
                     'order_date' => $validated['order_date'],
-                    'customer_id' => $validated['customer_id'] ?? null,
+                    'customer_id' => $customerId ?? null,
                     'deadline' => $validated['deadline'] ?? null, // tambah ini
                     'subtotal' => $subtotal,
                     'discount_total' => $discountTotal,
@@ -394,11 +423,23 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
                     $proofPath = $request->hasFile('proof_path')
                         ? $request->file('proof_path')->store('payment-proofs', 'public')
                         : null;
-
+                
+                    // VALIDASI: Untuk transfer/split, wajib bukti ATAU no referensi
+                    if (in_array($validated['payment_method'], ['transfer', 'split'])) {
+                        $hasProof = $request->hasFile('proof_path');
+                        $hasReference = !empty($validated['reference_number']);
+                        
+                        if (!$hasProof && !$hasReference) {
+                            return back()->withErrors([
+                                'proof_path' => 'Untuk metode transfer/split, wajib upload bukti transfer atau isi no referensi.'
+                            ])->withInput();
+                        }
+                    }
+                
                     $paymentCategory = ($paymentAmount >= $grandTotal) ? 'pelunasan' : 'dp';
-
+                
                     $latestPayment = Payment::where('sales_order_id', $salesOrder->id)->latest('created_at')->first();
-
+                
                     if ($latestPayment) {
                         $latestPayment->update([
                             'method' => $validated['payment_method'],
@@ -409,12 +450,9 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
                             'transfer_amount' => $transferAmount,
                             'paid_at' => $validated['paid_at'] ?? now(),
                             'proof_path' => $proofPath ?? $latestPayment->proof_path,
+                            'reference_number' => $validated['reference_number'] ?? $latestPayment->reference_number, // TAMBAH INI
                             'created_by' => Auth::id(),
                         ]);
-
-                        \Log::info('Payment updated in update', ['payment_id' => $latestPayment->id, 'amount' => $paymentAmount, 'proof_path' => $proofPath ?? 'none']);
-
-                        $this->logAction($salesOrder, 'payment_updated', "Pembayaran diperbarui: {$paymentCategory}, Jumlah: Rp " . number_format($paymentAmount, 0, ',', '.') . ", Metode: {$validated['payment_method']}" . ($proofPath ? "" : ", tanpa bukti"));
                     } else {
                         $payment = Payment::create([
                             'sales_order_id' => $salesOrder->id,
@@ -426,6 +464,7 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
                             'transfer_amount' => $transferAmount,
                             'paid_at' => $validated['paid_at'] ?? now(),
                             'proof_path' => $proofPath,
+                            'reference_number' => $validated['reference_number'] ?? null, // TAMBAH INI
                             'created_by' => Auth::id(),
                         ]);
 
@@ -468,42 +507,25 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
         }
     }
 
-    public function uploadProof(Request $request, SalesOrder $salesOrder, Payment $payment): RedirectResponse
+    public function uploadProof(Request $request, SalesOrder $salesOrder, Payment $payment)
     {
-        $shiftCheck = $this->checkActiveShift();
-        if ($shiftCheck !== true) {
-            return $shiftCheck;
-        }
-
-        if ($payment->sales_order_id !== $salesOrder->id) {
-            \Log::warning('Invalid payment for SO: ' . $salesOrder->so_number, ['payment_id' => $payment->id]);
-            return back()->withErrors(['error' => 'Pembayaran tidak valid untuk sales order ini.']);
-        }
-
-        if (!in_array($payment->method, ['transfer', 'split'])) {
-            \Log::warning('Invalid payment method for proof upload: ' . $payment->method, ['so_number' => $salesOrder->so_number]);
-            return back()->withErrors(['error' => 'Upload bukti hanya untuk metode transfer atau split.']);
-        }
-
-        $validated = $request->validate([
-            'proof_path' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:2048'],
+        $request->validate([
+            'proof_path' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:2048'], // Tetap required karena khusus untuk upload bukti
         ]);
-
+    
         try {
-            DB::transaction(function () use ($payment, $request) {
-                if ($payment->proof_path) {
-                    Storage::disk('public')->delete($payment->proof_path);
-                }
-                $proofPath = $request->file('proof_path')->store('payment-proofs', 'public');
-                $payment->update(['proof_path' => $proofPath]);
-                $this->logAction($payment->salesOrder, 'proof_uploaded', "Bukti pembayaran diunggah untuk pembayaran ID {$payment->id}");
-            });
-
-            \Log::info('Proof uploaded successfully for SO: ' . $salesOrder->so_number, ['payment_id' => $payment->id]);
-            return back()->with('success', 'Bukti pembayaran berhasil diunggah.');
+            $proofPath = $request->file('proof_path')->store('payment-proofs', 'public');
+            
+            $payment->update([
+                'proof_path' => $proofPath
+            ]);
+    
+            $this->logAction($salesOrder, 'proof_uploaded', "Bukti pembayaran diupload untuk payment ID: {$payment->id}");
+    
+            return back()->with('success', 'Bukti pembayaran berhasil diupload.');
         } catch (\Exception $e) {
-            \Log::error('Error uploading proof for SO ' . $salesOrder->so_number . ': ' . $e->getMessage());
-            return back()->withErrors(['error' => 'Terjadi kesalahan saat mengunggah bukti: ' . $e->getMessage()]);
+            \Log::error('Error uploading proof: ' . $e->getMessage());
+            return back()->withErrors(['error' => 'Gagal upload bukti: ' . $e->getMessage()]);
         }
     }
 
@@ -616,30 +638,36 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
         if ($shiftCheck !== true) {
             return $shiftCheck;
         }
-
+    
         if ($salesOrder->status !== 'pending') {
             \Log::warning('Attempt to start process on non-pending SO: ' . $salesOrder->so_number);
             return back()->withErrors(['status' => 'Hanya pending yang bisa dimulai prosesnya.']);
         }
-
+    
         if ($salesOrder->approved_by === null) {
             \Log::warning('SO not approved: ' . $salesOrder->so_number);
             return back()->withErrors(['status' => 'Sales order harus di-approve terlebih dahulu.']);
         }
-
+    
         if ($salesOrder->paid_total < $salesOrder->grand_total * 0.5) {
             \Log::warning('Insufficient payment for SO: ' . $salesOrder->so_number, ['paid_total' => $salesOrder->paid_total, 'grand_total' => $salesOrder->grand_total]);
             return back()->withErrors(['payment' => 'Pembayaran minimal 50% untuk mulai proses.']);
         }
-
+    
+        // ✅ PERBAIKAN: Untuk transfer/split, boleh proof_path ATAU reference_number
         if (in_array($salesOrder->payment_method, ['transfer', 'split'])) {
-            $paymentsWithoutProof = $salesOrder->payments()->whereNull('proof_path')->count();
+            $paymentsWithoutProof = $salesOrder->payments()
+                ->where(function($q) {
+                    $q->whereNull('proof_path')->whereNull('reference_number');
+                })
+                ->count();
+            
             if ($paymentsWithoutProof > 0) {
-                \Log::warning('Missing proof for transfer/split payments in SO: ' . $salesOrder->so_number);
-                return back()->withErrors(['payment' => 'Semua pembayaran untuk metode transfer atau split harus memiliki bukti pembayaran.']);
+                \Log::warning('Missing proof AND reference for transfer/split payments in SO: ' . $salesOrder->so_number);
+                return back()->withErrors(['payment' => 'Semua pembayaran transfer/split harus memiliki bukti pembayaran ATAU no referensi.']);
             }
         }
-
+    
         try {
             DB::transaction(function () use ($salesOrder) {
                 $this->updateStockOnPayment($salesOrder);

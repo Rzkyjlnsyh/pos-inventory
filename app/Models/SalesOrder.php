@@ -104,6 +104,6 @@ class SalesOrder extends Model
 
     public function isEditable(): bool
     {
-        return in_array($this->status, ['pending']);
+        return !in_array($this->status, ['diterima_toko', 'selesai']);
     }
 }

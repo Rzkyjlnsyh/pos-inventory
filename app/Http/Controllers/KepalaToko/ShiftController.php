@@ -19,6 +19,7 @@ use App\Exports\ShiftDetailExport;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ShiftController extends Controller
 {
@@ -67,7 +68,7 @@ class ShiftController extends Controller
         return redirect()->route('kepala-toko.shift.dashboard')->with('success', $message);
     }
 
-    public function end(Request $request): Response|RedirectResponse
+    public function end(Request $request): Response|RedirectResponse|BinaryFileResponse
     {
         $validated = $request->validate([
             'notes' => ['nullable', 'string'],
@@ -304,8 +305,8 @@ public function printPreview($id)
             // 3. Total penjualan = SUM dari amount semua payment di shift ini
             $totalSales = $payments->sum('amount');
     
-            // 4. Total customer = UNIQUE customer dari semua sales order yang ada payment di shift ini
-            $totalCustomers = $salesOrdersInShift->pluck('customer_id')->filter()->unique()->count();
+            // 4. Total customer = Jumlah Sales Order (setiap SO = 1 customer, termasuk "Umum")
+            $totalCustomers = $salesOrdersInShift->count();
     
             // Durasi shift
             $start = Carbon::parse($shift->start_time);

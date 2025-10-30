@@ -8,6 +8,9 @@ use App\Models\SalesOrderItem;
 use App\Models\SalesOrderLog;
 use App\Models\Product;
 use App\Models\Customer;
+use App\Models\Supplier;
+use App\Models\PurchaseOrder;
+use App\Models\PurchaseOrderItem;
 use App\Models\StockMovement;
 use App\Models\Payment;
 use App\Models\Shift;
@@ -66,18 +69,17 @@ class SalesOrderController extends Controller
     {
         $activeShift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
         if (!$activeShift) {
-            \Log::warning('No active shift for user: ' . Auth::id());
             return redirect()->route('admin.shift.dashboard')->with('error', 'Silakan mulai shift dan masukkan kas awal terlebih dahulu.');
         }
         $customers = Customer::orderBy('name')->get();
         $products = Product::where('is_active', true)->where('price', '>', 0)->orderBy('name')->get();
-        return view('admin.sales.create', compact('customers', 'products', 'activeShift'));
+        $suppliers = Supplier::orderBy('name')->get(); // ✅ Tambahkan ini
+        return view('admin.sales.create', compact('customers', 'products', 'activeShift', 'suppliers')); // ✅ Tambahkan 'suppliers'
     }
 
     public function store(Request $request): RedirectResponse|View
     {
         \Log::info('Store request received', $request->all());
-    
         $activeShift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
         if (!$activeShift) {
             \Log::error('No active shift found for user: ' . Auth::id());
@@ -87,12 +89,13 @@ class SalesOrderController extends Controller
         $validated = $request->validate([
             'order_type' => ['required', 'in:jahit_sendiri,beli_jadi'],
             'order_date' => ['required', 'date'],
-            'deadline' => ['nullable', 'date'], // TAMBAH INI
+            'deadline' => ['nullable', 'date'],
             'customer_id' => ['nullable', 'exists:customers,id'],
             'customer_name' => ['nullable', 'string', 'max:255'], 
             'customer_phone' => ['nullable', 'string', 'max:20'],
             'payment_method' => ['required', 'in:cash,transfer,split'],
             'payment_status' => ['required', 'in:dp,lunas'],
+            'add_to_purchase' => ['nullable', 'boolean'], // ✅ Tambahkan validasi checkbox
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['nullable', 'exists:products,id'],
             'items.*.product_name' => ['required', 'string', 'max:255'],
@@ -105,9 +108,8 @@ class SalesOrderController extends Controller
             'transfer_amount' => ['nullable', 'numeric', 'min:0'],
             'paid_at' => ['nullable', 'date'],
             'proof_path' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:2048'],
+            'reference_number' => ['nullable', 'string', 'max:100'],
         ]);
-    
-        // === VALIDASI CUSTOMER - TAMBAH INI ===
     
         \Log::info('Validated data', $validated);
     
@@ -144,49 +146,39 @@ class SalesOrderController extends Controller
                 \Log::error('Payment amount exceeds grand total', ['payment_amount' => $paymentAmount, 'grand_total' => $grandTotal]);
                 return back()->withErrors(['payment_amount' => 'Jumlah melebihi grand total: Rp ' . number_format($grandTotal, 0, ',', '.')])->withInput();
             }
-        } else {
-            \Log::info('No payment amount, skipping payment creation');
         }
     
         $status = 'pending';
-    
         try {
             $salesOrder = DB::transaction(function () use ($validated, $request, $cashAmount, $transferAmount, $paymentAmount, $grandTotal, $activeShift, $status, $subtotal, $discountTotal) {
-                // === AUTO CREATE CUSTOMER LOGIC - PERBAIKI INI ===
-$customerId = $validated['customer_id'] ?? null;
-
-if (empty($customerId) && !empty($validated['customer_name'])) {
-    // Cek dulu apakah customer dengan nama yang sama sudah ada
-    $existingCustomer = Customer::where('name', $validated['customer_name'])->first();
-    
-    if ($existingCustomer) {
-        // Gunakan customer yang sudah ada
-        $customerId = $existingCustomer->id;
-        \Log::info('Using existing customer', ['customer_id' => $customerId, 'name' => $existingCustomer->name]);
-    } else {
-        // Buat customer baru
-        $customer = Customer::create([
-            'name' => $validated['customer_name'],
-            'phone' => $validated['customer_phone'] ?? null,
-            'email' => null,
-            'address' => null,
-            'notes' => 'Auto-created from sales order',
-            'is_active' => true,
-        ]);
-        $customerId = $customer->id;
-        \Log::info('Auto-created customer', ['customer_id' => $customerId, 'name' => $customer->name, 'phone' => $customer->phone]);
-    }
-}
-                // === END AUTO CREATE CUSTOMER ===
+                // === AUTO CREATE CUSTOMER LOGIC ===
+                $customerId = $validated['customer_id'] ?? null;
+                if (empty($customerId) && !empty($validated['customer_name'])) {
+                    $existingCustomer = Customer::where('name', $validated['customer_name'])->first();
+                    if ($existingCustomer) {
+                        $customerId = $existingCustomer->id;
+                        \Log::info('Using existing customer', ['customer_id' => $customerId, 'name' => $existingCustomer->name]);
+                    } else {
+                        $customer = Customer::create([
+                            'name' => $validated['customer_name'],
+                            'phone' => $validated['customer_phone'] ?? null,
+                            'email' => null,
+                            'address' => null,
+                            'notes' => 'Auto-created from sales order',
+                            'is_active' => true,
+                        ]);
+                        $customerId = $customer->id;
+                        \Log::info('Auto-created customer', ['customer_id' => $customerId, 'name' => $customer->name, 'phone' => $customer->phone]);
+                    }
+                }
     
                 $soNumber = $this->generateSoNumber();
-    
                 $salesOrder = SalesOrder::create([
                     'so_number' => $soNumber,
                     'order_type' => $validated['order_type'],
                     'order_date' => $validated['order_date'],
-                    'customer_id' => $customerId ?? null, // PASTIKAN INI TIDAK NULL
-                    'deadline' => $validated['deadline'] ?? null, // tambah ini
+                    'customer_id' => $customerId ?? null,
+                    'deadline' => $validated['deadline'] ?? null,
                     'subtotal' => $subtotal,
                     'discount_total' => $discountTotal,
                     'grand_total' => $grandTotal,
@@ -215,8 +207,15 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
                         ? $request->file('proof_path')->store('payment-proofs', 'public')
                         : null;
     
-                    $paymentCategory = ($paymentAmount >= $grandTotal) ? 'pelunasan' : 'dp';
+                    if (in_array($validated['payment_method'], ['transfer', 'split'])) {
+                        $hasProof = $request->hasFile('proof_path');
+                        $hasReference = !empty($validated['reference_number']);
+                        if (!$hasProof && !$hasReference) {
+                            throw new \Exception('Untuk metode transfer/split, wajib upload bukti transfer atau isi no referensi.');
+                        }
+                    }
     
+                    $paymentCategory = ($paymentAmount >= $grandTotal) ? 'pelunasan' : 'dp';
                     $payment = Payment::create([
                         'sales_order_id' => $salesOrder->id,
                         'method' => $validated['payment_method'],
@@ -227,6 +226,7 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
                         'transfer_amount' => $transferAmount,
                         'paid_at' => $validated['paid_at'] ?? now(),
                         'proof_path' => $proofPath,
+                        'reference_number' => $validated['reference_number'] ?? null,
                         'created_by' => Auth::id(),
                     ]);
     
@@ -240,23 +240,113 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
                 }
     
                 $this->logAction($salesOrder, 'created', "Sales order dibuat: {$soNumber}, Tipe: {$validated['order_type']}, Total: Rp " . number_format($grandTotal, 0, ',', '.'));
-    
                 return $salesOrder;
             });
     
             \Log::info('Sales order created successfully', ['so_number' => $salesOrder->so_number]);
     
-            if ($paymentAmount > 0) {
-                $salesOrder->load('payments');
-                $payment = $salesOrder->payments->first();
-                return view('admin.sales.nota', [
-                    'salesOrder' => $salesOrder,
-                    'payment' => $payment,
-                    'autoPrint' => true,
-                ]);
+            // === AUTO CREATE PURCHASE ORDER JIKA DICEKLIS ===
+            if ($request->has('add_to_purchase') && $request->boolean('add_to_purchase')) {
+                $itemsToPurchase = [];
+                foreach ($validated['items'] as $item) {
+                    if (!empty($item['product_id'])) {
+                        $product = Product::find($item['product_id']);
+                        if ($product && $product->stock_qty < $item['qty']) {
+                            $itemsToPurchase[] = [
+                                'product_id' => $item['product_id'],
+                                'product_name' => $item['product_name'],
+                                'sku' => $item['sku'] ?? null,
+                                'cost_price' => 0, // Kosongkan harga modal
+                                'qty' => $item['qty'],
+                                'discount' => 0,
+                            ];
+                        }
+                    } else {
+                        // Produk custom (tidak ada di database)
+                        $itemsToPurchase[] = [
+                            'product_id' => null,
+                            'product_name' => $item['product_name'],
+                            'sku' => $item['sku'] ?? null,
+                            'cost_price' => 0, // Kosongkan harga modal
+                            'qty' => $item['qty'],
+                            'discount' => 0,
+                        ];
+                    }
+                }
+    
+                if (!empty($itemsToPurchase)) {
+                    try {
+                        DB::transaction(function () use ($salesOrder, $itemsToPurchase, $request) {
+                            $supplierId = $request->input('supplier_id');
+                            $supplierName = $request->input('supplier_name');
+            
+                            if ($supplierId) {
+                                $supplier = Supplier::findOrFail($supplierId);
+                            } elseif ($supplierName) {
+                                $supplier = Supplier::firstOrCreate(
+                                    ['name' => $supplierName],
+                                    ['is_active' => true]
+                                );
+                            } else {
+                                $supplier = Supplier::firstOrCreate(
+                                    ['name' => 'Pre-order Customer'],
+                                    ['is_active' => true]
+                                );
+                            }
+    
+                            $poNumber = 'PO' . now()->format('ymd') . str_pad((string) (PurchaseOrder::whereDate('created_at', now()->toDateString())->count() + 1), 4, '0', STR_PAD_LEFT);
+    
+                            $subtotalPo = collect($itemsToPurchase)->sum(fn($i) => $i['cost_price'] * $i['qty']);
+                            $discountTotalPo = collect($itemsToPurchase)->sum(fn($i) => $i['discount']);
+                            $grandTotalPo = $subtotalPo - $discountTotalPo;
+    
+                            $purchaseOrder = PurchaseOrder::create([
+                                'po_number' => $poNumber,
+                                'order_date' => now(),
+                                'supplier_id' => $supplier->id,
+                                'purchase_type' => $salesOrder->order_type === 'jahit_sendiri' ? 'kain' : 'produk_jadi',
+                                'deadline' => $salesOrder->deadline,
+                                'subtotal' => $subtotalPo,
+                                'discount_total' => $discountTotalPo,
+                                'grand_total' => $grandTotalPo,
+                                'status' => PurchaseOrder::STATUS_DRAFT,
+                                'is_paid' => false,
+                                'created_by' => Auth::id(),
+                            ]);
+    
+                            foreach ($itemsToPurchase as $item) {
+                                PurchaseOrderItem::create([
+                                    'purchase_order_id' => $purchaseOrder->id,
+                                    'product_id' => $item['product_id'],
+                                    'product_name' => $item['product_name'],
+                                    'sku' => $item['sku'],
+                                    'cost_price' => $item['cost_price'], // 0
+                                    'qty' => $item['qty'],
+                                    'discount' => $item['discount'],
+                                    'line_total' => ($item['cost_price'] * $item['qty']) - $item['discount'],
+                                ]);
+                            }
+    
+                            \App\Models\PurchaseOrderLog::create([
+                                'purchase_order_id' => $purchaseOrder->id,
+                                'user_id' => Auth::id(),
+                                'action' => 'created',
+                                'description' => "Purchase order Dari Penjualan : {$salesOrder->so_number}",
+                                'created_at' => now(),
+                            ]);
+    
+                            $this->logAction($salesOrder, 'linked_to_purchase', "Linked to Purchase Order: {$poNumber}");
+                        });
+                    } catch (\Exception $e) {
+                        \Log::error('Error auto-creating purchase order for SO: ' . $salesOrder->so_number . ' - ' . $e->getMessage());
+                        // Tidak menghentikan proses SO
+                    }
+                }
             }
     
-            return redirect()->route('admin.sales.show', $salesOrder)->with('success', 'Sales order dibuat.');
+            // === NONAKTIFKAN AUTO-PRINT (KARENA CETAK DARI SHOW LEBIH RAPI) ===
+            return redirect()->route('admin.sales.show', $salesOrder)->with('success', 'Sales order berhasil dibuat.');
+    
         } catch (\Exception $e) {
             \Log::error('Error storing sales order: ' . $e->getMessage(), ['request' => $request->all()]);
             return back()->withErrors(['error' => 'Terjadi kesalahan: ' . $e->getMessage()])->withInput();
@@ -360,11 +450,35 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
 
         try {
             DB::transaction(function () use ($salesOrder, $validated, $request, $cashAmount, $transferAmount, $paymentAmount, $grandTotal, $subtotal, $discountTotal) {
+                $customerId = $validated['customer_id'] ?? null;
+
+if (empty($customerId) && !empty($validated['customer_name'])) {
+    // Cek dulu apakah customer dengan nama yang sama sudah ada
+    $existingCustomer = Customer::where('name', $validated['customer_name'])->first();
+    
+    if ($existingCustomer) {
+        // Gunakan customer yang sudah ada
+        $customerId = $existingCustomer->id;
+        \Log::info('Using existing customer', ['customer_id' => $customerId, 'name' => $existingCustomer->name]);
+    } else {
+        // Buat customer baru
+        $customer = Customer::create([
+            'name' => $validated['customer_name'],
+            'phone' => $validated['customer_phone'] ?? null,
+            'email' => null,
+            'address' => null,
+            'notes' => 'Auto-created from sales order edit',
+            'is_active' => true,
+        ]);
+        $customerId = $customer->id;
+        \Log::info('Auto-created customer in update', ['customer_id' => $customerId, 'name' => $customer->name, 'phone' => $customer->phone]);
+    }
+}
                 $salesOrder->update([
                     'order_type' => $validated['order_type'],
                     'order_date' => $validated['order_date'],
                     'deadline' => $validated['deadline'] ?? null, // TAMBAH INI
-                    'customer_id' => $validated['customer_id'] ?? null,
+                    'customer_id' => $customerId ?? null,
                     'subtotal' => $subtotal,
                     'discount_total' => $discountTotal,
                     'grand_total' => $grandTotal,

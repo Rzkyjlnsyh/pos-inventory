@@ -3,94 +3,50 @@
 <head>
     <title>Nota {{ $salesOrder->so_number }}</title>
     <style>
+        body {
+            font-family: 'Courier New', monospace;
+            width: 58mm;
+            margin: 0;
+            padding: 5px;
+            font-size: 12px;
+            line-height: 1.3;
+        }
+        .center { text-align: center; }
+        .right { text-align: right; }
+        .divider { border-top: 1px dashed #000; margin: 5px 0; }
+        .bold { font-weight: bold; }
         @media print {
-            .page-break { display: block; page-break-before: always; }
-        }
-        #invoice-POS {
-            box-shadow: 0 0 1in -0.25in rgba(0, 0, 0, 0.5);
-            padding: 2mm;
-            margin: 0 auto;
-            width: 58mm; /* ubah sesuai ukuran kertas printer thermal, bisa 44mm atau 80mm */
-            background: #FFF;
-            font-family: Arial, sans-serif; 
-        }
-        #invoice-POS h1 {
-            font-size: 1.2em;
-            text-align: center;
-        }
-        #invoice-POS p, #invoice-POS td, #invoice-POS th {
-            font-size: 0.7em;
-        }
-        #invoice-POS table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        #invoice-POS .tabletitle {
-            background: #EEE;
-            font-size: 0.6em;
-        }
-        #invoice-POS .itemtext {
-            font-size: 0.6em;
-        }
-        #invoice-POS th, #invoice-POS td {
-            padding: 4px;
-            border-bottom: 1px solid #EEE;
-            text-align: left;
-        }
-        #invoice-POS #legalcopy {
-            margin-top: 5mm;
-            text-align: center;
-            font-size: 0.6em;
+            body { margin: 0; padding: 5px; }
         }
     </style>
 </head>
 <body>
-    <div id="invoice-POS">
-        <h1>Pare Custom</h1>
-        <p style="text-align:center;">Nota Penjualan</p>
-        <p>SO Number: {{ $salesOrder->so_number }}</p>
-        <p>Tanggal: {{ \Carbon\Carbon::parse($salesOrder->order_date)->format('d/m/Y') }}</p>
-        
-        <p><strong>Customer:</strong> {{ $salesOrder->customer->name ?? 'Guest' }}</p>
-        @if(isset($payment) && $payment->creator)
-            <p><strong>Kasir:</strong> {{ $payment->creator->name }}</p>
-        @endif
-
-        <table>
-            <tr class="tabletitle">
-                <th>Produk</th>
-                <th>Qty</th>
-                <th>Harga</th>
-                <th>Subtotal</th>
-            </tr>
-            @foreach ($salesOrder->items as $item)
-                <tr>
-                    <td class="itemtext">{{ $item->product_name }}</td>
-                    <td>{{ $item->qty }}</td>
-                    <td>Rp {{ number_format($item->sale_price, 0, ',', '.') }}</td>
-                    <td>Rp {{ number_format($item->line_total, 0, ',', '.') }}</td>
-                </tr>
-            @endforeach
-            <tr class="tabletitle">
-                <td colspan="3"><b>Total</b></td>
-                <td><b>Rp {{ number_format($salesOrder->grand_total, 0, ',', '.') }}</b></td>
-            </tr>
-        </table>
-
-        <p><strong>Pembayaran:</strong> {{ ucfirst($payment->method) }}</p>
-        @if($payment->method === 'split')
-            <p>Cash: Rp {{ number_format($payment->cash_amount, 0, ',', '.') }}</p>
-            <p>Transfer: Rp {{ number_format($payment->transfer_amount, 0, ',', '.') }}</p>
-        @endif
-        <p>Jumlah: Rp {{ number_format($payment->amount, 0, ',', '.') }}</p>
-        <p>Status: {{ ucfirst($payment->status) }}</p>
-
-        <div id="legalcopy">
-            <p><strong>Terima kasih atas pembelian Anda!</strong><br/>
-            Barang yang sudah dibeli tidak dapat dikembalikan.</p>
-        </div>
-    </div>
-
+    <div class="center bold">PARE CUSTOM</div>
+    <div class="center">NOTA PEMBAYARAN</div>
+    <div class="divider"></div>
+    <div>SO: {{ $salesOrder->so_number }}</div>
+    <div>Tgl: {{ \Carbon\Carbon::parse($salesOrder->order_date)->format('d/m/Y') }}</div>
+    <div>Cust: {{ $salesOrder->customer->name ?? 'Umum' }}</div>
+    @if(isset($payment) && $payment->creator)
+        <div>Kasir: {{ $payment->creator->name }}</div>
+    @endif
+    <div class="divider"></div>
+    @foreach ($salesOrder->items as $item)
+        <div>{{ str_pad(substr($item->product_name, 0, 20), 20) }} {{ str_pad($item->qty, 2, ' ', STR_PAD_LEFT) }}x{{ str_pad(number_format($item->sale_price, 0, ',', '.'), 10, ' ', STR_PAD_LEFT) }}</div>
+    @endforeach
+    <div class="divider"></div>
+    <div class="right">TOTAL: {{ str_pad('Rp ' . number_format($salesOrder->grand_total, 0, ',', '.'), 24, ' ', STR_PAD_LEFT) }}</div>
+    <div class="right">BAYAR: {{ str_pad('Rp ' . number_format($payment->amount, 0, ',', '.'), 24, ' ', STR_PAD_LEFT) }}</div>
+    <div class="right">SISA: {{ str_pad('Rp ' . number_format($salesOrder->remaining_amount, 0, ',', '.'), 24, ' ', STR_PAD_LEFT) }}</div>
+    <div class="divider"></div>
+    <div class="center">Metode: {{ ucfirst($payment->method) }}</div>
+    @if($payment->method === 'split')
+        <div class="center">Cash: {{ number_format($payment->cash_amount, 0, ',', '.') }}</div>
+        <div class="center">Transfer: {{ number_format($payment->transfer_amount, 0, ',', '.') }}</div>
+    @endif
+    <div class="divider"></div>
+    <div class="center">Terima kasih!</div>
+    <div class="center">*** {{ now()->format('d/m/Y H:i') }} ***</div>
     @if(isset($autoPrint) && $autoPrint)
         <script>
             window.onload = function() {

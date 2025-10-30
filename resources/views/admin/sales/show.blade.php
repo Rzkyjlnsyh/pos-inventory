@@ -321,65 +321,80 @@
                     @php
                         $cumulativePayment += $payment->amount;
                     @endphp
-                    <tr class="border-b hover:bg-gray-50">
-                        <td class="px-4 py-2 border">{{ \Carbon\Carbon::parse($payment->paid_at)->format('d/m/Y H:i') }}</td>
-                        <td class="px-4 py-2 border">
-                            <span class="capitalize">{{ $payment->method }}</span>
-                            @if($payment->method === 'split')
-                                <br>
-                                <small class="text-gray-500">
-                                    (Cash: Rp {{ number_format($payment->cash_amount, 0, ',', '.') }},
-                                    Transfer: Rp {{ number_format($payment->transfer_amount, 0, ',', '.') }})
-                                </small>
-                            @endif
-                        </td>
-                        <td class="px-4 py-2 border text-right font-medium text-green-600">
-                            Rp {{ number_format($payment->amount, 0, ',', '.') }}
-                            <br>
-                            <small class="text-gray-500 text-xs">
-                                Total: Rp {{ number_format($cumulativePayment, 0, ',', '.') }}
-                            </small>
-                        </td>
-                        <td class="px-4 py-2 border">
-                            {{ $payment->creator->name ?? 'System' }}
-                            <br>
-                            <small class="text-gray-500 text-xs">
-                                #{{ $payment->created_by }}
-                            </small>
-                        </td>
-                        <td class="px-4 py-2 border">
-                            {{ $payment->note ?? '-' }}
-                            @if($payment->reference)
-                                <br><small class="text-gray-500">Ref: {{ $payment->reference }}</small>
-                            @endif
-                            @if($payment->proof_path)
-                                <br><a href="{{ Storage::url($payment->proof_path) }}" target="_blank" class="text-blue-500 text-xs">Lihat Bukti</a>
-                            @elseif(in_array($payment->method, ['transfer', 'split']) && $activeShift && Auth::user()->hasRole('admin'))
-                                <br>
-                                <form action="{{ route('admin.sales.uploadProof', ['salesOrder' => $salesOrder, 'payment' => $payment]) }}" method="POST" enctype="multipart/form-data">
-                                    @csrf
-                                    <input type="file" name="proof_path" accept=".jpg,.jpeg,.png,.pdf" class="border rounded px-3 py-2 w-full mt-2">
-                                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs mt-2">
-                                        Upload Bukti
-                                    </button>
-                                    @error('proof_path')
-                                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                                    @enderror
-                                </form>
-                            @endif
-                        </td>
-                        <td class="px-4 py-2 border text-center">
-                            <div class="flex justify-center gap-2">
-                            <button onclick="printPaymentNota({{ $payment->id }})" class="text-green-600 hover:underline" title="Print Langsung">
-            <i class="bi bi-printer"></i>
-        </button>
-                                <a href="{{ route('admin.sales.printNota', $payment) }}" class="text-blue-600 hover:underline" title="Download PDF">
-                                    <i class="bi bi-download"></i>
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
-                @empty
+<tr class="border-b hover:bg-gray-50 {{ $loop->first ? 'border-l-4 border-l-green-500 bg-green-50' : '' }}">
+    <td class="px-4 py-2 border">
+        {{ \Carbon\Carbon::parse($payment->paid_at)->format('d/m/Y H:i') }}
+        @if($loop->first)
+            <span class="ml-2 bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded">Terbaru</span>
+        @endif
+    </td>
+    <td class="px-4 py-2 border">
+        @if($payment->method === 'cash')
+            <span class="inline-flex items-center"><i class="bi bi-cash mr-1 text-green-600"></i> Cash</span>
+        @elseif($payment->method === 'transfer')
+            <span class="inline-flex items-center"><i class="bi bi-bank mr-1 text-blue-600"></i> Transfer</span>
+        @else
+            <span class="inline-flex items-center"><i class="bi bi-cash-stack mr-1 text-purple-600"></i> Split</span>
+            <br>
+            <small class="text-gray-500">
+                (Cash: Rp {{ number_format($payment->cash_amount, 0, ',', '.') }},
+                Transfer: Rp {{ number_format($payment->transfer_amount, 0, ',', '.') }})
+            </small>
+        @endif
+    </td>
+    <td class="px-4 py-2 border text-right font-medium text-green-600">
+        Rp {{ number_format($payment->amount, 0, ',', '.') }}
+        <br>
+        <small class="text-gray-500 text-xs">
+            Total: Rp {{ number_format($cumulativePayment, 0, ',', '.') }}
+        </small>
+        <br>
+        <span class="px-2 py-0.5 rounded-full text-xs font-medium 
+            @if($payment->category === 'pelunasan') bg-green-100 text-green-700 
+            @else bg-yellow-100 text-yellow-700 @endif">
+            {{ ucfirst($payment->category) }}
+        </span>
+    </td>
+    <td class="px-4 py-2 border">
+        {{ $payment->creator->name ?? 'System' }}
+        <br>
+        <small class="text-gray-500 text-xs">#{{ $payment->created_by }}</small>
+    </td>
+    <td class="px-4 py-2 border">
+        @if($payment->reference_number)
+            No Ref: {{ $payment->reference_number }}<br>
+        @endif
+        @if($payment->note)
+            <small class="text-gray-600">{{ $payment->note }}</small><br>
+        @endif
+        @if($payment->proof_path)
+            <a href="{{ route('owner.sales.payment-proof', $payment) }}" target="_blank" class="text-blue-500 text-xs hover:underline inline-flex items-center">
+                <i class="bi bi-file-earmark-image mr-1"></i> Lihat Bukti
+            </a>
+        @elseif(in_array($payment->method, ['transfer', 'split']) && $activeShift && Auth::user()->hasRole('owner'))
+            <form action="{{ route('owner.sales.uploadProof', ['salesOrder' => $salesOrder, 'payment' => $payment]) }}" method="POST" enctype="multipart/form-data" class="upload-proof-form mt-2">
+                @csrf
+                <input type="file" name="proof_path" accept=".jpg,.jpeg,.png,.pdf" class="border rounded px-2 py-1 text-xs w-full" required>
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs mt-1 w-full">
+                    <i class="bi bi-upload"></i> Upload Bukti
+                </button>
+                @error('proof_path')
+                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                @enderror
+            </form>
+        @endif
+    </td>
+    <td class="px-4 py-2 border text-center">
+        <div class="flex justify-center gap-2">
+            <button onclick="printPaymentNota({{ $payment->id }})" class="text-green-600 hover:underline" title="Print Langsung">
+                <i class="bi bi-printer"></i>
+            </button>
+            <a href="{{ route('owner.sales.printNota', $payment) }}" class="text-blue-600 hover:underline" title="Download PDF">
+                <i class="bi bi-download"></i>
+            </a>
+        </div>
+    </td>
+</tr>                @empty
                     <tr>
                         <td colspan="6" class="text-center text-gray-500 px-4 py-4">Belum ada pembayaran</td>
                     </tr>
