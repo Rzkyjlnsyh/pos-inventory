@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tambah Produk - Pare Custom</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.10/dist/cdn.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css" />
     <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -161,23 +162,60 @@
                                 </div>
 
                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div class="input-group relative md:col-span-1">
-                                        <label for="category_id" class="absolute -top-2 left-2 z-10 px-1 text-xs font-medium text-gray-500 floating-label">
-                                            Kategori
-                                        </label>
-                                        <select name="category_id" id="category_id" class="form-input block w-full px-4 py-3 text-gray-700">
-                                            <option value="">-</option>
-                                            @foreach($categories as $cat)
-                                                <option value="{{ $cat->id }}" @selected(old('category_id')==$cat->id)>{{ $cat->name }}</option>
-                                            @endforeach
-                                        </select>
-                                        @error('category_id')
-                                            <p class="mt-2 text-sm text-red-600">
-                                                <i class="bi bi-exclamation-circle mr-1"></i>
-                                                {{ $message }}
-                                            </p>
-                                        @enderror
-                                    </div>
+                                <div class="input-group relative md:col-span-1">
+    <label for="category_search" class="absolute -top-2 left-2 z-10 px-1 text-xs font-medium text-gray-500 floating-label">
+        Kategori
+    </label>
+    <div x-data="{
+        query: '',
+        results: [],
+        selectedId: {{ old('category_id', 'null') }},
+        selectCategory(id, name) {
+            this.selectedId = id;
+            this.query = name;
+            document.getElementById('category_id').value = id;
+            this.results = [];
+        },
+        async search() {
+            if (!this.query.trim()) {
+                this.results = [];
+                return;
+            }
+            const res = await fetch(`/api/categories?q=${encodeURIComponent(this.query)}`);
+            this.results = await res.json();
+        }
+    }" class="relative">
+        <input type="text"
+               id="category_search"
+               class="form-input block w-full px-4 py-3 text-gray-700"
+               placeholder="Ketik nama kategori..."
+               autocomplete="off"
+               x-model.debounce.300ms="query"
+               @input="search()"
+               @click.away="results = []"
+               @keydown.escape="results = []">
+
+        <!-- Dropdown hasil -->
+        <div x-show="results.length > 0"
+             x-transition
+             class="absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+            <template x-for="cat in results" :key="cat.id">
+                <div @click="selectCategory(cat.id, cat.name)"
+                     class="px-4 py-2 hover:bg-blue-50 cursor-pointer text-gray-800"
+                     x-text="cat.name"></div>
+            </template>
+        </div>
+
+        <input type="hidden" name="category_id" id="category_id" value="{{ old('category_id') }}">
+    </div>
+
+    @error('category_id')
+        <p class="mt-2 text-sm text-red-600">
+            <i class="bi bi-exclamation-circle mr-1"></i>
+            {{ $message }}
+        </p>
+    @enderror
+</div>
 
                                     <div class="input-group relative md:col-span-1">
                                         <label for="stock_qty" class="absolute -top-2 left-2 z-10 px-1 text-xs font-medium text-gray-500 floating-label">
@@ -207,8 +245,7 @@
        id="cost_price"
        class="form-input block w-full px-4 py-3 text-gray-700"
        value="{{ old('cost_price') }}"
-       step="0.01"
-       required>
+       step="0.01">
                                     @error('cost_price')
                                         <p class="mt-2 text-sm text-red-600">
                                             <i class="bi bi-exclamation-circle mr-1"></i>

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Produk - Pare Custom</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.10/dist/cdn.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -200,8 +201,7 @@
                                             <input type="number" step="0.01" name="cost_price" id="cost_price"
                                                    class="form-input pl-10"
                                                    value="{{ old('cost_price', preg_replace('/\.00$/','', $product->cost_price)) }}"
-                                                   placeholder="0"
-                                                   required>
+                                                   placeholder="0">
                                         </div>
                                         @error('cost_price')
                                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -209,20 +209,56 @@
                                     </div>
                                     </div>
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label for="category_id" class="block text-sm font-medium text-gray-700 mb-2">
-                                                <i class="bi bi-folder mr-2 text-blue-500"></i>Kategori
-                                            </label>
-                                            <select name="category_id" id="category_id" class="form-input">
-                                                <option value="">-</option>
-                                                @foreach($categories as $cat)
-                                                    <option value="{{ $cat->id }}" @selected(old('category_id', $product->category_id)==$cat->id)>{{ $cat->name }}</option>
-                                                @endforeach
-                                            </select>
-                                            @error('category_id')
-                                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                            @enderror
-                                        </div>
+                                    <div>
+    <label for="category_search" class="block text-sm font-medium text-gray-700 mb-2">
+        <i class="bi bi-folder mr-2 text-blue-500"></i>Kategori
+    </label>
+    <div x-data="{
+        query: '{{ addslashes($product->category?->name ?? '') }}',
+        results: [],
+        selectedId: {{ $product->category_id ?? 'null' }},
+        selectCategory(id, name) {
+            this.selectedId = id;
+            this.query = name;
+            document.getElementById('category_id').value = id;
+            this.results = [];
+        },
+        async search() {
+            if (!this.query.trim()) {
+                this.results = [];
+                return;
+            }
+            const res = await fetch(`/api/categories?q=${encodeURIComponent(this.query)}`);
+            this.results = await res.json();
+        }
+    }" class="relative">
+        <input type="text"
+               id="category_search"
+               class="form-input"
+               placeholder="Ketik nama kategori..."
+               autocomplete="off"
+               x-model.debounce.300ms="query"
+               @input="search()"
+               @click.away="results = []"
+               @keydown.escape="results = []">
+
+        <!-- Dropdown hasil -->
+        <div x-show="results.length > 0"
+             x-transition
+             class="absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+            <template x-for="cat in results" :key="cat.id">
+                <div @click="selectCategory(cat.id, cat.name)"
+                     class="px-4 py-2 hover:bg-blue-50 cursor-pointer text-gray-800"
+                     x-text="cat.name"></div>
+            </template>
+        </div>
+
+        <input type="hidden" name="category_id" id="category_id" value="{{ old('category_id', $product->category_id) }}">
+    </div>
+    @error('category_id')
+        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+    @enderror
+</div>
                                         <div>
                                             <label for="is_active" class="block text-sm font-medium text-gray-700 mb-2">
                                                 <i class="bi bi-toggle-on mr-2 text-green-500"></i>Status

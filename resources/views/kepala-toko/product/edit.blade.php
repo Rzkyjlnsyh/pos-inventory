@@ -89,12 +89,12 @@
         </button>
         
         <!-- Sidebar -->
-        <x-navbar-finance></x-navbar-finance>
+        <x-navbar-kepala-toko></x-navbar-kepala-toko>
         
         <!-- Main Content -->
         <div class="flex-1 lg:w-5/6">
             <!-- Top Navigation -->
-            <x-navbar-top-finance></x-navbar-top-finance>
+            <x-navbar-top-kepala-toko></x-navbar-top-kepala-toko>
             
             <!-- Content Area -->
             <div class="p-4 lg:p-8">
@@ -103,7 +103,7 @@
                     <nav class="flex mb-8" aria-label="Breadcrumb">
                       <ol class="inline-flex items-center space-x-1 md:space-x-3">
                           <li class="inline-flex items-center">
-                              <a href="{{ route('finance.product.index') }}" class="hover-link">
+                              <a href="{{ route('kepala-toko.product.index') }}" class="hover-link">
                                   <span class="nav-text inline-flex items-center text-gray-500">
                                       <i class="bi bi-house-door mr-2"></i>
                                       Produk
@@ -135,7 +135,7 @@
                         </div>
 
                         <!-- Form Content -->
-                        <form action="{{ route('finance.product.update', $product) }}" method="POST" enctype="multipart/form-data" class="p-8">
+                        <form action="{{ route('kepala-toko.product.update', $product) }}" method="POST" enctype="multipart/form-data" class="p-8">
                             @csrf
                             @method('PUT')
 
@@ -331,7 +331,7 @@
 
                             <!-- Action Buttons -->
                             <div class="flex justify-end space-x-4 mt-8 pt-6 border-t">
-                                <a href="{{ route('finance.product.index') }}" 
+                                <a href="{{ route('kepala-toko.product.index') }}" 
                                    class="action-button inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500">
                                     <i class="bi bi-x-lg mr-2"></i>
                                     Batal

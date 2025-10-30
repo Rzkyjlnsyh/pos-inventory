@@ -9,6 +9,7 @@ use App\Http\Controllers\Owner\ProfileOwnerController;
 use App\Http\Controllers\Owner\NotificationOwnerController;
 use App\Http\Controllers\Owner\ContactController;
 use App\Http\Controllers\Owner\CategoryController;
+use App\Http\Controllers\Admin\CategoryAdminController;
 use App\Http\Controllers\Owner\SalesOrderController;
 use App\Http\Controllers\Owner\ShiftController;
 use App\Http\Controllers\Admin\ContactController as AdminContactController;
@@ -22,6 +23,15 @@ Route::get('/', fn() => view('welcome'));
 Route::get('/dashboard', fn() => view('dashboard'))
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
+
+    // === TAMBAHKAN DI PALING ATAS, SEBELUM SEMUA GROUP ===
+Route::get('/api/categories', function (\Illuminate\Http\Request $request) {
+    $q = $request->get('q');
+    $categories = \App\Models\Category::when($q, fn($query) => $query->where('name', 'like', "%{$q}%"))
+        ->limit(10)
+        ->get(['id', 'name']);
+    return response()->json($categories);
+})->name('api.categories.search');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -221,7 +231,7 @@ Route::middleware(['auth', 'finance'])->prefix('finance')->name('finance.')->gro
     Route::get('finance/product/download-template', [\App\Http\Controllers\Finance\ProductFinanceController::class, 'downloadTemplate'])->name('product.download-template');
 
     // Categories
-    Route::resource('categories', CategoryController::class)
+    Route::resource('categories', App\Http\Controllers\Finance\CategoryFinanceController::class)
         ->names([
             'index' => 'category.index',
             'create' => 'category.create',
@@ -230,9 +240,9 @@ Route::middleware(['auth', 'finance'])->prefix('finance')->name('finance.')->gro
             'update' => 'category.update',
             'destroy' => 'category.destroy',
         ])->except(['show']);
-    Route::get('category/import', [CategoryController::class, 'importForm'])->name('category.import');
-    Route::post('category/import', [CategoryController::class, 'import'])->name('category.import');
-    Route::get('category/download-template', [CategoryController::class, 'downloadTemplate'])->name('category.download-template');
+    Route::get('category/import', [App\Http\Controllers\Finance\CategoryFinanceController::class, 'importForm'])->name('category.import');
+    Route::post('category/import', [App\Http\Controllers\Finance\CategoryFinanceController::class, 'import'])->name('category.import');
+    Route::get('category/download-template', [App\Http\Controllers\Finance\CategoryFinanceController::class, 'downloadTemplate'])->name('category.download-template');
     
     // Inventory Finance routes
     Route::prefix('inventory')->name('inventory.')->group(function () {
@@ -302,8 +312,15 @@ Route::middleware(['auth', 'kepala_toko'])->prefix('kepala-toko')->name('kepala-
     Route::get('contacts/customers/template', [KepalaTokoContactController::class, 'downloadCustomerTemplate'])->name('contacts.customers.template');
     Route::get('contacts/suppliers/template', [KepalaTokoContactController::class, 'downloadSupplierTemplate'])->name('contacts.suppliers.template');
 
+    Route::resource('product', \App\Http\Controllers\KepalaToko\ProductKepalaTokoController::class);
+    Route::get('catalog/products/search', [\App\Http\Controllers\KepalaToko\ProductKepalaTokoController::class, 'search'])->name('catalog.products.search');
+    Route::post('kepala-toko/product/import', [\App\Http\Controllers\KepalaToko\ProductKepalaTokoController::class, 'import'])->name('product.import');
+    Route::get('kepala-toko/product/download-template', [\App\Http\Controllers\KepalaToko\ProductKepalaTokoController::class, 'downloadTemplate'])->name('product.download-template');
+    Route::get('/products/search', [\App\Http\Controllers\KepalaToko\ProductKepalaTokoController::class, 'search'])->name('products.search');
+
+
     // Categories
-    Route::resource('categories', CategoryController::class)
+    Route::resource('categories', App\Http\Controllers\KepalaToko\CategoryKeptokController::class)
         ->names([
             'index' => 'category.index',
             'create' => 'category.create',
@@ -312,9 +329,9 @@ Route::middleware(['auth', 'kepala_toko'])->prefix('kepala-toko')->name('kepala-
             'update' => 'category.update',
             'destroy' => 'category.destroy',
         ])->except(['show']);
-    Route::get('category/import', [CategoryController::class, 'importForm'])->name('category.import');
-    Route::post('category/import', [CategoryController::class, 'import'])->name('category.import');
-    Route::get('category/download-template', [CategoryController::class, 'downloadTemplate'])->name('category.download-template');
+    Route::get('category/import', [App\Http\Controllers\KepalaToko\CategoryKeptokController::class, 'importForm'])->name('category.import');
+    Route::post('category/import', [App\Http\Controllers\KepalaToko\CategoryKeptokController::class, 'import'])->name('category.import');
+    Route::get('category/download-template', [App\Http\Controllers\KepalaToko\CategoryKeptokController::class, 'downloadTemplate'])->name('category.download-template');
 
     // Inventory Kepala Toko routes
     Route::prefix('inventory')->name('inventory.')->group(function () {
@@ -413,7 +430,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/products/search', [\App\Http\Controllers\Admin\ProductAdminController::class, 'search'])->name('products.search');
 
     // Categories
-    Route::resource('categories', CategoryController::class)
+    Route::resource('categories', CategoryAdminController::class)
         ->names([
             'index' => 'category.index',
             'create' => 'category.create',
@@ -422,9 +439,9 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
             'update' => 'category.update',
             'destroy' => 'category.destroy',
         ])->except(['show']);
-    Route::get('category/import', [CategoryController::class, 'importForm'])->name('category.import');
-    Route::post('category/import', [CategoryController::class, 'import'])->name('category.import');
-    Route::get('category/download-template', [CategoryController::class, 'downloadTemplate'])->name('category.download-template');
+    Route::get('category/import', [CategoryAdminController::class, 'importForm'])->name('category.import');
+    Route::post('category/import', [CategoryAdminController::class, 'import'])->name('category.import');
+    Route::get('category/download-template', [CategoryAdminController::class, 'downloadTemplate'])->name('category.download-template');
 
     // Contacts (Customer & Supplier)
     Route::get('contacts', [AdminContactController::class, 'index'])->name('contacts.index');

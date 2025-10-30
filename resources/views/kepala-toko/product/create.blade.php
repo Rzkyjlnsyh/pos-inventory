@@ -88,10 +88,10 @@
             <i class="bi bi-list"></i>
         </button>
 
-        <x-navbar-finance></x-navbar-finance>
+        <x-navbar-kepala-toko></x-navbar-kepala-toko>
 
         <div class="flex-1 lg:w-5/6">
-            <x-navbar-top-finance></x-navbar-top-finance>
+            <x-navbar-top-kepala-toko></x-navbar-top-kepala-toko>
 
             <div class="p-4 lg:p-8">
                 <div class="max-w-2xl mx-auto">
@@ -102,7 +102,7 @@
                             <p class="mt-2 text-gray-600 text-sm">Lengkapi informasi produk yang akan ditambahkan</p>
                         </div>
 
-                        <form action="{{ route('finance.product.store') }}" method="POST" enctype="multipart/form-data" class="p-8">
+                        <form action="{{ route('kepala-toko.product.store') }}" method="POST" enctype="multipart/form-data" class="p-8">
                             @csrf
 
                             <!-- Enhanced Input Groups -->
@@ -292,7 +292,7 @@
 
                                 <!-- Enhanced Buttons -->
                                 <div class="flex justify-end space-x-4 pt-6 border-t">
-                                    <a href="{{ route('finance.product.index') }}"
+                                    <a href="{{ route('kepala-toko.product.index') }}"
                                        class="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all duration-200">
                                         <i class="bi bi-arrow-left mr-2"></i>
                                         Kembali
