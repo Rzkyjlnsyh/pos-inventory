@@ -59,13 +59,13 @@
                         <input type="text" name="q" value="{{ request('q') }}" placeholder="Cari SO atau customer"
                             class="border rounded px-3 py-2 w-full max-w-xs focus:outline-none focus:ring-2 focus:ring-blue-500" />
 
-                        <select name="status"
-                            class="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="">Semua Status</option>
-                            @foreach (['pending', 'request_kain', 'proses_jahit', 'jadi', 'diterima_toko', 'di proses', 'selesai'] as $s)
-                                <option value="{{ $s }}" @if(request('status') === $s) selected @endif>{{ ucfirst(str_replace('_', ' ', $s)) }}</option>
-                            @endforeach
-                        </select>
+                            <select name="status" class="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+    <option value="">Semua Status</option>
+    <option value="draft" @if(request('status') === 'draft') selected @endif>Draft</option>
+    @foreach (['pending', 'request_kain', 'proses_jahit', 'jadi', 'diterima_toko', 'di proses', 'selesai'] as $s)
+        <option value="{{ $s }}" @if(request('status') === $s) selected @endif>{{ ucfirst(str_replace('_', ' ', $s)) }}</option>
+    @endforeach
+</select>
 
                         <select name="payment_status"
                             class="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">

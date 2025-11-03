@@ -86,6 +86,10 @@ class SalesOrderController extends Controller
             return back()->withErrors(['error' => 'Tidak ada shift aktif. Silakan mulai shift terlebih dahulu.'])->withInput();
         }
     
+        // Tentukan status dari input (draft atau pending)
+        $status = $request->input('status', 'pending');
+    
+        // Validasi dasar (selalu wajib)
         $validated = $request->validate([
             'order_type' => ['required', 'in:jahit_sendiri,beli_jadi'],
             'order_date' => ['required', 'date'],
@@ -93,9 +97,9 @@ class SalesOrderController extends Controller
             'customer_id' => ['nullable', 'exists:customers,id'],
             'customer_name' => ['nullable', 'string', 'max:255'], 
             'customer_phone' => ['nullable', 'string', 'max:20'],
-            'payment_method' => ['required', 'in:cash,transfer,split'],
-            'payment_status' => ['required', 'in:dp,lunas'],
-            'add_to_purchase' => ['nullable', 'boolean'], // ✅ Tambahkan validasi checkbox
+            'payment_method' => $status === 'draft' ? ['nullable', 'in:cash,transfer,split'] : ['required', 'in:cash,transfer,split'],
+            'payment_status' => $status === 'draft' ? ['nullable', 'in:dp,lunas'] : ['required', 'in:dp,lunas'],
+            'add_to_purchase' => ['nullable', 'boolean'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['nullable', 'exists:products,id'],
             'items.*.product_name' => ['required', 'string', 'max:255'],
@@ -103,12 +107,12 @@ class SalesOrderController extends Controller
             'items.*.sale_price' => ['required', 'numeric', 'min:0.01'],
             'items.*.qty' => ['required', 'integer', 'min:1'],
             'items.*.discount' => ['nullable', 'numeric', 'min:0'],
-            'payment_amount' => ['nullable', 'numeric', 'min:0'],
-            'cash_amount' => ['nullable', 'numeric', 'min:0'],
-            'transfer_amount' => ['nullable', 'numeric', 'min:0'],
-            'paid_at' => ['nullable', 'date'],
-            'proof_path' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:2048'],
-            'reference_number' => ['nullable', 'string', 'max:100'],
+            'payment_amount' => $status === 'draft' ? ['nullable'] : ['nullable', 'numeric', 'min:0'],
+            'cash_amount' => $status === 'draft' ? ['nullable'] : ['nullable', 'numeric', 'min:0'],
+            'transfer_amount' => $status === 'draft' ? ['nullable'] : ['nullable', 'numeric', 'min:0'],
+            'paid_at' => $status === 'draft' ? ['nullable'] : ['nullable', 'date'],
+            'proof_path' => $status === 'draft' ? ['nullable'] : ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:2048'],
+            'reference_number' => $status === 'draft' ? ['nullable'] : ['nullable', 'string', 'max:100'],
         ]);
     
         \Log::info('Validated data', $validated);
@@ -131,24 +135,27 @@ class SalesOrderController extends Controller
         });
         $grandTotal = $subtotal - $discountTotal;
     
-        $cashAmount = $validated['payment_method'] === 'split' ? ($validated['cash_amount'] ?? 0) : ($validated['payment_method'] === 'cash' ? ($validated['payment_amount'] ?? 0) : 0);
-        $transferAmount = $validated['payment_method'] === 'split' ? ($validated['transfer_amount'] ?? 0) : ($validated['payment_method'] === 'transfer' ? ($validated['payment_amount'] ?? 0) : 0);
-        $paymentAmount = $cashAmount + $transferAmount;
+        $cashAmount = 0;
+        $transferAmount = 0;
+        $paymentAmount = 0;
     
-        \Log::info('Calculated payment', ['payment_amount' => $paymentAmount, 'cash' => $cashAmount, 'transfer' => $transferAmount, 'grand_total' => $grandTotal]);
+        if ($status !== 'draft') {
+            $cashAmount = $validated['payment_method'] === 'split' ? ($validated['cash_amount'] ?? 0) : ($validated['payment_method'] === 'cash' ? ($validated['payment_amount'] ?? 0) : 0);
+            $transferAmount = $validated['payment_method'] === 'split' ? ($validated['transfer_amount'] ?? 0) : ($validated['payment_method'] === 'transfer' ? ($validated['payment_amount'] ?? 0) : 0);
+            $paymentAmount = $cashAmount + $transferAmount;
     
-        if ($paymentAmount > 0) {
-            if ($validated['payment_status'] === 'dp' && $paymentAmount < $grandTotal * 0.5) {
-                \Log::error('Payment amount below 50% DP', ['payment_amount' => $paymentAmount, 'grand_total' => $grandTotal]);
-                return back()->withErrors(['payment_amount' => 'DP minimal 50%: Rp ' . number_format($grandTotal * 0.5, 0, ',', '.')])->withInput();
-            }
-            if ($paymentAmount > $grandTotal) {
-                \Log::error('Payment amount exceeds grand total', ['payment_amount' => $paymentAmount, 'grand_total' => $grandTotal]);
-                return back()->withErrors(['payment_amount' => 'Jumlah melebihi grand total: Rp ' . number_format($grandTotal, 0, ',', '.')])->withInput();
+            \Log::info('Calculated payment', ['payment_amount' => $paymentAmount, 'cash' => $cashAmount, 'transfer' => $transferAmount, 'grand_total' => $grandTotal]);
+    
+            // ✅ HANYA CEK JIKA BUKAN DRAFT
+            if ($paymentAmount > 0) {
+                // ❌ HAPUS CEK 50% DP
+                if ($paymentAmount > $grandTotal) {
+                    \Log::error('Payment amount exceeds grand total', ['payment_amount' => $paymentAmount, 'grand_total' => $grandTotal]);
+                    return back()->withErrors(['payment_amount' => 'Jumlah melebihi grand total: Rp ' . number_format($grandTotal, 0, ',', '.')])->withInput();
+                }
             }
         }
     
-        $status = 'pending';
         try {
             $salesOrder = DB::transaction(function () use ($validated, $request, $cashAmount, $transferAmount, $paymentAmount, $grandTotal, $activeShift, $status, $subtotal, $discountTotal) {
                 // === AUTO CREATE CUSTOMER LOGIC ===
@@ -182,9 +189,9 @@ class SalesOrderController extends Controller
                     'subtotal' => $subtotal,
                     'discount_total' => $discountTotal,
                     'grand_total' => $grandTotal,
-                    'status' => $status,
-                    'payment_method' => $validated['payment_method'],
-                    'payment_status' => $validated['payment_status'],
+                    'status' => $status, // ✅ BISA 'draft' ATAU 'pending'
+                    'payment_method' => $validated['payment_method'] ?? null,
+                    'payment_status' => $validated['payment_status'] ?? null,
                     'created_by' => Auth::id(),
                 ]);
     
@@ -202,7 +209,8 @@ class SalesOrderController extends Controller
                     ]);
                 }
     
-                if ($paymentAmount > 0) {
+                // ✅ HANYA PROSES PEMBAYARAN JIKA BUKAN DRAFT
+                if ($status !== 'draft' && $paymentAmount > 0) {
                     $proofPath = $request->hasFile('proof_path')
                         ? $request->file('proof_path')->store('payment-proofs', 'public')
                         : null;
@@ -246,7 +254,7 @@ class SalesOrderController extends Controller
             \Log::info('Sales order created successfully', ['so_number' => $salesOrder->so_number]);
     
             // === AUTO CREATE PURCHASE ORDER JIKA DICEKLIS ===
-            if ($request->has('add_to_purchase') && $request->boolean('add_to_purchase')) {
+            if ($status !== 'draft' && $request->has('add_to_purchase') && $request->boolean('add_to_purchase')) {
                 $itemsToPurchase = [];
                 foreach ($validated['items'] as $item) {
                     if (!empty($item['product_id'])) {
@@ -256,18 +264,17 @@ class SalesOrderController extends Controller
                                 'product_id' => $item['product_id'],
                                 'product_name' => $item['product_name'],
                                 'sku' => $item['sku'] ?? null,
-                                'cost_price' => 0, // Kosongkan harga modal
+                                'cost_price' => 0,
                                 'qty' => $item['qty'],
                                 'discount' => 0,
                             ];
                         }
                     } else {
-                        // Produk custom (tidak ada di database)
                         $itemsToPurchase[] = [
                             'product_id' => null,
                             'product_name' => $item['product_name'],
                             'sku' => $item['sku'] ?? null,
-                            'cost_price' => 0, // Kosongkan harga modal
+                            'cost_price' => 0,
                             'qty' => $item['qty'],
                             'discount' => 0,
                         ];
@@ -279,7 +286,6 @@ class SalesOrderController extends Controller
                         DB::transaction(function () use ($salesOrder, $itemsToPurchase, $request) {
                             $supplierId = $request->input('supplier_id');
                             $supplierName = $request->input('supplier_name');
-            
                             if ($supplierId) {
                                 $supplier = Supplier::findOrFail($supplierId);
                             } elseif ($supplierName) {
@@ -295,7 +301,6 @@ class SalesOrderController extends Controller
                             }
     
                             $poNumber = 'PO' . now()->format('ymd') . str_pad((string) (PurchaseOrder::whereDate('created_at', now()->toDateString())->count() + 1), 4, '0', STR_PAD_LEFT);
-    
                             $subtotalPo = collect($itemsToPurchase)->sum(fn($i) => $i['cost_price'] * $i['qty']);
                             $discountTotalPo = collect($itemsToPurchase)->sum(fn($i) => $i['discount']);
                             $grandTotalPo = $subtotalPo - $discountTotalPo;
@@ -320,7 +325,7 @@ class SalesOrderController extends Controller
                                     'product_id' => $item['product_id'],
                                     'product_name' => $item['product_name'],
                                     'sku' => $item['sku'],
-                                    'cost_price' => $item['cost_price'], // 0
+                                    'cost_price' => $item['cost_price'],
                                     'qty' => $item['qty'],
                                     'discount' => $item['discount'],
                                     'line_total' => ($item['cost_price'] * $item['qty']) - $item['discount'],
@@ -339,14 +344,11 @@ class SalesOrderController extends Controller
                         });
                     } catch (\Exception $e) {
                         \Log::error('Error auto-creating purchase order for SO: ' . $salesOrder->so_number . ' - ' . $e->getMessage());
-                        // Tidak menghentikan proses SO
                     }
                 }
             }
     
-            // === NONAKTIFKAN AUTO-PRINT (KARENA CETAK DARI SHOW LEBIH RAPI) ===
             return redirect()->route('admin.sales.show', $salesOrder)->with('success', 'Sales order berhasil dibuat.');
-    
         } catch (\Exception $e) {
             \Log::error('Error storing sales order: ' . $e->getMessage(), ['request' => $request->all()]);
             return back()->withErrors(['error' => 'Terjadi kesalahan: ' . $e->getMessage()])->withInput();
@@ -384,19 +386,25 @@ class SalesOrderController extends Controller
         if ($shiftCheck !== true) {
             return $shiftCheck;
         }
-
+    
         if (!$salesOrder->isEditable()) {
             \Log::warning('Attempt to update non-editable SO: ' . $salesOrder->so_number);
             return back()->withErrors(['error' => 'Sales order yang selesai tidak bisa diedit.']);
         }
-
+    
+        // Ambil status dari request (bisa 'draft' atau 'pending')
+        $status = $request->input('status', $salesOrder->status);
+    
         $validated = $request->validate([
             'order_type' => ['required', 'in:jahit_sendiri,beli_jadi'],
             'order_date' => ['required', 'date'],
-            'deadline' => $validated['deadline'] ?? null, // TAMBAH INI
+            'deadline' => ['nullable', 'date'],
             'customer_id' => ['nullable', 'exists:customers,id'],
-            'payment_method' => ['required', 'in:cash,transfer,split'],
-            'payment_status' => ['required', 'in:dp,lunas'],
+            'customer_name' => ['nullable', 'string', 'max:255'],
+            'customer_phone' => ['nullable', 'string', 'max:20'],
+            'payment_method' => $status === 'draft' ? ['nullable', 'in:cash,transfer,split'] : ['required', 'in:cash,transfer,split'],
+            'payment_status' => $status === 'draft' ? ['nullable', 'in:dp,lunas'] : ['required', 'in:dp,lunas'],
+            'add_to_purchase' => ['nullable', 'boolean'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['nullable', 'exists:products,id'],
             'items.*.product_name' => ['required', 'string', 'max:255'],
@@ -404,14 +412,17 @@ class SalesOrderController extends Controller
             'items.*.sale_price' => ['required', 'numeric', 'min:0.01'],
             'items.*.qty' => ['required', 'integer', 'min:1'],
             'items.*.discount' => ['nullable', 'numeric', 'min:0'],
-            'payment_amount' => ['nullable', 'numeric', 'min:0'],
-            'cash_amount' => ['nullable', 'numeric', 'min:0'],
-            'transfer_amount' => ['nullable', 'numeric', 'min:0'],
-            'paid_at' => ['nullable', 'date'],
-            'proof_path' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:2048'],
+            'payment_amount' => $status === 'draft' ? ['nullable'] : ['nullable', 'numeric', 'min:0'],
+            'cash_amount' => $status === 'draft' ? ['nullable'] : ['nullable', 'numeric', 'min:0'],
+            'transfer_amount' => $status === 'draft' ? ['nullable'] : ['nullable', 'numeric', 'min:0'],
+            'paid_at' => $status === 'draft' ? ['nullable'] : ['nullable', 'date'],
+            'proof_path' => $status === 'draft' ? ['nullable'] : ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:2048'],
+            'reference_number' => ['nullable', 'string', 'max:100'],
         ]);
-
-        foreach ($request->items as $index => $item) {
+    
+        $items = $validated['items'] ?? [];
+    
+        foreach ($items as $index => $item) {
             if (!empty($item['product_id'])) {
                 $product = Product::find($item['product_id']);
                 if (!$product || $product->price <= 0) {
@@ -420,77 +431,71 @@ class SalesOrderController extends Controller
                 }
             }
         }
-
-        $subtotal = collect($validated['items'])->reduce(function ($carry, $item) {
-            return $carry + ((float)$item['sale_price'] * (int)$item['qty']);
-        }, 0);
-        $discountTotal = collect($validated['items'])->sum(function ($item) {
-            return (float)($item['discount'] ?? 0) * (int)$item['qty'];
-        });
+    
+        $subtotal = collect($items)->reduce(fn($carry, $item) => $carry + ((float)$item['sale_price'] * (int)$item['qty']), 0);
+        $discountTotal = collect($items)->sum(fn($item) => (float)($item['discount'] ?? 0) * (int)$item['qty']);
         $grandTotal = $subtotal - $discountTotal;
-
-        $cashAmount = $validated['payment_method'] === 'split' ? ($validated['cash_amount'] ?? 0) : ($validated['payment_method'] === 'cash' ? ($validated['payment_amount'] ?? 0) : 0);
-        $transferAmount = $validated['payment_method'] === 'split' ? ($validated['transfer_amount'] ?? 0) : ($validated['payment_method'] === 'transfer' ? ($validated['payment_amount'] ?? 0) : 0);
-        $paymentAmount = $cashAmount + $transferAmount;
-
-        \Log::info('Calculated payment in update', ['payment_amount' => $paymentAmount, 'cash' => $cashAmount, 'transfer' => $transferAmount, 'grand_total' => $grandTotal]);
-
-        if ($paymentAmount > 0) {
-            if ($validated['payment_status'] === 'dp' && $paymentAmount < $grandTotal * 0.5) {
-                \Log::error('Payment amount below 50% DP', ['payment_amount' => $paymentAmount, 'grand_total' => $grandTotal]);
-                return back()->withErrors(['payment_amount' => 'DP minimal 50%: Rp ' . number_format($grandTotal * 0.5, 0, ',', '.')])->withInput();
-            }
-            if ($paymentAmount > $grandTotal) {
+    
+        $cashAmount = 0;
+        $transferAmount = 0;
+        $paymentAmount = 0;
+    
+        if ($status !== 'draft') {
+            $cashAmount = $validated['payment_method'] === 'split' ? ($validated['cash_amount'] ?? 0) : ($validated['payment_method'] === 'cash' ? ($validated['payment_amount'] ?? 0) : 0);
+            $transferAmount = $validated['payment_method'] === 'split' ? ($validated['transfer_amount'] ?? 0) : ($validated['payment_method'] === 'transfer' ? ($validated['payment_amount'] ?? 0) : 0);
+            $paymentAmount = $cashAmount + $transferAmount;
+    
+            if ($paymentAmount > 0 && $paymentAmount > $grandTotal) {
                 \Log::error('Payment amount exceeds grand total', ['payment_amount' => $paymentAmount, 'grand_total' => $grandTotal]);
                 return back()->withErrors(['payment_amount' => 'Jumlah melebihi grand total: Rp ' . number_format($grandTotal, 0, ',', '.')])->withInput();
             }
-        } else {
-            \Log::info('No payment amount in update, skipping payment creation');
         }
-
-        try {
-            DB::transaction(function () use ($salesOrder, $validated, $request, $cashAmount, $transferAmount, $paymentAmount, $grandTotal, $subtotal, $discountTotal) {
-                $customerId = $validated['customer_id'] ?? null;
-
-if (empty($customerId) && !empty($validated['customer_name'])) {
-    // Cek dulu apakah customer dengan nama yang sama sudah ada
-    $existingCustomer = Customer::where('name', $validated['customer_name'])->first();
     
-    if ($existingCustomer) {
-        // Gunakan customer yang sudah ada
-        $customerId = $existingCustomer->id;
-        \Log::info('Using existing customer', ['customer_id' => $customerId, 'name' => $existingCustomer->name]);
-    } else {
-        // Buat customer baru
-        $customer = Customer::create([
-            'name' => $validated['customer_name'],
-            'phone' => $validated['customer_phone'] ?? null,
-            'email' => null,
-            'address' => null,
-            'notes' => 'Auto-created from sales order edit',
-            'is_active' => true,
-        ]);
-        $customerId = $customer->id;
-        \Log::info('Auto-created customer in update', ['customer_id' => $customerId, 'name' => $customer->name, 'phone' => $customer->phone]);
-    }
-}
+        try {
+            DB::transaction(function () use (
+                $salesOrder, $validated, $request, $cashAmount, $transferAmount, $paymentAmount,
+                $grandTotal, $subtotal, $discountTotal, $status, $items
+            ) {
+                // === AUTO CREATE CUSTOMER ===
+                $customerId = $validated['customer_id'] ?? null;
+                if (empty($customerId) && !empty($validated['customer_name'])) {
+                    $existingCustomer = Customer::where('name', $validated['customer_name'])->first();
+                    if ($existingCustomer) {
+                        $customerId = $existingCustomer->id;
+                        \Log::info('Using existing customer', ['customer_id' => $customerId]);
+                    } else {
+                        $customer = Customer::create([
+                            'name' => $validated['customer_name'],
+                            'phone' => $validated['customer_phone'] ?? null,
+                            'email' => null,
+                            'address' => null,
+                            'notes' => 'Auto-created from sales order edit',
+                            'is_active' => true,
+                        ]);
+                        $customerId = $customer->id;
+                        \Log::info('Auto-created customer in update', ['customer_id' => $customerId]);
+                    }
+                }
+    
+                // === UPDATE SALES ORDER ===
                 $salesOrder->update([
                     'order_type' => $validated['order_type'],
                     'order_date' => $validated['order_date'],
-                    'deadline' => $validated['deadline'] ?? null, // TAMBAH INI
+                    'deadline' => $validated['deadline'] ?? null,
                     'customer_id' => $customerId ?? null,
                     'subtotal' => $subtotal,
                     'discount_total' => $discountTotal,
                     'grand_total' => $grandTotal,
-                    'payment_method' => $validated['payment_method'],
-                    'payment_status' => $validated['payment_status'],
-                    'status' => 'pending',
-                    'approved_by' => null,
-                    'approved_at' => null,
+                    'payment_method' => $validated['payment_method'] ?? null,
+                    'payment_status' => $validated['payment_status'] ?? null,
+                    'status' => $status,
+                    'approved_by' => $status === 'draft' ? null : $salesOrder->approved_by,
+                    'approved_at' => $status === 'draft' ? null : $salesOrder->approved_at,
                 ]);
-
+    
+                // === REPLACE ITEMS ===
                 $salesOrder->items()->delete();
-                foreach ($validated['items'] as $item) {
+                foreach ($items as $item) {
                     $lineTotal = ((float)$item['sale_price'] * (int)$item['qty']) - ((float)($item['discount'] ?? 0) * (int)$item['qty']);
                     SalesOrderItem::create([
                         'sales_order_id' => $salesOrder->id,
@@ -503,16 +508,16 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
                         'line_total' => $lineTotal,
                     ]);
                 }
-
-                if ($paymentAmount > 0) {
+    
+                // === UPDATE OR CREATE PAYMENT (jika bukan draft) ===
+                if ($status !== 'draft' && $paymentAmount > 0) {
                     $proofPath = $request->hasFile('proof_path')
                         ? $request->file('proof_path')->store('payment-proofs', 'public')
                         : null;
-
+    
                     $paymentCategory = ($paymentAmount >= $grandTotal) ? 'pelunasan' : 'dp';
-
                     $latestPayment = Payment::where('sales_order_id', $salesOrder->id)->latest('created_at')->first();
-
+    
                     if ($latestPayment) {
                         $latestPayment->update([
                             'method' => $validated['payment_method'],
@@ -523,14 +528,12 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
                             'transfer_amount' => $transferAmount,
                             'paid_at' => $validated['paid_at'] ?? now(),
                             'proof_path' => $proofPath ?? $latestPayment->proof_path,
+                            'reference_number' => $validated['reference_number'] ?? $latestPayment->reference_number,
                             'created_by' => Auth::id(),
                         ]);
-
-                        \Log::info('Payment updated in update', ['payment_id' => $latestPayment->id, 'amount' => $paymentAmount, 'proof_path' => $proofPath ?? 'none']);
-
-                        $this->logAction($salesOrder, 'payment_updated', "Pembayaran diperbarui: {$paymentCategory}, Jumlah: Rp " . number_format($paymentAmount, 0, ',', '.') . ", Metode: {$validated['payment_method']}" . ($proofPath ? "" : ", tanpa bukti"));
+                        $this->logAction($salesOrder, 'payment_updated', "Pembayaran diperbarui: {$paymentCategory}, Rp " . number_format($paymentAmount, 0, ',', '.'));
                     } else {
-                        $payment = Payment::create([
+                        Payment::create([
                             'sales_order_id' => $salesOrder->id,
                             'method' => $validated['payment_method'],
                             'status' => $validated['payment_status'],
@@ -540,45 +543,134 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
                             'transfer_amount' => $transferAmount,
                             'paid_at' => $validated['paid_at'] ?? now(),
                             'proof_path' => $proofPath,
+                            'reference_number' => $validated['reference_number'] ?? null,
                             'created_by' => Auth::id(),
                         ]);
-
-                        \Log::info('Payment created in update', ['payment_id' => $payment->id, 'amount' => $paymentAmount, 'proof_path' => $proofPath ?? 'none']);
-
-                        $this->logAction($salesOrder, 'payment_added', "Pembayaran ditambahkan: {$paymentCategory}, Jumlah: Rp " . number_format($paymentAmount, 0, ',', '.') . ", Metode: {$validated['payment_method']}" . ($proofPath ? "" : ", tanpa bukti"));
+                        $this->logAction($salesOrder, 'payment_added', "Pembayaran ditambahkan: {$paymentCategory}, Rp " . number_format($paymentAmount, 0, ',', '.'));
                     }
-
+    
                     $activeShift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
                     if ($activeShift && $cashAmount > 0) {
                         $activeShift->increment('cash_total', $cashAmount);
                     }
                 }
-
-                $this->logAction($salesOrder, 'updated', "Sales order diperbarui: Tipe: {$validated['order_type']}, Total: Rp " . number_format($grandTotal, 0, ',', '.'));
-
-                $changes = [];
-                if ($salesOrder->getOriginal('order_type') !== $validated['order_type']) {
-                    $changes[] = "Tipe order berubah dari {$salesOrder->getOriginal('order_type')} ke {$validated['order_type']}";
-                }
-                if ($salesOrder->getOriginal('payment_method') !== $validated['payment_method']) {
-                    $changes[] = "Metode pembayaran berubah dari {$salesOrder->getOriginal('payment_method')} ke {$validated['payment_method']}";
-                }
-                if ($salesOrder->getOriginal('payment_status') !== $validated['payment_status']) {
-                    $changes[] = "Status pembayaran berubah dari {$salesOrder->getOriginal('payment_status')} ke {$validated['payment_status']}";
-                }
-                if ($salesOrder->getOriginal('grand_total') != $grandTotal) {
-                    $changes[] = "Grand total berubah dari Rp " . number_format($salesOrder->getOriginal('grand_total'), 0, ',', '.') . " ke Rp " . number_format($grandTotal, 0, ',', '.');
-                }
-                if (!empty($changes)) {
-                    $this->logAction($salesOrder, 'updated_details', implode(', ', $changes));
+    
+                $this->logAction($salesOrder, 'updated', "Sales order diperbarui: {$salesOrder->so_number}");
+    
+                // === AUTO CREATE PURCHASE ORDER JIKA DICEKLIS SAAT EDIT ===
+                if ($request->has('add_to_purchase') && $request->boolean('add_to_purchase')) {
+                    // Cek apakah PO sudah pernah dibuat
+                    $alreadyLinked = $salesOrder->logs()->where('action', 'linked_to_purchase')->exists();
+                    if (!$alreadyLinked) {
+                        $itemsToPurchase = [];
+                        foreach ($items as $item) {
+                            if (!empty($item['product_id'])) {
+                                $product = Product::find($item['product_id']);
+                                if ($product && $product->stock_qty < $item['qty']) {
+                                    $itemsToPurchase[] = [
+                                        'product_id' => $item['product_id'],
+                                        'product_name' => $item['product_name'],
+                                        'sku' => $item['sku'] ?? null,
+                                        'cost_price' => 0,
+                                        'qty' => $item['qty'],
+                                        'discount' => 0,
+                                    ];
+                                }
+                            } else {
+                                $itemsToPurchase[] = [
+                                    'product_id' => null,
+                                    'product_name' => $item['product_name'],
+                                    'sku' => $item['sku'] ?? null,
+                                    'cost_price' => 0,
+                                    'qty' => $item['qty'],
+                                    'discount' => 0,
+                                ];
+                            }
+                        }
+    
+                        if (!empty($itemsToPurchase)) {
+                            try {
+                                DB::transaction(function () use ($salesOrder, $itemsToPurchase, $request) {
+                                    $supplierId = $request->input('supplier_id');
+                                    $supplierName = $request->input('supplier_name');
+    
+                                    if ($supplierId) {
+                                        $supplier = Supplier::findOrFail($supplierId);
+                                    } elseif ($supplierName) {
+                                        $supplier = Supplier::firstOrCreate(
+                                            ['name' => $supplierName],
+                                            ['is_active' => true]
+                                        );
+                                    } else {
+                                        $supplier = Supplier::firstOrCreate(
+                                            ['name' => 'Pre-order Customer'],
+                                            ['is_active' => true]
+                                        );
+                                    }
+    
+                                    $poNumber = 'PO' . now()->format('ymd') . str_pad(
+                                        (string) (PurchaseOrder::whereDate('created_at', now()->toDateString())->count() + 1),
+                                        4, '0', STR_PAD_LEFT
+                                    );
+    
+                                    $subtotalPo = collect($itemsToPurchase)->sum(fn($i) => $i['cost_price'] * $i['qty']);
+                                    $discountTotalPo = collect($itemsToPurchase)->sum(fn($i) => $i['discount']);
+                                    $grandTotalPo = $subtotalPo - $discountTotalPo;
+    
+                                    $purchaseOrder = PurchaseOrder::create([
+                                        'po_number' => $poNumber,
+                                        'order_date' => now(),
+                                        'supplier_id' => $supplier->id,
+                                        'purchase_type' => $salesOrder->order_type === 'jahit_sendiri' ? 'kain' : 'produk_jadi',
+                                        'deadline' => $salesOrder->deadline,
+                                        'subtotal' => $subtotalPo,
+                                        'discount_total' => $discountTotalPo,
+                                        'grand_total' => $grandTotalPo,
+                                        'status' => PurchaseOrder::STATUS_DRAFT,
+                                        'is_paid' => false,
+                                        'created_by' => Auth::id(),
+                                    ]);
+    
+                                    foreach ($itemsToPurchase as $item) {
+                                        PurchaseOrderItem::create([
+                                            'purchase_order_id' => $purchaseOrder->id,
+                                            'product_id' => $item['product_id'],
+                                            'product_name' => $item['product_name'],
+                                            'sku' => $item['sku'],
+                                            'cost_price' => $item['cost_price'],
+                                            'qty' => $item['qty'],
+                                            'discount' => $item['discount'],
+                                            'line_total' => ($item['cost_price'] * $item['qty']) - $item['discount'],
+                                        ]);
+                                    }
+    
+                                    \App\Models\PurchaseOrderLog::create([
+                                        'purchase_order_id' => $purchaseOrder->id,
+                                        'user_id' => Auth::id(),
+                                        'action' => 'created',
+                                        'description' => "Purchase order Dari Penjualan: {$salesOrder->so_number}",
+                                        'created_at' => now(),
+                                    ]);
+    
+                                    $this->logAction($salesOrder, 'linked_to_purchase', "Linked to Purchase Order: {$poNumber}");
+                                });
+                            } catch (\Exception $e) {
+                                \Log::error('Error auto-creating purchase order on edit for SO: ' . $salesOrder->so_number . ' - ' . $e->getMessage());
+                                // Tidak throw agar SO tetap ter-update
+                            }
+                        }
+                    }
                 }
             });
-
-            \Log::info('Sales order updated successfully', ['so_number' => $salesOrder->so_number]);
-            return redirect()->route('admin.sales.show', $salesOrder)->with('success', 'Sales order diperbarui dan menunggu approval.');
+    
+            return redirect()->route('admin.sales.show', $salesOrder)
+                ->with('success', 'Sales order berhasil diperbarui.' . 
+                    ($request->boolean('add_to_purchase') && !$salesOrder->fresh()->logs()->where('action', 'linked_to_purchase')->exists() ? ' Purchase Order otomatis dibuat.' : '')
+                );
+    
         } catch (\Exception $e) {
             \Log::error('Error updating sales order: ' . $e->getMessage(), ['so_number' => $salesOrder->so_number]);
-            return back()->withErrors(['error' => 'Terjadi kesalahan saat update SO: ' . $e->getMessage()])->withInput();
+            return back()->withErrors(['error' => 'Terjadi kesalahan: ' . $e->getMessage()])->withInput();
         }
     }
 

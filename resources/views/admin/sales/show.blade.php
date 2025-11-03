@@ -38,24 +38,59 @@
                         <p class="text-sm text-gray-500 mt-1">SO Number: {{ $salesOrder->so_number }}</p>
                     </div>
                     <div class="flex space-x-2">
-                        <a href="{{ route('admin.sales.index') }}"
-                           class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded shadow">
-                            <i class="bi bi-arrow-left"></i> Kembali
-                        </a>
-                        @if($salesOrder->isEditable() && $activeShift && Auth::user()->hasRole('admin'))
-                            <a href="{{ route('admin.sales.edit', $salesOrder) }}"
-                               class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded shadow">
-                                <i class="bi bi-pencil"></i> Edit
-                            </a>
-                        @endif
-                        @if($salesOrder->status === 'pending' && $salesOrder->approved_by !== null && $salesOrder->paid_total >= $salesOrder->grand_total * 0.5 && $activeShift && Auth::user()->hasRole('admin'))
-                            <form action="{{ route('admin.sales.startProcess', $salesOrder) }}" method="POST">
-                                @csrf
-                                <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow">
-                                    <i class="bi bi-play-circle"></i> Mulai Proses
-                                </button>
-                            </form>
-                        @endif
+    <a href="{{ route('admin.sales.index') }}"
+       class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded shadow">
+        <i class="bi bi-arrow-left"></i> Kembali
+    </a>
+
+    @if($salesOrder->status === 'draft' && $activeShift && Auth::user()->hasRole('admin'))
+        <!-- Tombol Edit Draft -->
+        <a href="{{ route('admin.sales.edit', $salesOrder) }}"
+           class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded shadow">
+            <i class="bi bi-pencil"></i> Edit Draft
+        </a>
+
+        <!-- Tombol Proses Draft -->
+        <form action="{{ route('admin.sales.update', $salesOrder) }}" method="POST" style="display:inline;">
+            @csrf
+            @method('PUT')
+            <input type="hidden" name="status" value="pending">
+            <input type="hidden" name="order_type" value="{{ $salesOrder->order_type }}">
+            <input type="hidden" name="order_date" value="{{ $salesOrder->order_date->format('Y-m-d\TH:i') }}">
+            <input type="hidden" name="deadline" value="{{ $salesOrder->deadline?->format('Y-m-d') }}">
+            <input type="hidden" name="customer_id" value="{{ $salesOrder->customer_id }}">
+            <input type="hidden" name="payment_method" value="{{ $salesOrder->payment_method ?? 'cash' }}">
+            <input type="hidden" name="payment_status" value="{{ $salesOrder->payment_status ?? 'dp' }}">
+            @foreach($salesOrder->items as $index => $item)
+                <input type="hidden" name="items[{{ $index }}][product_id]" value="{{ $item->product_id }}">
+                <input type="hidden" name="items[{{ $index }}][product_name]" value="{{ $item->product_name }}">
+                <input type="hidden" name="items[{{ $index }}][sku]" value="{{ $item->sku }}">
+                <input type="hidden" name="items[{{ $index }}][sale_price]" value="{{ $item->sale_price }}">
+                <input type="hidden" name="items[{{ $index }}][qty]" value="{{ $item->qty }}">
+                <input type="hidden" name="items[{{ $index }}][discount]" value="{{ $item->discount }}">
+            @endforeach
+            <button type="submit"
+                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow"
+                    onclick="return confirm('Yakin ingin memproses draft ini? Ini akan mengubah status menjadi \"Pending\".')">
+                <i class="bi bi-play-circle"></i> Proses Draft
+            </button>
+        </form>
+    @elseif($salesOrder->isEditable() && $activeShift && Auth::user()->hasRole('admin'))
+        <a href="{{ route('admin.sales.edit', $salesOrder) }}"
+           class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded shadow">
+            <i class="bi bi-pencil"></i> Edit
+        </a>
+    @endif
+
+    <!-- Sisanya tetap sama (tombol proses jahit, dll) -->
+    @if($salesOrder->status === 'pending' && $salesOrder->approved_by !== null && $salesOrder->paid_total >= $salesOrder->grand_total * 0.5 && $activeShift && Auth::user()->hasRole('admin'))
+        <form action="{{ route('admin.sales.startProcess', $salesOrder) }}" method="POST">
+            @csrf
+            <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow">
+                <i class="bi bi-play-circle"></i> Mulai Proses
+            </button>
+        </form>
+    @endif
                         @if($salesOrder->order_type === 'jahit_sendiri' && $salesOrder->status === 'request_kain' && $activeShift && Auth::user()->hasRole('admin'))
                             <form action="{{ route('admin.sales.processJahit', $salesOrder) }}" method="POST">
                                 @csrf
@@ -186,7 +221,18 @@
                         <div class="flex justify-between"><span class="text-gray-600">SO Number:</span><span class="font-mono font-semibold">{{ $salesOrder->so_number }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-600">Tipe Order:</span><span class="capitalize">{{ str_replace('_', ' ', $salesOrder->order_type) }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-600">Tanggal Order:</span><span>{{ \Carbon\Carbon::parse($salesOrder->order_date)->format('d/m/Y') }}</span></div>
-                        <div class="flex justify-between"><span class="text-gray-600">Customer:</span><span>{{ $salesOrder->customer ? $salesOrder->customer->name : 'Umum' }}</span></div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Customer:</span>
+                            <span>
+                                {{ $salesOrder->customer ? $salesOrder->customer->name : 'Umum' }}
+                                @if($salesOrder->customer && $salesOrder->customer->phone)
+                                    <br><small class="text-gray-500">({{ $salesOrder->customer->phone }})</small>
+                                @endif
+                            </span>
+                        </div>
+                        @if($salesOrder->deadline)
+                            <div class="flex justify-between"><span class="text-gray-600">Deadline:</span><span>{{ \Carbon\Carbon::parse($salesOrder->deadline)->format('d/m/Y') }}</span></div>
+                        @endif
                         <div class="flex justify-between"><span class="text-gray-600">Dibuat Oleh:</span><span>{{ $salesOrder->creator->name ?? 'System' }}</span></div>
                         @if($salesOrder->approved_by)
                             <div class="flex justify-between"><span class="text-gray-600">Disetujui Oleh:</span><span>{{ $salesOrder->approver->name ?? 'System' }}</span></div>
@@ -267,14 +313,16 @@
                                     <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                                 @enderror
                             </div>
-                            <div>
-                                <label for="reference" class="block font-medium mb-1">No. Referensi (opsional)</label>
-                                <input type="text" name="reference" id="reference" value="{{ old('reference') }}"
-                                       class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
-                                @error('reference')
-                                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                                @enderror
-                            </div>
+    <div>
+        <label for="reference_number" class="block font-medium mb-1">No Referensi Transfer (Opsional)</label>
+        <input type="text" name="reference_number" id="reference_number" 
+               class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
+               placeholder="Contoh: TRF123456789" value="{{ old('reference_number') }}">
+        <p class="text-sm text-gray-600 mt-1">No referensi bank atau keterangan</p>
+        @error('reference_number')
+            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+        @enderror
+    </div>
                             <div>
                                 <label for="proof_path" class="block font-medium mb-1">Bukti Pembayaran (opsional)</label>
                                 <input type="file" name="proof_path" id="proof_path" accept=".jpg,.jpeg,.png,.pdf"
@@ -283,7 +331,6 @@
                                     <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                                 @enderror
                             </div>
-                        </div>
                         <div class="mb-4">
                             <label for="note" class="block font-medium mb-1">Catatan (opsional)</label>
                             <textarea name="note" id="note" rows="2"
@@ -291,6 +338,7 @@
                             @error('note')
                                 <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                             @enderror
+                        </div>
                         </div>
                         <button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded shadow">
                             <i class="bi bi-check-lg"></i> Simpan Pembayaran
@@ -368,11 +416,11 @@
             <small class="text-gray-600">{{ $payment->note }}</small><br>
         @endif
         @if($payment->proof_path)
-            <a href="{{ route('owner.sales.payment-proof', $payment) }}" target="_blank" class="text-blue-500 text-xs hover:underline inline-flex items-center">
+            <a href="{{ route('admin.sales.payment-proof', $payment) }}" target="_blank" class="text-blue-500 text-xs hover:underline inline-flex items-center">
                 <i class="bi bi-file-earmark-image mr-1"></i> Lihat Bukti
             </a>
-        @elseif(in_array($payment->method, ['transfer', 'split']) && $activeShift && Auth::user()->hasRole('owner'))
-            <form action="{{ route('owner.sales.uploadProof', ['salesOrder' => $salesOrder, 'payment' => $payment]) }}" method="POST" enctype="multipart/form-data" class="upload-proof-form mt-2">
+        @elseif(in_array($payment->method, ['transfer', 'split']) && $activeShift && Auth::user()->hasRole('admin'))
+            <form action="{{ route('admin.sales.uploadProof', ['salesOrder' => $salesOrder, 'payment' => $payment]) }}" method="POST" enctype="multipart/form-data" class="upload-proof-form mt-2">
                 @csrf
                 <input type="file" name="proof_path" accept=".jpg,.jpeg,.png,.pdf" class="border rounded px-2 py-1 text-xs w-full" required>
                 <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs mt-1 w-full">
@@ -386,10 +434,11 @@
     </td>
     <td class="px-4 py-2 border text-center">
         <div class="flex justify-center gap-2">
-            <button onclick="printPaymentNota({{ $payment->id }})" class="text-green-600 hover:underline" title="Print Langsung">
+            <!-- TOMBOL UTAMA YANG BERUBAH -->
+            <button onclick="showPrintOptions({{ $payment->id }})" class="text-green-600 hover:text-green-800" title="Cetak Nota">
                 <i class="bi bi-printer"></i>
             </button>
-            <a href="{{ route('owner.sales.printNota', $payment) }}" class="text-blue-600 hover:underline" title="Download PDF">
+            <a href="{{ route('admin.sales.printNota', $payment) }}" class="text-blue-600 hover:text-blue-800" title="Download PDF">
                 <i class="bi bi-download"></i>
             </a>
         </div>
@@ -486,6 +535,25 @@
                         <div><span class="text-gray-600">Diselesaikan pada:</span><span>{{ \Carbon\Carbon::parse($salesOrder->completed_at)->format('d/m/Y H:i') }}</span></div>
                     @endif
                 </div>
+                @if($salesOrder->logs->contains('action', 'linked_to_purchase'))
+    <div class="mt-6 p-4 bg-blue-50 rounded-lg">
+        <h3 class="font-semibold text-blue-800">Purchase Order Terkait</h3>
+        @php
+            $linkedLog = $salesOrder->logs->firstWhere('action', 'linked_to_purchase');
+            $poNumber = $linkedLog ? explode(': ', $linkedLog->description)[1] ?? null : null;
+            $purchaseOrder = $poNumber ? \App\Models\PurchaseOrder::where('po_number', $poNumber)->first() : null;
+        @endphp
+        @if($purchaseOrder)
+            <p class="text-sm">
+                PO: <a href="{{ route('admin.purchases.show', $purchaseOrder) }}" class="text-blue-600 underline">{{ $purchaseOrder->po_number }}</a><br>
+                Supplier: {{ $purchaseOrder->supplier->name ?? '-' }}<br>
+                Status: <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">{{ $purchaseOrder->getStatusLabel() }}</span>
+            </p>
+        @else
+            <p class="text-sm text-gray-600">PO: {{ $poNumber ?? '-' }}</p>
+        @endif
+    </div>
+@endif
                 <div class="mt-6">
                     <h2 class="text-lg font-semibold mb-4 text-gray-800">Riwayat Aktivitas</h2>
                     <div class="overflow-x-auto">
@@ -515,97 +583,474 @@
                         </table>
                     </div>
                 </div>
+                @if($salesOrder->logs->contains('action', 'linked_to_purchase'))
+                    <div class="mt-6 p-4 bg-blue-50 rounded-lg">
+                        <h3 class="font-semibold text-blue-800">Purchase Order Terkait</h3>
+                        @php
+                            $linkedLog = $salesOrder->logs->firstWhere('action', 'linked_to_purchase');
+                            $poNumber = $linkedLog ? explode(': ', $linkedLog->description)[1] ?? null : null;
+                            $purchaseOrder = $poNumber ? \App\Models\PurchaseOrder::where('po_number', $poNumber)->first() : null;
+                        @endphp
+                        @if($purchaseOrder)
+                            <p class="text-sm">PO: <a href="{{ route('admin.purchases.show', $purchaseOrder) }}" class="text-blue-600 underline">{{ $purchaseOrder->po_number }}</a></p>
+                            <p class="text-sm">Supplier: {{ $purchaseOrder->supplier->name ?? '-' }}</p>
+                            <p class="text-sm">Tipe: {{ $purchaseOrder->getTypeLabel() }}</p>
+                        @else
+                            <p class="text-sm text-gray-600">PO: {{ $poNumber ?? '-' }}</p>
+                        @endif
+                    </div>
+                @endif
             </div>
         </div>
     </div>
 </div>
 
+<!-- Modal Print Options -->
+<div id="printModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-lg p-6 w-80 mx-4">
+        <h3 class="text-lg font-semibold mb-4 text-center">Pilih Metode Cetak</h3>
+        
+        <div class="space-y-3">
+            <!-- Option 1: Pure HTML Thermal -->
+            <button onclick="printThermalHTML()" class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg flex items-center justify-center gap-3 shadow">
+                <i class="bi bi-printer text-xl"></i>
+                <div class="text-left">
+                    <div class="font-semibold">Thermal Printer</div>
+                    <div class="text-xs opacity-90">Format thermal 58mm murni</div>
+                </div>
+            </button>
+            
+            <!-- Option 2: ESC/POS Text -->
+            <button onclick="printESCPOS()" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg flex items-center justify-center gap-3 shadow">
+                <i class="bi bi-file-text text-xl"></i>
+                <div class="text-left">
+                    <div class="font-semibold">Text Printer</div>
+                    <div class="text-xs opacity-90">Format text plain</div>
+                </div>
+            </button>
+            
+            <!-- Option 3: PDF Download -->
+            <button onclick="downloadThermalPDF()" class="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg flex items-center justify-center gap-3 shadow">
+                <i class="bi bi-file-earmark-pdf text-xl"></i>
+                <div class="text-left">
+                    <div class="font-semibold">Download PDF</div>
+                    <div class="text-xs opacity-90">Simpan sebagai PDF</div>
+                </div>
+            </button>
+        </div>
+        
+        <div class="mt-4 flex justify-center">
+            <button onclick="closePrintModal()" class="text-gray-600 hover:text-gray-800 px-4 py-2">Batal</button>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Indicator -->
+<div id="loading" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-lg p-6 flex items-center gap-3">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <span>Loading...</span>
+    </div>
+</div>
+
+<!-- Thermal Receipt Template (Hidden) -->
+<div id="thermalReceipt" style="display: none;">
+    <div class="thermal-receipt">
+        <div class="receipt-header">
+            <div class="company-name">PARECUSTOM</div>
+            <div class="receipt-title">NOTA PEMBAYARAN</div>
+            <div class="receipt-divider">========================</div>
+        </div>
+        
+        <div class="receipt-body">
+            <div class="receipt-line">
+                <span class="label">SO Number</span>
+                <span class="value" id="rcpt-so-number"></span>
+            </div>
+            <div class="receipt-line">
+                <span class="label">Customer</span>
+                <span class="value" id="rcpt-customer"></span>
+            </div>
+            <div class="receipt-line">
+                <span class="label">Tanggal</span>
+                <span class="value" id="rcpt-date"></span>
+            </div>
+            <div class="receipt-divider">========================</div>
+            
+            <div class="receipt-section">RINGKASAN PEMBAYARAN</div>
+            <div class="receipt-line">
+                <span class="label">Grand Total</span>
+                <span class="value" id="rcpt-grand-total"></span>
+            </div>
+            <div class="receipt-line">
+                <span class="label">Total Bayar</span>
+                <span class="value" id="rcpt-paid-total"></span>
+            </div>
+            <div class="receipt-line">
+                <span class="label">Sisa</span>
+                <span class="value" id="rcpt-remaining"></span>
+            </div>
+            <div class="receipt-divider">========================</div>
+            
+            <div class="receipt-section">DETAIL PEMBAYARAN</div>
+            <div class="receipt-line">
+                <span class="label">Tanggal Bayar</span>
+                <span class="value" id="rcpt-payment-date"></span>
+            </div>
+            <div class="receipt-line">
+                <span class="label">Metode</span>
+                <span class="value" id="rcpt-method"></span>
+            </div>
+            <div class="receipt-line">
+                <span class="label">Jumlah</span>
+                <span class="value" id="rcpt-amount"></span>
+            </div>
+            <div id="rcpt-split-details"></div>
+            <div id="rcpt-reference"></div>
+            <div id="rcpt-note"></div>
+            <div class="receipt-divider">========================</div>
+            
+            <div class="receipt-line">
+                <span class="label">Operator</span>
+                <span class="value" id="rcpt-operator"></span>
+            </div>
+            <div class="receipt-divider">========================</div>
+            
+            <div class="receipt-footer">
+                <div class="thank-you">Terima kasih atas pembayarannya</div>
+                <div class="print-time" id="rcpt-print-time"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Thermal Receipt Styles */
+.thermal-receipt {
+    width: 58mm;
+    min-height: 100mm;
+    padding: 2mm;
+    font-family: 'Courier New', monospace;
+    font-size: 9px;
+    line-height: 1.2;
+    background: white;
+    margin: 0;
+}
+
+.receipt-header {
+    text-align: center;
+    margin-bottom: 3mm;
+}
+
+.company-name {
+    font-size: 11px;
+    font-weight: bold;
+    margin-bottom: 1mm;
+}
+
+.receipt-title {
+    font-weight: bold;
+    margin-bottom: 2mm;
+}
+
+.receipt-divider {
+    text-align: center;
+    margin: 2mm 0;
+    font-weight: bold;
+}
+
+.receipt-body {
+    margin-bottom: 3mm;
+}
+
+.receipt-line {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1mm;
+}
+
+.receipt-line .label {
+    font-weight: bold;
+}
+
+.receipt-line .value {
+    text-align: right;
+}
+
+.receipt-section {
+    font-weight: bold;
+    text-align: center;
+    margin: 2mm 0;
+}
+
+.receipt-footer {
+    text-align: center;
+    margin-top: 3mm;
+}
+
+.thank-you {
+    margin-bottom: 2mm;
+}
+
+.print-time {
+    font-size: 8px;
+}
+
+/* Print Styles */
+@media print {
+    @page {
+        margin: 0;
+        padding: 0;
+        size: 58mm auto;
+    }
+    
+    body * {
+        visibility: hidden;
+    }
+    
+    .thermal-receipt, .thermal-receipt * {
+        visibility: visible;
+    }
+    
+    .thermal-receipt {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 58mm;
+        margin: 0;
+        padding: 2mm;
+        box-shadow: none;
+    }
+    
+    .no-print {
+        display: none !important;
+    }
+}
+
+/* Loading */
+.loading {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+}
+
+.loading-content {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+/* Toast Notification */
+.toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    color: white;
+    font-weight: 500;
+    z-index: 10000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.toast.success { background: #10b981; }
+.toast.error { background: #ef4444; }
+.toast.info { background: #3b82f6; }
+</style>
+
 <script>
-    function toggleSidebar() {
-        document.getElementById('sidebar').classList.toggle('-translate-x-full');
-    }
-    function toggleDropdown(button) {
-        const dropdown = button.nextElementSibling;
-        const chevron = button.querySelector('.bi-chevron-down');
-        dropdown.classList.toggle('max-h-0');
-        dropdown.classList.toggle('max-h-40');
-        chevron.classList.toggle('rotate-180');
-    }
+// Global variables
+let currentPaymentId = null;
+let currentPaymentData = null;
 
-    document.addEventListener('DOMContentLoaded', function () {
-        const paymentMethod = '{{ $salesOrder->payment_method }}';
-        const proofInput = document.getElementById('proof_path');
-        const form = document.getElementById('paymentForm');
-
-        const splitFields = document.getElementById('split-payment-fields');
-        splitFields.classList.toggle('hidden', paymentMethod !== 'split');
-
-        document.getElementById('payment_method').addEventListener('change', function () {
-            splitFields.classList.toggle('hidden', this.value !== 'split');
-            if (this.value !== 'split') {
-                document.getElementById('cash_amount').value = 0;
-                document.getElementById('transfer_amount').value = 0;
-                document.getElementById('proof_path').value = '';
-            }
-            updatePaymentAmount();
-            updateProofRequired(this.value);
-        });
-
-        function updatePaymentAmount() {
-            const method = document.getElementById('payment_method').value;
-            const cash = parseFloat(document.getElementById('cash_amount')?.value || 0);
-            const transfer = parseFloat(document.getElementById('transfer_amount')?.value || 0);
-            const total = method === 'split' ? cash + transfer : parseFloat(document.getElementById('payment_amount').value) || 0;
-            document.getElementById('payment_amount').value = total.toFixed(2);
-        }
-
-        function updateProofRequired(method) {
-            proofInput.required = (method === 'transfer' || method === 'split');
-        }
-
-        updateProofRequired(paymentMethod);
-
-        document.getElementById('cash_amount')?.addEventListener('input', updatePaymentAmount);
-        document.getElementById('transfer_amount')?.addEventListener('input', updatePaymentAmount);
-
-        form.addEventListener('submit', function (e) {
-            const method = document.getElementById('payment_method').value;
-            if ((method === 'transfer' || method === 'split') && !proofInput.files.length) {
-                e.preventDefault();
-                alert('Harap unggah bukti pembayaran untuk metode ' + method);
-            }
-        });
-    });
-    function printPaymentNota(paymentId) {
-    // Tampilkan loading
-    const printBtn = event.target;
-    const originalHTML = printBtn.innerHTML;
-    printBtn.innerHTML = '<i class="bi bi-hourglass"></i>';
-    printBtn.disabled = true;
-
-    // Cari data payment berdasarkan ID
-    const payment = getPaymentById(paymentId);
-    if (!payment) {
+// Show print options modal
+function showPrintOptions(paymentId) {
+    currentPaymentId = paymentId;
+    currentPaymentData = getPaymentById(paymentId);
+    
+    if (!currentPaymentData) {
         alert('Data pembayaran tidak ditemukan!');
-        printBtn.innerHTML = originalHTML;
-        printBtn.disabled = false;
         return;
     }
+    
+    document.getElementById('printModal').classList.remove('hidden');
+}
 
-    // Format plain text yang sudah terbukti work
-    const textContent = `PARECUSTOM
+// Close print modal
+function closePrintModal() {
+    document.getElementById('printModal').classList.add('hidden');
+}
+
+// 1. PURE HTML THERMAL PRINTING
+function printThermalHTML() {
+    if (!currentPaymentData) return;
+    
+    showLoading('Menyiapkan cetakan thermal...');
+    
+    // Prepare receipt data
+    const salesOrder = {!! json_encode($salesOrder) !!};
+    const payment = currentPaymentData;
+    
+    // Populate receipt template
+    document.getElementById('rcpt-so-number').textContent = salesOrder.so_number;
+    document.getElementById('rcpt-customer').textContent = salesOrder.customer ? salesOrder.customer.name : 'Umum';
+    document.getElementById('rcpt-date').textContent = new Date().toLocaleDateString('id-ID');
+    document.getElementById('rcpt-grand-total').textContent = 'Rp ' + formatNumber(salesOrder.grand_total);
+    document.getElementById('rcpt-paid-total').textContent = 'Rp ' + formatNumber(salesOrder.paid_total);
+    document.getElementById('rcpt-remaining').textContent = 'Rp ' + formatNumber(salesOrder.remaining_amount);
+    document.getElementById('rcpt-payment-date').textContent = formatDate(payment.paid_at);
+    document.getElementById('rcpt-method').textContent = payment.method.toUpperCase();
+    document.getElementById('rcpt-amount').textContent = 'Rp ' + formatNumber(payment.amount);
+    document.getElementById('rcpt-operator').textContent = payment.creator_name || 'System';
+    document.getElementById('rcpt-print-time').textContent = '*** ' + new Date().toLocaleDateString('id-ID') + ' ' + new Date().toLocaleTimeString('id-ID').substring(0,5) + ' ***';
+    
+    // Handle split payment
+    const splitDetails = document.getElementById('rcpt-split-details');
+    splitDetails.innerHTML = '';
+    if (payment.method === 'split') {
+        splitDetails.innerHTML = `
+            <div class="receipt-line">
+                <span class="label">- Cash</span>
+                <span class="value">Rp ${formatNumber(payment.cash_amount)}</span>
+            </div>
+            <div class="receipt-line">
+                <span class="label">- Transfer</span>
+                <span class="value">Rp ${formatNumber(payment.transfer_amount)}</span>
+            </div>
+        `;
+    }
+    
+    // Handle reference
+    const referenceDiv = document.getElementById('rcpt-reference');
+    referenceDiv.innerHTML = '';
+    if (payment.reference) {
+        referenceDiv.innerHTML = `
+            <div class="receipt-line">
+                <span class="label">Referensi</span>
+                <span class="value">${payment.reference}</span>
+            </div>
+        `;
+    }
+    
+    // Handle note
+    const noteDiv = document.getElementById('rcpt-note');
+    noteDiv.innerHTML = '';
+    if (payment.note) {
+        noteDiv.innerHTML = `
+            <div class="receipt-line">
+                <span class="label">Catatan</span>
+                <span class="value">${payment.note}</span>
+            </div>
+        `;
+    }
+    
+    // Create print window
+    const printWindow = window.open('', '_blank');
+    const receiptHTML = document.getElementById('thermalReceipt').innerHTML;
+    
+    const fullHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Nota Pembayaran - ${salesOrder.so_number}</title>
+    <meta charset="UTF-8">
+    <style>
+        @page { margin: 0; padding: 0; size: 58mm auto; }
+        body { 
+            margin: 0; 
+            padding: 0; 
+            width: 58mm;
+            font-family: 'Courier New', monospace;
+            font-size: 9px;
+            line-height: 1.2;
+            background: white;
+        }
+        .thermal-receipt {
+            width: 58mm;
+            padding: 2mm;
+            margin: 0;
+        }
+        .receipt-header { text-align: center; margin-bottom: 3mm; }
+        .company-name { font-size: 11px; font-weight: bold; margin-bottom: 1mm; }
+        .receipt-title { font-weight: bold; margin-bottom: 2mm; }
+        .receipt-divider { text-align: center; margin: 2mm 0; font-weight: bold; }
+        .receipt-line { display: flex; justify-content: space-between; margin-bottom: 1mm; }
+        .receipt-line .label { font-weight: bold; }
+        .receipt-line .value { text-align: right; }
+        .receipt-section { font-weight: bold; text-align: center; margin: 2mm 0; }
+        .receipt-footer { text-align: center; margin-top: 3mm; }
+        .thank-you { margin-bottom: 2mm; }
+        .print-time { font-size: 8px; }
+        
+        @media print {
+            body { margin: 0; padding: 0; }
+            .thermal-receipt { margin: 0; padding: 2mm; }
+        }
+    </style>
+</head>
+<body>
+    ${receiptHTML}
+    
+    <div class="no-print" style="padding: 10px; text-align: center; background: #f0f0f0; margin-top: 10px;">
+        <button onclick="window.print()" style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; margin: 5px;">
+            🖨️ Cetak Sekarang
+        </button>
+        <button onclick="window.close()" style="padding: 8px 16px; background: #6c757d; color: white; border: none; border-radius: 4px; margin: 5px;">
+            ❌ Tutup
+        </button>
+    </div>
+
+    <script>
+        setTimeout(() => {
+            window.print();
+        }, 500);
+    <\/script>
+</body>
+</html>`;
+    
+    printWindow.document.write(fullHTML);
+    printWindow.document.close();
+    
+    hideLoading();
+    closePrintModal();
+    
+    setTimeout(() => {
+        showToast('Nota siap dicetak! Pilih printer thermal Anda.', 'success');
+    }, 1000);
+}
+
+// 2. ESC/POS TEXT PRINTING (Alternative)
+function printESCPOS() {
+    if (!currentPaymentData) return;
+    
+    showLoading('Membuat format text...');
+    
+    const salesOrder = {!! json_encode($salesOrder) !!};
+    const payment = currentPaymentData;
+    
+    // Create plain text receipt
+    const textReceipt = `
+PARECUSTOM
 NOTA PEMBAYARAN
-${''.padEnd(32, '-')}
-SO Number  : {{ $salesOrder->so_number }}
-Customer   : {{ $salesOrder->customer ? $salesOrder->customer->name : 'Umum' }}
-Tanggal    : ${new Date().toLocaleDateString('id-ID')} ${new Date().toLocaleTimeString('id-ID')}
-${''.padEnd(32, '-')}
-Grand Total: Rp ${formatNumber({{ $salesOrder->grand_total }})}
-Total Bayar: Rp ${formatNumber({{ $salesOrder->paid_total }})}
-Sisa       : Rp ${formatNumber({{ $salesOrder->remaining_amount }})}
-${''.padEnd(32, '-')}
+========================
+SO Number  : ${salesOrder.so_number}
+Customer   : ${salesOrder.customer ? salesOrder.customer.name : 'Umum'}
+Tanggal    : ${new Date().toLocaleDateString('id-ID')}
+========================
+RINGKASAN PEMBAYARAN
+Grand Total: Rp ${formatNumber(salesOrder.grand_total)}
+Total Bayar: Rp ${formatNumber(salesOrder.paid_total)}
+Sisa      : Rp ${formatNumber(salesOrder.remaining_amount)}
+========================
 DETAIL PEMBAYARAN
-${''.padEnd(32, '-')}
 Tanggal Bayar: ${formatDate(payment.paid_at)}
 Metode      : ${payment.method.toUpperCase()}
 Jumlah      : Rp ${formatNumber(payment.amount)}
@@ -613,84 +1058,48 @@ ${payment.method === 'split' ? `- Cash     : Rp ${formatNumber(payment.cash_amou
 - Transfer : Rp ${formatNumber(payment.transfer_amount)}` : ''}
 ${payment.reference ? `Referensi  : ${payment.reference}` : ''}
 ${payment.note ? `Catatan    : ${payment.note}` : ''}
-${''.padEnd(32, '-')}
+========================
 Operator   : ${payment.creator_name || 'System'}
-${''.padEnd(32, '-')}
+========================
 Terima kasih atas pembayarannya
-*** ${new Date().toLocaleDateString('id-ID')} ${new Date().toLocaleTimeString('id-ID')} ***`;
-
-    // Buka window baru untuk print
-    const printWindow = window.open('', '_blank', 'width=230,height=500');
+*** ${new Date().toLocaleDateString('id-ID')} ${new Date().toLocaleTimeString('id-ID')} ***
+    `.trim();
     
-    if (!printWindow) {
-        alert('Popup diblokir! Izinkan popup untuk cetak.');
-        printBtn.innerHTML = originalHTML;
-        printBtn.disabled = false;
-        return;
-    }
-
-    const html = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Print Payment Nota</title>
-            <meta charset="UTF-8">
-            <style>
-                body {
-                    font-family: 'Courier New', monospace;
-                    font-size: 11px;
-                    width: 58mm;
-                    margin: 0;
-                    padding: 5px;
-                    line-height: 1.2;
-                }
-                pre {
-                    margin: 0;
-                    white-space: pre;
-                    font-family: 'Courier New', monospace;
-                }
-                @media print {
-                    body { margin: 0; padding: 5px; }
-                }
-            </style>
-        </head>
-        <body>
-            <pre>${textContent}</pre>
-            <script>
-                window.onload = function() {
-                    setTimeout(function() {
-                        window.print();
-                        setTimeout(function() {
-                            window.close();
-                        }, 100);
-                    }, 100);
-                };
-            <\/script>
-        </body>
-        </html>
-    `;
-
-    printWindow.document.write(html);
-    printWindow.document.close();
-
-    // Reset tombol setelah 3 detik
-    setTimeout(function() {
-        printBtn.innerHTML = originalHTML;
-        printBtn.disabled = false;
-    }, 3000);
+    // Create text file and download
+    const blob = new Blob([textReceipt], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `nota-${salesOrder.so_number}-${payment.id}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    hideLoading();
+    closePrintModal();
+    showToast('File text berhasil diunduh! Buka dengan aplikasi printer.', 'success');
 }
 
-// Helper functions
+// 3. PDF DOWNLOAD
+function downloadThermalPDF() {
+    if (!currentPaymentData) return;
+    
+    // Redirect to PDF route
+    window.open('{{ route("admin.sales.printNota", ":paymentId") }}'.replace(':paymentId', currentPaymentId), '_blank');
+    closePrintModal();
+}
+
+// Utility Functions
 function formatNumber(num) {
     return parseInt(num).toLocaleString('id-ID');
 }
 
 function formatDate(dateString) {
     const date = new Date(dateString);
-    return date.toLocaleDateString('id-ID') + ' ' + date.toLocaleTimeString('id-ID');
+    return date.toLocaleDateString('id-ID') + ' ' + date.toLocaleTimeString('id-ID').substring(0, 5);
 }
 
-// Function untuk mendapatkan data payment dari JavaScript
 function getPaymentById(paymentId) {
     const payments = {!! json_encode($salesOrder->payments->map(function($payment) {
         return [
@@ -699,7 +1108,7 @@ function getPaymentById(paymentId) {
             'method' => $payment->method,
             'cash_amount' => $payment->cash_amount,
             'transfer_amount' => $payment->transfer_amount,
-            'reference' => $payment->reference,
+            'reference' => $payment->reference_number,
             'note' => $payment->note,
             'paid_at' => $payment->paid_at,
             'creator_name' => $payment->creator->name ?? 'System'
@@ -708,6 +1117,106 @@ function getPaymentById(paymentId) {
     
     return payments.find(p => p.id === paymentId);
 }
+
+function showLoading(message = 'Loading...') {
+    const loading = document.getElementById('loading');
+    if (loading) {
+        loading.querySelector('span').textContent = message;
+        loading.classList.remove('hidden');
+    }
+}
+
+function hideLoading() {
+    const loading = document.getElementById('loading');
+    if (loading) {
+        loading.classList.add('hidden');
+    }
+}
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+
+// Close modal when clicking outside
+document.getElementById('printModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closePrintModal();
+    }
+});
+
+// Existing functions (keep your existing code)
+function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('-translate-x-full');
+}
+
+function toggleDropdown(button) {
+    const dropdown = button.nextElementSibling;
+    const chevron = button.querySelector('.bi-chevron-down');
+    dropdown.classList.toggle('max-h-0');
+    dropdown.classList.toggle('max-h-40');
+    chevron.classList.toggle('rotate-180');
+}
+
+// Your existing DOMContentLoaded code...
+document.addEventListener('DOMContentLoaded', function () {
+    const paymentMethod = '{{ $salesOrder->payment_method }}';
+    const proofInput = document.getElementById('proof_path');
+    const form = document.getElementById('paymentForm');
+
+    const splitFields = document.getElementById('split-payment-fields');
+    splitFields.classList.toggle('hidden', paymentMethod !== 'split');
+
+    document.getElementById('payment_method').addEventListener('change', function () {
+        splitFields.classList.toggle('hidden', this.value !== 'split');
+        if (this.value !== 'split') {
+            document.getElementById('cash_amount').value = 0;
+            document.getElementById('transfer_amount').value = 0;
+            document.getElementById('proof_path').value = '';
+        }
+        updatePaymentAmount();
+        updateProofRequired(this.value);
+    });
+
+    function updatePaymentAmount() {
+        const method = document.getElementById('payment_method').value;
+        const cash = parseFloat(document.getElementById('cash_amount')?.value || 0);
+        const transfer = parseFloat(document.getElementById('transfer_amount')?.value || 0);
+        const total = method === 'split' ? cash + transfer : parseFloat(document.getElementById('payment_amount').value) || 0;
+        document.getElementById('payment_amount').value = total.toFixed(2);
+    }
+
+    function updateProofRequired(method) {
+        proofInput.required = (method === 'transfer' || method === 'split');
+    }
+
+    updateProofRequired(paymentMethod);
+
+    document.getElementById('cash_amount')?.addEventListener('input', updatePaymentAmount);
+    document.getElementById('transfer_amount')?.addEventListener('input', updatePaymentAmount);
+
+    form.addEventListener('submit', function (e) {
+        const method = document.getElementById('payment_method').value;
+        if ((method === 'transfer' || method === 'split') && !proofInput.files.length) {
+            e.preventDefault();
+            alert('Harap unggah bukti pembayaran untuk metode ' + method);
+        }
+    });
+});
+
+// Escape key to close modal
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closePrintModal();
+    }
+});
 </script>
 </body>
 </html>

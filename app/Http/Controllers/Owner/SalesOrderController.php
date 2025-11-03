@@ -25,15 +25,6 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class SalesOrderController extends Controller
 {
-    private function checkActiveShift(): bool|RedirectResponse
-    {
-        $activeShift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
-        if (!$activeShift) {
-            \Log::warning('No active shift for user: ' . Auth::id());
-            return redirect()->route('owner.shift.dashboard')->with('error', 'Silakan mulai shift terlebih dahulu untuk melakukan aksi ini.');
-        }
-        return true;
-    }
 
     private function logAction(SalesOrder $salesOrder, string $action, string $description): void
     {
@@ -67,25 +58,15 @@ class SalesOrderController extends Controller
 
     public function create(): View|RedirectResponse
     {
-        $activeShift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
-        if (!$activeShift) {
-            return redirect()->route('owner.shift.dashboard')->with('error', 'Silakan mulai shift dan masukkan kas awal terlebih dahulu.');
-        }
+
         $customers = Customer::orderBy('name')->get();
         $products = Product::where('is_active', true)->where('price', '>', 0)->orderBy('name')->get();
         $suppliers = Supplier::orderBy('name')->get(); // ✅ Tambahkan ini
-        return view('owner.sales.create', compact('customers', 'products', 'activeShift', 'suppliers')); // ✅ Tambahkan 'suppliers'
+        return view('owner.sales.create', compact('customers', 'products', 'suppliers')); // ✅ Tambahkan 'suppliers'
     }
 
     public function store(Request $request): RedirectResponse|View
     {
-        \Log::info('Store request received', $request->all());
-        $activeShift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
-        if (!$activeShift) {
-            \Log::error('No active shift found for user: ' . Auth::id());
-            return back()->withErrors(['error' => 'Tidak ada shift aktif. Silakan mulai shift terlebih dahulu.'])->withInput();
-        }
-    
         $validated = $request->validate([
             'order_type' => ['required', 'in:jahit_sendiri,beli_jadi'],
             'order_date' => ['required', 'date'],
@@ -150,7 +131,7 @@ class SalesOrderController extends Controller
     
         $status = 'pending';
         try {
-            $salesOrder = DB::transaction(function () use ($validated, $request, $cashAmount, $transferAmount, $paymentAmount, $grandTotal, $activeShift, $status, $subtotal, $discountTotal) {
+            $salesOrder = DB::transaction(function () use ($validated, $request, $cashAmount, $transferAmount, $paymentAmount, $grandTotal, $status, $subtotal, $discountTotal) {
                 // === AUTO CREATE CUSTOMER LOGIC ===
                 $customerId = $validated['customer_id'] ?? null;
                 if (empty($customerId) && !empty($validated['customer_name'])) {
@@ -232,9 +213,6 @@ class SalesOrderController extends Controller
     
                     \Log::info('Payment created', ['payment_id' => $payment->id, 'amount' => $paymentAmount, 'proof_path' => $proofPath ?? 'none']);
     
-                    if ($cashAmount > 0 && $activeShift) {
-                        $activeShift->increment('cash_total', $cashAmount);
-                    }
     
                     $this->logAction($salesOrder, 'payment_added', "Pembayaran ditambahkan: {$paymentCategory}, Jumlah: Rp " . number_format($paymentAmount, 0, ',', '.') . ", Metode: {$validated['payment_method']}" . ($proofPath ? "" : ", tanpa bukti"));
                 }
@@ -357,16 +335,11 @@ class SalesOrderController extends Controller
     {
         $salesOrder->load(['customer', 'items', 'creator', 'approver', 'payments.creator', 'logs.user']);
         $payment = $salesOrder->payments->first() ?? new Payment();
-        $activeShift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
-        return view('owner.sales.show', compact('salesOrder', 'payment', 'activeShift'));
+        return view('owner.sales.show', compact('salesOrder', 'payment'));
     }
 
     public function edit(SalesOrder $salesOrder): View|RedirectResponse
     {
-        $shiftCheck = $this->checkActiveShift();
-        if ($shiftCheck !== true) {
-            return $shiftCheck;
-        }
 
         if (!$salesOrder->isEditable()) {
             \Log::warning('Attempt to edit non-editable SO: ' . $salesOrder->so_number);
@@ -374,16 +347,11 @@ class SalesOrderController extends Controller
         }
         $customers = Customer::orderBy('name')->get();
         $products = Product::where('is_active', true)->where('price', '>', 0)->orderBy('name')->get();
-        $activeShift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
-        return view('owner.sales.edit', compact('salesOrder', 'customers', 'products', 'activeShift'));
+        return view('owner.sales.edit', compact('salesOrder', 'customers', 'products'));
     }
 
     public function update(Request $request, SalesOrder $salesOrder): RedirectResponse
     {
-        $shiftCheck = $this->checkActiveShift();
-        if ($shiftCheck !== true) {
-            return $shiftCheck;
-        }
 
         if (!$salesOrder->isEditable()) {
             \Log::warning('Attempt to update non-editable SO: ' . $salesOrder->so_number);
@@ -558,11 +526,6 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
 
                         $this->logAction($salesOrder, 'payment_added', "Pembayaran ditambahkan: {$paymentCategory}, Jumlah: Rp " . number_format($paymentAmount, 0, ',', '.') . ", Metode: {$validated['payment_method']}" . ($proofPath ? "" : ", tanpa bukti"));
                     }
-
-                    $activeShift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
-                    if ($activeShift && $cashAmount > 0) {
-                        $activeShift->increment('cash_total', $cashAmount);
-                    }
                 }
 
                 $this->logAction($salesOrder, 'updated', "Sales order diperbarui: Tipe: {$validated['order_type']}, Total: Rp " . number_format($grandTotal, 0, ',', '.'));
@@ -595,10 +558,6 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
 
     public function uploadProof(Request $request, SalesOrder $salesOrder, Payment $payment): RedirectResponse
     {
-        $shiftCheck = $this->checkActiveShift();
-        if ($shiftCheck !== true) {
-            return $shiftCheck;
-        }
 
         if ($payment->sales_order_id !== $salesOrder->id) {
             \Log::warning('Invalid payment for SO: ' . $salesOrder->so_number, ['payment_id' => $payment->id]);
@@ -634,10 +593,6 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
 
     public function approve(Request $request, SalesOrder $salesOrder): RedirectResponse
     {
-        $shiftCheck = $this->checkActiveShift();
-        if ($shiftCheck !== true) {
-            return $shiftCheck;
-        }
         if ($salesOrder->status !== 'pending') {
             \Log::warning('Attempt to approve non-pending SO: ' . $salesOrder->so_number);
             return back()->withErrors(['status' => 'Hanya pending yang bisa di-approve.']);
@@ -656,10 +611,6 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
 
     public function addPayment(Request $request, SalesOrder $salesOrder): RedirectResponse
     {
-        $shiftCheck = $this->checkActiveShift();
-        if ($shiftCheck !== true) {
-            return $shiftCheck;
-        }
     
         $validated = $request->validate([
             'payment_amount' => ['required', 'numeric', 'min:0', function ($attribute, $value, $fail) use ($salesOrder) {
@@ -733,10 +684,6 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
 
                 $salesOrder->update(['payment_status' => ($newPaidTotal >= $salesOrder->grand_total) ? 'lunas' : 'dp']);
 
-                $activeShift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
-                if ($activeShift && $cashAmount > 0) {
-                    $activeShift->increment('cash_total', $cashAmount);
-                }
 
                 $this->logAction($salesOrder, 'payment_added', "Pembayaran ditambahkan: {$paymentCategory}, Jumlah: Rp " . number_format($validated['payment_amount'], 0, ',', '.') . ", Metode: {$validated['payment_method']}");
             });
@@ -751,10 +698,6 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
 
     public function startProcess(SalesOrder $salesOrder): RedirectResponse
     {
-        $shiftCheck = $this->checkActiveShift();
-        if ($shiftCheck !== true) {
-            return $shiftCheck;
-        }
     
         if ($salesOrder->status !== 'pending') {
             \Log::warning('Attempt to start process on non-pending SO: ' . $salesOrder->so_number);
@@ -802,10 +745,6 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
 
     public function processJahit(SalesOrder $salesOrder): RedirectResponse
     {
-        $shiftCheck = $this->checkActiveShift();
-        if ($shiftCheck !== true) {
-            return $shiftCheck;
-        }
         if ($salesOrder->order_type !== 'jahit_sendiri' || $salesOrder->status !== 'request_kain') {
             \Log::warning('Invalid state for jahit process on SO: ' . $salesOrder->so_number, ['order_type' => $salesOrder->order_type, 'status' => $salesOrder->status]);
             return back()->withErrors(['status' => 'Hanya SO jahit sendiri dengan status request kain yang bisa diproses jahit.']);
@@ -824,10 +763,6 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
 
     public function markAsJadi(SalesOrder $salesOrder): RedirectResponse
     {
-        $shiftCheck = $this->checkActiveShift();
-        if ($shiftCheck !== true) {
-            return $shiftCheck;
-        }
         if ($salesOrder->order_type !== 'jahit_sendiri' || $salesOrder->status !== 'proses_jahit') {
             \Log::warning('Invalid state for marking jadi on SO: ' . $salesOrder->so_number, ['order_type' => $salesOrder->order_type, 'status' => $salesOrder->status]);
             return back()->withErrors(['status' => 'Hanya SO jahit sendiri dengan status proses jahit yang bisa ditandai jadi.']);
@@ -845,10 +780,6 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
     }
     public function markAsDiterimaToko(SalesOrder $salesOrder): RedirectResponse
     {
-        $shiftCheck = $this->checkActiveShift();
-        if ($shiftCheck !== true) {
-            return $shiftCheck;
-        }
         $validStatuses = $salesOrder->order_type === 'jahit_sendiri' ? ['jadi'] : ['di proses'];
         if (!in_array($salesOrder->status, $validStatuses)) {
             \Log::warning('Invalid state for marking diterima toko on SO: ' . $salesOrder->so_number, ['status' => $salesOrder->status]);
@@ -868,10 +799,6 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
 
     public function complete(SalesOrder $salesOrder): RedirectResponse
     {
-        $shiftCheck = $this->checkActiveShift();
-        if ($shiftCheck !== true) {
-            return $shiftCheck;
-        }
         if ($salesOrder->status !== 'diterima_toko') {
             \Log::warning('Attempt to complete non-diterima_toko SO: ' . $salesOrder->so_number);
             return back()->withErrors(['status' => 'Hanya SO yang sudah diterima toko yang bisa diselesaikan.']);

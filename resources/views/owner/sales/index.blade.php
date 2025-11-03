@@ -79,19 +79,13 @@
                             <i class="bi bi-funnel-fill mr-1"></i> Filter
                         </button>
 
-                        @php
-                            $activeShift = \App\Models\Shift::where('user_id', \Illuminate\Support\Facades\Auth::id())->whereNull('end_time')->first();
-                        @endphp
-                        @if($activeShift)
+
+
                             <a href="{{ route('owner.sales.create') }}"
                                 class="ml-auto bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow">
                                 <i class="bi bi-plus-circle mr-1"></i> Buat SO Baru
                             </a>
-                        @else
-                            <span class="ml-auto bg-gray-400 text-white px-4 py-2 rounded shadow cursor-not-allowed">
-                                <i class="bi bi-plus-circle mr-1"></i> Shift Closed
-                            </span>
-                        @endif
+
                     </form>
                 </div>
 
