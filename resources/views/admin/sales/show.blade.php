@@ -364,10 +364,12 @@
             <tbody>
                 @php
                     $cumulativePayment = 0;
+                    $totalPaid = 0; // Hitung total bayar dari payments
                 @endphp
                 @forelse($salesOrder->payments as $payment)
                     @php
                         $cumulativePayment += $payment->amount;
+                        $totalPaid += $payment->amount;
                     @endphp
 <tr class="border-b hover:bg-gray-50 {{ $loop->first ? 'border-l-4 border-l-green-500 bg-green-50' : '' }}">
     <td class="px-4 py-2 border">
@@ -434,7 +436,6 @@
     </td>
     <td class="px-4 py-2 border text-center">
         <div class="flex justify-center gap-2">
-            <!-- TOMBOL UTAMA YANG BERUBAH -->
             <button onclick="showPrintOptions({{ $payment->id }})" class="text-green-600 hover:text-green-800" title="Cetak Nota">
                 <i class="bi bi-printer"></i>
             </button>
@@ -458,15 +459,15 @@
                 <div class="font-semibold">Total yang harus dibayar:</div>
                 <div class="text-right">Rp {{ number_format($salesOrder->grand_total, 0, ',', '.') }}</div>
                 <div class="font-semibold">Total sudah dibayar:</div>
-                <div class="text-right text-green-600 font-medium">Rp {{ number_format($salesOrder->paid_total, 0, ',', '.') }}</div>
+                <div class="text-right text-green-600 font-medium">Rp {{ number_format($totalPaid, 0, ',', '.') }}</div>
                 <div class="font-semibold">Sisa pembayaran:</div>
-                <div class="text-right @if($salesOrder->remaining_amount > 0) text-red-600 @else text-green-600 @endif font-medium">
-                    Rp {{ number_format($salesOrder->remaining_amount, 0, ',', '.') }}
+                <div class="text-right @if(($salesOrder->grand_total - $totalPaid) > 0) text-red-600 @else text-green-600 @endif font-medium">
+                    Rp {{ number_format($salesOrder->grand_total - $totalPaid, 0, ',', '.') }}
                 </div>
                 <div class="font-semibold">Status Pembayaran:</div>
                 <div class="text-right">
-                    <span class="px-2 py-1 rounded-full text-xs font-medium @if($salesOrder->payment_status === 'lunas') bg-green-100 text-green-600 @else bg-yellow-100 text-yellow-600 @endif">
-                        {{ ucfirst($salesOrder->payment_status) }}
+                    <span class="px-2 py-1 rounded-full text-xs font-medium @if($totalPaid >= $salesOrder->grand_total) bg-green-100 text-green-600 @else bg-yellow-100 text-yellow-600 @endif">
+                        {{ $totalPaid >= $salesOrder->grand_total ? 'Lunas' : 'DP' }}
                     </span>
                 </div>
             </div>
@@ -616,7 +617,7 @@
                 <i class="bi bi-printer text-xl"></i>
                 <div class="text-left">
                     <div class="font-semibold">Thermal Printer</div>
-                    <div class="text-xs opacity-90">Format thermal 58mm murni</div>
+                    <div class="text-xs opacity-90">Format thermal 58mm + detail barang</div>
                 </div>
             </button>
             
@@ -625,7 +626,7 @@
                 <i class="bi bi-file-text text-xl"></i>
                 <div class="text-left">
                     <div class="font-semibold">Text Printer</div>
-                    <div class="text-xs opacity-90">Format text plain</div>
+                    <div class="text-xs opacity-90">Format text + detail barang</div>
                 </div>
             </button>
             
@@ -677,7 +678,20 @@
             </div>
             <div class="receipt-divider">========================</div>
             
+            <!-- DETAIL ITEMS BARANG -->
+            <div class="receipt-section">DETAIL BARANG</div>
+            <div id="rcpt-items-list"></div>
+            <div class="receipt-divider">========================</div>
+            
             <div class="receipt-section">RINGKASAN PEMBAYARAN</div>
+            <div class="receipt-line">
+                <span class="label">Subtotal</span>
+                <span class="value" id="rcpt-subtotal"></span>
+            </div>
+            <div class="receipt-line">
+                <span class="label">Diskon</span>
+                <span class="value" id="rcpt-discount"></span>
+            </div>
             <div class="receipt-line">
                 <span class="label">Grand Total</span>
                 <span class="value" id="rcpt-grand-total"></span>
@@ -796,6 +810,28 @@
     font-size: 8px;
 }
 
+.item-line {
+    margin-bottom: 2mm;
+}
+
+.item-name {
+    font-weight: bold;
+    margin-bottom: 0.5mm;
+}
+
+.item-details {
+    display: flex;
+    justify-content: space-between;
+    font-size: 8px;
+    margin-bottom: 0.5mm;
+}
+
+.item-subtotal {
+    text-align: right;
+    font-weight: bold;
+    margin-bottom: 1mm;
+}
+
 /* Print Styles */
 @media print {
     @page {
@@ -871,6 +907,17 @@
 let currentPaymentId = null;
 let currentPaymentData = null;
 
+// PERBAIKAN: Hitung total bayar dari semua payments
+function calculateTotalPaid(payments) {
+    if (!payments || payments.length === 0) return 0;
+    return payments.reduce((total, payment) => total + (parseFloat(payment.amount) || 0), 0);
+}
+
+// PERBAIKAN: Hitung sisa bayar
+function calculateRemaining(grandTotal, totalPaid) {
+    return Math.max(0, parseFloat(grandTotal) - totalPaid);
+}
+
 // Show print options modal
 function showPrintOptions(paymentId) {
     currentPaymentId = paymentId;
@@ -898,17 +945,27 @@ function printThermalHTML() {
     // Prepare receipt data
     const salesOrder = {!! json_encode($salesOrder) !!};
     const payment = currentPaymentData;
+    const allPayments = {!! json_encode($salesOrder->payments) !!};
     
-    // Populate receipt template
+    // PERBAIKAN: Hitung total bayar dan sisa yang REAL
+    const totalPaid = calculateTotalPaid(allPayments);
+    const remaining = calculateRemaining(salesOrder.grand_total, totalPaid);
+    
+    // Populate receipt template dengan nilai REAL
     document.getElementById('rcpt-so-number').textContent = salesOrder.so_number;
     document.getElementById('rcpt-customer').textContent = salesOrder.customer ? salesOrder.customer.name : 'Umum';
     document.getElementById('rcpt-date').textContent = new Date().toLocaleDateString('id-ID');
-    document.getElementById('rcpt-grand-total').textContent = 'Rp ' + formatNumber(salesOrder.grand_total);
-    document.getElementById('rcpt-paid-total').textContent = 'Rp ' + formatNumber(salesOrder.paid_total);
-    document.getElementById('rcpt-remaining').textContent = 'Rp ' + formatNumber(salesOrder.remaining_amount);
+    
+    // PERBAIKAN: Gunakan nilai yang REAL
+    document.getElementById('rcpt-subtotal').textContent = 'Rp ' + safeFormatNumber(salesOrder.subtotal);
+    document.getElementById('rcpt-discount').textContent = 'Rp ' + safeFormatNumber(salesOrder.discount_total);
+    document.getElementById('rcpt-grand-total').textContent = 'Rp ' + safeFormatNumber(salesOrder.grand_total);
+    document.getElementById('rcpt-paid-total').textContent = 'Rp ' + safeFormatNumber(totalPaid); // TOTAL BAYAR REAL
+    document.getElementById('rcpt-remaining').textContent = 'Rp ' + safeFormatNumber(remaining); // SISA REAL
+    
     document.getElementById('rcpt-payment-date').textContent = formatDate(payment.paid_at);
     document.getElementById('rcpt-method').textContent = payment.method.toUpperCase();
-    document.getElementById('rcpt-amount').textContent = 'Rp ' + formatNumber(payment.amount);
+    document.getElementById('rcpt-amount').textContent = 'Rp ' + safeFormatNumber(payment.amount);
     document.getElementById('rcpt-operator').textContent = payment.creator_name || 'System';
     document.getElementById('rcpt-print-time').textContent = '*** ' + new Date().toLocaleDateString('id-ID') + ' ' + new Date().toLocaleTimeString('id-ID').substring(0,5) + ' ***';
     
@@ -919,11 +976,11 @@ function printThermalHTML() {
         splitDetails.innerHTML = `
             <div class="receipt-line">
                 <span class="label">- Cash</span>
-                <span class="value">Rp ${formatNumber(payment.cash_amount)}</span>
+                <span class="value">Rp ${safeFormatNumber(payment.cash_amount)}</span>
             </div>
             <div class="receipt-line">
                 <span class="label">- Transfer</span>
-                <span class="value">Rp ${formatNumber(payment.transfer_amount)}</span>
+                <span class="value">Rp ${safeFormatNumber(payment.transfer_amount)}</span>
             </div>
         `;
     }
@@ -950,6 +1007,26 @@ function printThermalHTML() {
                 <span class="value">${payment.note}</span>
             </div>
         `;
+    }
+    
+    // TAMBAHAN: Populate items list
+    const itemsList = document.getElementById('rcpt-items-list');
+    itemsList.innerHTML = '';
+    
+    if (salesOrder.items && salesOrder.items.length > 0) {
+        salesOrder.items.forEach((item, index) => {
+            const itemHTML = `
+                <div class="item-line">
+                    <div class="item-name">${item.product_name}</div>
+                    <div class="item-details">
+                        <span>${item.qty} x Rp ${safeFormatNumber(item.sale_price)}</span>
+                        <span>Disc: Rp ${safeFormatNumber(item.discount)}</span>
+                    </div>
+                    <div class="item-subtotal">Rp ${safeFormatNumber(item.line_total)}</div>
+                </div>
+            `;
+            itemsList.innerHTML += itemHTML;
+        });
     }
     
     // Create print window
@@ -989,6 +1066,10 @@ function printThermalHTML() {
         .receipt-footer { text-align: center; margin-top: 3mm; }
         .thank-you { margin-bottom: 2mm; }
         .print-time { font-size: 8px; }
+        .item-line { margin-bottom: 2mm; }
+        .item-name { font-weight: bold; margin-bottom: 0.5mm; }
+        .item-details { display: flex; justify-content: space-between; font-size: 8px; margin-bottom: 0.5mm; }
+        .item-subtotal { text-align: right; font-weight: bold; margin-bottom: 1mm; }
         
         @media print {
             body { margin: 0; padding: 0; }
@@ -1035,9 +1116,14 @@ function printESCPOS() {
     
     const salesOrder = {!! json_encode($salesOrder) !!};
     const payment = currentPaymentData;
+    const allPayments = {!! json_encode($salesOrder->payments) !!};
     
-    // Create plain text receipt
-    const textReceipt = `
+    // PERBAIKAN: Hitung total bayar dan sisa yang REAL
+    const totalPaid = calculateTotalPaid(allPayments);
+    const remaining = calculateRemaining(salesOrder.grand_total, totalPaid);
+    
+    // Create plain text receipt dengan DETAIL ITEM dan NILAI REAL
+    let textReceipt = `
 PARECUSTOM
 NOTA PEMBAYARAN
 ========================
@@ -1045,17 +1131,36 @@ SO Number  : ${salesOrder.so_number}
 Customer   : ${salesOrder.customer ? salesOrder.customer.name : 'Umum'}
 Tanggal    : ${new Date().toLocaleDateString('id-ID')}
 ========================
+DETAIL BARANG
+`;
+
+    // Tambahkan items
+    if (salesOrder.items && salesOrder.items.length > 0) {
+        salesOrder.items.forEach((item, index) => {
+            textReceipt += `
+${item.product_name}
+  ${item.qty} x Rp ${safeFormatNumber(item.sale_price)} 
+  Disc: Rp ${safeFormatNumber(item.discount)}
+  Subtotal: Rp ${safeFormatNumber(item.line_total)}
+`;
+        });
+    }
+
+    textReceipt += `
+========================
 RINGKASAN PEMBAYARAN
-Grand Total: Rp ${formatNumber(salesOrder.grand_total)}
-Total Bayar: Rp ${formatNumber(salesOrder.paid_total)}
-Sisa      : Rp ${formatNumber(salesOrder.remaining_amount)}
+Subtotal   : Rp ${safeFormatNumber(salesOrder.subtotal)}
+Diskon     : Rp ${safeFormatNumber(salesOrder.discount_total)}
+Grand Total: Rp ${safeFormatNumber(salesOrder.grand_total)}
+Total Bayar: Rp ${safeFormatNumber(totalPaid)}
+Sisa      : Rp ${safeFormatNumber(remaining)}
 ========================
 DETAIL PEMBAYARAN
 Tanggal Bayar: ${formatDate(payment.paid_at)}
 Metode      : ${payment.method.toUpperCase()}
-Jumlah      : Rp ${formatNumber(payment.amount)}
-${payment.method === 'split' ? `- Cash     : Rp ${formatNumber(payment.cash_amount)}
-- Transfer : Rp ${formatNumber(payment.transfer_amount)}` : ''}
+Jumlah      : Rp ${safeFormatNumber(payment.amount)}
+${payment.method === 'split' ? `- Cash     : Rp ${safeFormatNumber(payment.cash_amount)}
+- Transfer : Rp ${safeFormatNumber(payment.transfer_amount)}` : ''}
 ${payment.reference ? `Referensi  : ${payment.reference}` : ''}
 ${payment.note ? `Catatan    : ${payment.note}` : ''}
 ========================
@@ -1090,12 +1195,21 @@ function downloadThermalPDF() {
     closePrintModal();
 }
 
-// Utility Functions
-function formatNumber(num) {
+// PERBAIKAN: Utility Functions yang lebih aman
+function safeFormatNumber(num) {
+    // Handle null, undefined, NaN, dll
+    if (num === null || num === undefined || num === '' || isNaN(num)) {
+        return '0';
+    }
     return parseInt(num).toLocaleString('id-ID');
 }
 
+function formatNumber(num) {
+    return safeFormatNumber(num); // Fallback ke yang aman
+}
+
 function formatDate(dateString) {
+    if (!dateString) return '-';
     const date = new Date(dateString);
     return date.toLocaleDateString('id-ID') + ' ' + date.toLocaleTimeString('id-ID').substring(0, 5);
 }
