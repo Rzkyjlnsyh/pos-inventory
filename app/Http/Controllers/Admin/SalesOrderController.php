@@ -572,8 +572,8 @@ public function import(Request $request): RedirectResponse
                 ]);
     
                 $salesOrder->items()->delete();
-                foreach ($items as $item) {
-                    $lineTotal = ((float)$item['sale_price'] * (int)$item['qty']) - ((float)($item['discount'] ?? 0) * (int)$item['qty']);
+                foreach ($validated['items'] as $item) {
+                    $lineTotal = (float)$item['sale_price'] * (int)$item['qty'];
                     SalesOrderItem::create([
                         'sales_order_id' => $salesOrder->id,
                         'product_id' => $item['product_id'] ?? null,
@@ -581,7 +581,7 @@ public function import(Request $request): RedirectResponse
                         'sku' => $item['sku'] ?? null,
                         'sale_price' => $item['sale_price'],
                         'qty' => $item['qty'],
-                        'discount' => $item['discount'] ?? 0,
+                        'discount' => 0, // SET 0 karena diskon sekarang di level order
                         'line_total' => $lineTotal,
                     ]);
                 }

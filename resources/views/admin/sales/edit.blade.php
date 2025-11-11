@@ -62,45 +62,52 @@
                             @enderror
                         </div>
                         <div class="relative">
-                            <label for="customer_search" class="block font-medium mb-1">Customer (Opsional)</label>
-                            <input type="text" 
-                                   id="customer_search" 
-                                   class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
-                                   placeholder="Ketik nama customer atau biarkan kosong..."
-                                   autocomplete="off"
-                                   value="{{ old('customer_name', $salesOrder->customer ? $salesOrder->customer->name : '') }}">
-                            <input type="hidden" name="customer_id" id="customer_id" value="{{ old('customer_id', $salesOrder->customer_id) }}">
-                            <input type="hidden" name="customer_name" id="customer_name" value="{{ old('customer_name', $salesOrder->customer ? $salesOrder->customer->name : '') }}">
-                            <input type="hidden" name="customer_phone" id="customer_phone" value="{{ old('customer_phone', $salesOrder->customer ? $salesOrder->customer->phone : '') }}">
-                            <div id="customer_dropdown" class="hidden absolute z-10 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto">
-                                @foreach($customers as $customer)
-                                    <div class="p-2 hover:bg-gray-100 cursor-pointer customer-option"
-                                         data-id="{{ $customer->id }}"
-                                         data-name="{{ $customer->name }}"
-                                         data-phone="{{ $customer->phone ?? '' }}">
-                                        {{ $customer->name }} @if($customer->phone)({{ $customer->phone }})@endif
-                                    </div>
-                                @endforeach
-                            </div>
-                            <div id="selected_customer" class="mt-2 p-2 bg-blue-50 rounded {{ $salesOrder->customer ? '' : 'hidden' }}">
-                                <span id="customer_display_name" class="font-medium">{{ $salesOrder->customer ? $salesOrder->customer->name : '' }}</span>
-                                <span id="customer_display_phone" class="text-sm text-gray-600 ml-2">{{ $salesOrder->customer && $salesOrder->customer->phone ? '(' . $salesOrder->customer->phone . ')' : '' }}</span>
-                                <button type="button" id="clear_customer" class="text-red-600 ml-2">✕</button>
-                            </div>
-                            <div id="new_customer_fields" class="hidden mt-2">
-                                <div class="grid md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block font-medium mb-1">Nama Customer Baru *</label>
-                                        <input type="text" id="new_customer_name" class="border rounded px-3 py-2 w-full" placeholder="Nama customer baru">
-                                    </div>
-                                    <div>
-                                        <label class="block font-medium mb-1">Nomor Telepon</label>
-                                        <input type="text" id="new_customer_phone" class="border rounded px-3 py-2 w-full" placeholder="Contoh: 08123456789">
-                                    </div>
-                                </div>
-                                <p class="text-sm text-gray-600 mt-1">* Customer baru akan otomatis dibuat</p>
-                            </div>
-                        </div>
+    <label for="customer_search" class="block font-medium mb-1">Customer (Opsional)</label>
+    
+    <!-- Input untuk search customer dengan autocomplete -->
+    <input type="text" 
+           id="customer_search"
+           class="customer-autocomplete border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
+           placeholder="Ketik minimal 3 huruf nama customer..."
+           autocomplete="off"
+           value="{{ old('customer_name') }}">
+
+    <!-- Hidden fields untuk data customer -->
+    <input type="hidden" name="customer_id" id="customer_id" value="{{ old('customer_id') }}">
+    <input type="hidden" name="customer_name" id="customer_name" value="{{ old('customer_name') }}">
+    <input type="hidden" name="customer_phone" id="customer_phone" value="{{ old('customer_phone') }}">
+
+    <!-- Dropdown untuk hasil autocomplete -->
+    <div id="customer_autocomplete_results" 
+         class="hidden absolute z-20 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto">
+    </div>
+
+    <!-- Info customer yang dipilih -->
+    <div id="selected_customer" class="mt-2 p-2 bg-blue-50 rounded {{ old('customer_id') ? '' : 'hidden' }}">
+        <span id="customer_display_name" class="font-medium">{{ old('customer_name') }}</span>
+        <span id="customer_display_phone" class="text-sm text-gray-600 ml-2">{{ old('customer_phone') ? '(' . old('customer_phone') . ')' : '' }}</span>
+        <button type="button" id="clear_customer" class="text-red-600 ml-2">✕</button>
+    </div>
+
+    <!-- Fields untuk customer baru -->
+    <div id="new_customer_fields" class="hidden mt-2">
+        <div class="grid md:grid-cols-2 gap-4">
+            <div>
+                <label class="block font-medium mb-1">Nama Customer Baru *</label>
+                <input type="text" id="new_customer_name"
+                    class="border rounded px-3 py-2 w-full"
+                    placeholder="Nama customer baru">
+            </div>
+            <div>
+                <label class="block font-medium mb-1">Nomor Telepon</label>
+                <input type="text" id="new_customer_phone"
+                    class="border rounded px-3 py-2 w-full"
+                    placeholder="Contoh: 08123456789">
+            </div>
+        </div>
+        <p class="text-sm text-gray-600 mt-1">* Customer baru akan otomatis dibuat</p>
+    </div>
+</div>
                         <div>
                             <label for="payment_method" class="block font-medium mb-1">Metode Pembayaran</label>
                             <select name="payment_method" id="payment_method" {{ $salesOrder->status === 'draft' ? '' : 'required' }} class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
@@ -246,15 +253,6 @@
             @error('items.'.$index.'.qty')
                 <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
             @enderror
-        </div>
-        <div>
-            <label class="block font-medium mb-1">Diskon</label>
-            <input type="number" name="items[{{ $index }}][discount]" 
-                   class="discount border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
-                   min="0" step="0.01" value="{{ $item->discount }}">
-            <button type="button" class="remove-item text-red-600 hover:text-red-800 mt-2">
-                <i class="bi bi-trash"></i> Hapus
-            </button>
         </div>
     </div>
     @endforeach
@@ -409,19 +407,34 @@ document.querySelectorAll('.item-row').forEach((row, index) => {
 
     // === FUNGSI UMUM ===
     function updateGrandTotal() {
-        const rows = document.querySelectorAll('.item-row');
-        let subtotal = 0;
-        rows.forEach(row => {
-            const price = parseFloat(row.querySelector('.sale-price').value) || 0;
-            const qty = parseInt(row.querySelector('.qty').value) || 0;
-            const discount = parseFloat(row.querySelector('.discount').value) || 0;
-            subtotal += (price * qty) - (discount * qty);
-        });
-        grandTotal = subtotal;
-        document.getElementById('grand_total').value = grandTotal.toFixed(2);
-        updatePaymentStatus();
-        updatePaymentAmount();
-    }
+    const rows = document.querySelectorAll('.item-row');
+    let subtotal = 0;
+
+    // Hitung subtotal dari semua items
+    rows.forEach(row => {
+        const price = parseFloat(row.querySelector('.sale-price').value) || 0;
+        const qty = parseInt(row.querySelector('.qty').value) || 0;
+        subtotal += price * qty;
+    });
+
+    // Ambil discount total dari input
+    const discountTotal = parseFloat(document.getElementById('discount_total').value) || 0;
+    
+    // Hitung grand total
+    grandTotal = Math.max(0, subtotal - discountTotal);
+
+    // Update display
+    document.getElementById('display-subtotal').textContent = 'Rp ' + subtotal.toLocaleString('id-ID');
+    document.getElementById('display-grand-total').textContent = 'Rp ' + grandTotal.toLocaleString('id-ID');
+    document.getElementById('grand_total').value = grandTotal.toFixed(2);
+
+    // Update payment fields
+    updatePaymentAmount();
+    updatePaymentStatus();
+}
+
+// Event listener untuk discount total
+document.getElementById('discount_total').addEventListener('input', updateGrandTotal);
 
     function updatePaymentStatus() {
         const paymentAmount = parseFloat(document.getElementById('payment_amount').value) || 0;
@@ -435,11 +448,11 @@ document.querySelectorAll('.item-row').forEach((row, index) => {
         }
 
         if (paymentStatus.value === 'dp' && paymentAmount > 0) {
-            const minDp = Math.ceil(grandTotal * 0.5);
-            dpInfo.textContent = `Minimal DP 50%: Rp ${minDp.toLocaleString('id-ID')}`;
-        } else {
-            dpInfo.textContent = '';
-        }
+    dpInfo.textContent = `DP: Rp ${paymentAmount.toLocaleString('id-ID')}`;
+} else {
+    dpInfo.textContent = '';
+}
+
     }
 
     function updatePaymentAmount() {
@@ -525,69 +538,156 @@ document.querySelectorAll('.item-row').forEach((row, index) => {
         }
     });
 
-    // === CUSTOMER SEARCH & NEW CUSTOMER ===
-    const customerSearch = document.getElementById('customer_search');
-    const customerDropdown = document.getElementById('customer_dropdown');
-    const customerIdInput = document.getElementById('customer_id');
-    const customerNameInput = document.getElementById('customer_name');
-    const customerPhoneInput = document.getElementById('customer_phone');
-    const selectedCustomerDiv = document.getElementById('selected_customer');
-    const newCustomerFields = document.getElementById('new_customer_fields');
-    const newCustomerName = document.getElementById('new_customer_name');
-    const newCustomerPhone = document.getElementById('new_customer_phone');
+// === AUTOCOMPLETE CUSTOMER SEARCH ===
+const customerSearch = document.getElementById('customer_search');
+const customerResults = document.getElementById('customer_autocomplete_results');
+const customerIdInput = document.getElementById('customer_id');
+const customerNameInput = document.getElementById('customer_name');
+const customerPhoneInput = document.getElementById('customer_phone');
+const selectedCustomerDiv = document.getElementById('selected_customer');
+const newCustomerFields = document.getElementById('new_customer_fields');
+const newCustomerName = document.getElementById('new_customer_name');
+const newCustomerPhone = document.getElementById('new_customer_phone');
 
-    customerSearch.addEventListener('click', () => customerDropdown.classList.remove('hidden'));
-    document.addEventListener('click', function(e) {
-        if (!e.target.closest('.relative')) {
-            customerDropdown.classList.add('hidden');
-        }
-    });
+let searchTimeout = null;
 
-    customerDropdown.addEventListener('click', function(e) {
-        const option = e.target.closest('.customer-option');
-        if (option) {
-            customerIdInput.value = option.dataset.id;
-            customerNameInput.value = option.dataset.name;
-            customerPhoneInput.value = option.dataset.phone || '';
-            document.getElementById('customer_display_name').textContent = option.dataset.name;
-            document.getElementById('customer_display_phone').textContent = option.dataset.phone ? `(${option.dataset.phone})` : '';
-            selectedCustomerDiv.classList.remove('hidden');
-            newCustomerFields.classList.add('hidden');
-            customerDropdown.classList.add('hidden');
-            customerSearch.value = '';
-        }
-    });
+// Real-time search dengan debounce
+customerSearch.addEventListener('input', function () {
+    const searchTerm = this.value.trim();
+    
+    // Clear previous timeout
+    if (searchTimeout) {
+        clearTimeout(searchTimeout);
+    }
+    
+    // Hide results if search term is too short
+    if (searchTerm.length < 3) {
+        customerResults.classList.add('hidden');
+        checkNewCustomerFields(searchTerm);
+        return;
+    }
+    
+    // Debounce search - wait 300ms after user stops typing
+    searchTimeout = setTimeout(() => {
+        searchCustomers(searchTerm);
+    }, 300);
+});
 
-    document.getElementById('clear_customer').addEventListener('click', function() {
-        customerIdInput.value = '';
-        customerNameInput.value = '';
-        customerPhoneInput.value = '';
-        selectedCustomerDiv.classList.add('hidden');
-        newCustomerFields.classList.add('hidden');
-        customerSearch.value = '';
-        newCustomerName.value = '';
-        newCustomerPhone.value = '';
-    });
-
-    customerSearch.addEventListener('input', function() {
-        const term = this.value.trim();
-        if (term.length > 0) {
-            const exists = Array.from(customerDropdown.querySelectorAll('.customer-option'))
-                .some(opt => opt.dataset.name.toLowerCase() === term.toLowerCase());
-            if (!exists) {
-                newCustomerName.value = term;
-                customerNameInput.value = term;
-                newCustomerFields.classList.remove('hidden');
-            } else {
-                newCustomerFields.classList.add('hidden');
+// Function untuk search customers via AJAX
+function searchCustomers(searchTerm) {
+    fetch(`/admin/customers/search?q=${encodeURIComponent(searchTerm)}`)
+        .then(response => {
+            if (!response.ok) throw new Error('Network error');
+            return response.json();
+        })
+        .then(customers => {
+            customerResults.innerHTML = '';
+            
+            if (customers.length === 0) {
+                // No existing customers found
+                const noResult = document.createElement('div');
+                noResult.className = 'p-2 text-gray-500';
+                noResult.textContent = 'Customer tidak ditemukan. Akan dibuat customer baru.';
+                customerResults.appendChild(noResult);
+                customerResults.classList.remove('hidden');
+                
+                // Show new customer fields
+                checkNewCustomerFields(searchTerm);
+                return;
             }
-        } else {
+            
+            // Show matching customers
+            customers.forEach(customer => {
+                const div = document.createElement('div');
+                div.className = 'p-2 hover:bg-gray-100 cursor-pointer customer-option border-b';
+                div.innerHTML = `
+                    <div class="font-medium">${customer.name}</div>
+                    <div class="text-sm text-gray-600">${customer.phone ? `(${customer.phone})` : 'No phone'}</div>
+                `;
+                div.setAttribute('data-id', customer.id);
+                div.setAttribute('data-name', customer.name);
+                div.setAttribute('data-phone', customer.phone || '');
+                
+                div.addEventListener('click', function () {
+                    selectCustomer(customer.id, customer.name, customer.phone || '');
+                });
+                
+                customerResults.appendChild(div);
+            });
+            
+            customerResults.classList.remove('hidden');
             newCustomerFields.classList.add('hidden');
-        }
-    });
+        })
+        .catch(error => {
+            console.error('Error searching customers:', error);
+            customerResults.innerHTML = '<div class="p-2 text-red-500">Error loading customers</div>';
+            customerResults.classList.remove('hidden');
+        });
+}
 
-    newCustomerName.addEventListener('input', () => customerNameInput.value = newCustomerName.value);
-    newCustomerPhone.addEventListener('input', () => customerPhoneInput.value = newCustomerPhone.value);
+// Function untuk select customer
+function selectCustomer(id, name, phone) {
+    customerIdInput.value = id;
+    customerNameInput.value = name;
+    customerPhoneInput.value = phone;
+    
+    // Update display
+    document.getElementById('customer_display_name').textContent = name;
+    document.getElementById('customer_display_phone').textContent = phone ? `(${phone})` : '';
+    selectedCustomerDiv.classList.remove('hidden');
+    
+    // Clear search and hide results
+    customerSearch.value = '';
+    customerResults.classList.add('hidden');
+    newCustomerFields.classList.add('hidden');
+}
+
+// Function untuk check if we should show new customer fields
+function checkNewCustomerFields(searchTerm) {
+    if (searchTerm.length >= 3 && !customerIdInput.value) {
+        newCustomerName.value = searchTerm;
+        customerNameInput.value = searchTerm;
+        newCustomerFields.classList.remove('hidden');
+    } else {
+        newCustomerFields.classList.add('hidden');
+    }
+}
+
+// Clear customer selection
+document.getElementById('clear_customer').addEventListener('click', function () {
+    customerIdInput.value = '';
+    customerNameInput.value = '';
+    customerPhoneInput.value = '';
+    selectedCustomerDiv.classList.add('hidden');
+    newCustomerFields.classList.add('hidden');
+    customerSearch.value = '';
+    newCustomerName.value = '';
+    newCustomerPhone.value = '';
+    customerResults.classList.add('hidden');
+});
+
+// Sync new customer fields
+newCustomerName.addEventListener('input', function () {
+    customerNameInput.value = this.value;
+});
+
+newCustomerPhone.addEventListener('input', function () {
+    customerPhoneInput.value = this.value;
+});
+
+// Hide dropdown when clicking outside
+document.addEventListener('click', function (e) {
+    if (!e.target.closest('.relative')) {
+        customerResults.classList.add('hidden');
+    }
+});
+
+// Show dropdown when focusing on search
+customerSearch.addEventListener('focus', function () {
+    if (this.value.trim().length >= 3) {
+        this.dispatchEvent(new Event('input'));
+    }
+});
 
     // === SUPPLIER SEARCH ===
     const addToPurchase = document.getElementById('add_to_purchase');
@@ -662,11 +762,12 @@ document.querySelectorAll('.item-row').forEach((row, index) => {
             }
         }
 
-        if (amount > 0 && paymentStatus.value === 'dp' && amount < (grandTotal * 0.5)) {
-            e.preventDefault();
-            alert(`DP minimal 50%: Rp ${(grandTotal * 0.5).toLocaleString('id-ID')}`);
-            return;
-        }
+        if (paymentStatus.value === 'dp' && amount <= 0) {
+    e.preventDefault();
+    alert('Jumlah pembayaran DP harus lebih dari Rp 0');
+    return;
+}
+
 
         if (amount > grandTotal) {
             e.preventDefault();
