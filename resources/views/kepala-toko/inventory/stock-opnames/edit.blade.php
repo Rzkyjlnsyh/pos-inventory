@@ -21,23 +21,23 @@
       <i class="bi bi-list"></i>
     </button>
 
-    <x-navbar-owner></x-navbar-owner>
+    <x-navbar-kepala-toko></x-navbar-kepala-toko>
 
     <div class="flex-1 lg:w-5/6">
-      <x-navbar-top-owner></x-navbar-top-owner>
+      <x-navbar-top-kepala-toko></x-navbar-top-kepala-toko>
 
       <div class="p-4 lg:p-8">
         <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
           <div class="flex items-center justify-between">
             <h2 class="text-xl font-semibold text-gray-700">Edit Stock Opname</h2>
-            <a href="{{ route('owner.inventory.stock-opnames.show', $stockOpname->id) }}" class="text-blue-600 hover:underline">
+            <a href="{{ route('kepala-toko.inventory.stock-opnames.show', $stockOpname->id) }}" class="text-blue-600 hover:underline">
               Kembali ke Detail
             </a>
           </div>
         </div>
 
         <div class="bg-white p-6 rounded-xl shadow-lg">
-          <form action="{{ route('owner.inventory.stock-opnames.update', $stockOpname->id) }}" method="POST" x-data="opnameForm()">
+          <form action="{{ route('kepala-toko.inventory.stock-opnames.update', $stockOpname->id) }}" method="POST" x-data="opnameForm()">
             @csrf
             @method('PUT')
 
@@ -106,7 +106,7 @@
             </div>
 
             <div class="flex justify-end space-x-4 pt-6 border-t">
-              <a href="{{ route('owner.inventory.stock-opnames.show', $stockOpname->id) }}"
+              <a href="{{ route('kepala-toko.inventory.stock-opnames.show', $stockOpname->id) }}"
                 class="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
                 <i class="bi bi-arrow-left mr-2"></i>
                 Kembali

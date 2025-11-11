@@ -37,19 +37,61 @@ class Shift extends Model
         return $this->belongsTo(User::class);
     }
 
-    // Hapus ini jika migration payments tidak punya shift_id
     public function payments()
     {
         return $this->hasMany(Payment::class);
     }
+
     public function expenses()
     {
         return $this->hasMany(Expense::class);
     }
-        public function incomes()
+
+    public function incomes()
     {
         return $this->hasMany(Income::class);
     }
+
+        // METHOD BARU: VALIDASI INTEGRITAS DATA
+        public function validateCashIntegrity(): array
+        {
+            $realCashTotal = $this->calculateRealCashTotal();
+            $realFinalCash = $this->calculateRealFinalCash();
+            
+            $cashTotalValid = abs($this->cash_total - $realCashTotal) < 0.01;
+            $finalCashValid = abs($this->final_cash - $realFinalCash) < 0.01;
+            
+            return [
+                'is_valid' => $cashTotalValid && $finalCashValid,
+                'cash_total_diff' => $this->cash_total - $realCashTotal,
+                'final_cash_diff' => $this->final_cash - $realFinalCash,
+                'real_cash_total' => $realCashTotal,
+                'real_final_cash' => $realFinalCash,
+            ];
+        }
+
+            // METHOD BARU: HITUNG REAL CASH TOTAL
+    public function calculateRealCashTotal(): float
+    {
+        $totalCashFromPayments = $this->payments->sum(function($payment) {
+            if ($payment->method === 'cash') {
+                return $payment->amount;
+            } elseif ($payment->method === 'split') {
+                return $payment->cash_amount;
+            }
+            return 0;
+        });
+
+        $totalIncome = $this->incomes->sum('amount');
+        
+        return $totalCashFromPayments + $totalIncome;
+    }
+
+        // METHOD BARU: HITUNG REAL FINAL CASH
+        public function calculateRealFinalCash(): float
+        {
+            return $this->initial_cash + $this->calculateRealCashTotal() - $this->expense_total;
+        }
     public function isFirstShift(): bool
 {
     return Shift::whereNotNull('end_time')->count() === 0;

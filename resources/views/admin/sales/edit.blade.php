@@ -129,7 +129,7 @@
                         <label class="flex items-center">
                             <input type="hidden" name="add_to_purchase" value="0">
                             <input type="checkbox" name="add_to_purchase" id="add_to_purchase" value="1"
-                                   class="mr-2" {{ $salesOrder->logs->contains('action', 'linked_to_purchase') ? 'checked' : '' }}>
+                            class="mr-2" {{ $salesOrder->add_to_purchase ? 'checked' : '' }}>
                             <span>Masukkan ke Pembelian (Pre-order)</span>
                         </label>
                     </div>
@@ -139,9 +139,9 @@
                                class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
                                placeholder="Ketik nama supplier..."
                                autocomplete="off"
-                               value="{{ old('supplier_name', $salesOrder->logs->contains('action', 'linked_to_purchase') ? 'Pre-order Customer' : '') }}">
+                               value="{{ old('supplier_name', $salesOrder->add_to_purchase ? 'Pre-order Customer' : '') }}">
                         <input type="hidden" name="supplier_id" id="supplier_id" value="">
-                        <input type="hidden" name="supplier_name" id="supplier_name" value="{{ old('supplier_name', $salesOrder->logs->contains('action', 'linked_to_purchase') ? 'Pre-order Customer' : '') }}">
+                        <input type="hidden" name="supplier_name" id="supplier_name" value="{{ old('supplier_name', $salesOrder->add_to_purchase ? 'Pre-order Customer' : '') }}">
                         <div id="selected_supplier" class="mt-2 p-2 bg-blue-50 rounded hidden">
                             <span id="supplier_display_name" class="font-medium">Pre-order Customer</span>
                             <button type="button" id="clear_supplier" class="text-red-600 ml-2">✕</button>
@@ -216,44 +216,68 @@
                         <h2 class="text-lg font-semibold mb-4 text-gray-800">Item Order</h2>
                         <div id="items-container" class="space-y-4">
                             @foreach($salesOrder->items as $index => $item)
-                                <div class="item-row grid md:grid-cols-5 gap-4">
-                                    <div class="relative">
-                                        <label class="block font-medium mb-1">Produk</label>
-                                        <input type="text"
-                                               class="product-search border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
-                                               placeholder="Ketik nama produk..."
-                                               autocomplete="off"
-                                               value="{{ $item->product_name }}">
-                                        <input type="hidden" name="items[{{ $index }}][product_id]" class="product-id" value="{{ $item->product_id }}">
-                                        <input type="hidden" name="items[{{ $index }}][product_name]" class="product-name" value="{{ $item->product_name }}">
-                                        <div class="product-results hidden absolute z-20 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto"></div>
-                                    </div>
-                                    <div>
-                                        <label class="block font-medium mb-1">SKU</label>
-                                        <input type="text" name="items[{{ $index }}][sku]" class="sku border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" value="{{ $item->sku }}" readonly>
-                                    </div>
-                                    <div>
-                                        <label class="block font-medium mb-1">Harga</label>
-                                        <input type="number" name="items[{{ $index }}][sale_price]" class="sale-price border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" step="0.01" required value="{{ $item->sale_price }}">
-                                    </div>
-                                    <div>
-                                        <label class="block font-medium mb-1">Qty</label>
-                                        <input type="number" name="items[{{ $index }}][qty]" class="qty border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" min="1" required value="{{ $item->qty }}">
-                                    </div>
-                                    <div>
-                                        <label class="block font-medium mb-1">Diskon</label>
-                                        <input type="number" name="items[{{ $index }}][discount]" class="discount border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" min="0" step="0.01" value="{{ $item->discount ?? 0 }}">
-                                        @if($index > 0)
-                                            <button type="button" class="remove-item text-red-600 hover:text-red-800 mt-2"><i class="bi bi-trash"></i></button>
-                                        @endif
-                                    </div>
-                                </div>
+                            <div class="item-row grid md:grid-cols-3 gap-4">
+    <div class="relative md:col-span-2">
+        <label class="block font-medium mb-1">Produk</label>
+        <input type="text"
+            class="product-search border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
+            placeholder="Ketik nama produk..." autocomplete="off">
+        <input type="hidden" name="items[0][product_id]" class="product-id">
+        <input type="hidden" name="items[0][product_name]" class="product-name">
+        <input type="hidden" name="items[0][sku]" class="sku">
+        <div class="product-results hidden absolute z-20 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto"></div>
+    </div>
+    <div>
+        <label class="block font-medium mb-1">Harga</label>
+        <input type="number" name="items[0][sale_price]"
+            class="sale-price border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
+            step="0.01" required>
+        @error('items.0.sale_price')
+            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+        @enderror
+    </div>
+    <div>
+        <label class="block font-medium mb-1">Qty</label>
+        <input type="number" name="items[0][qty]"
+            class="qty border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
+            min="1" required>
+        @error('items.0.qty')
+            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+        @enderror
+    </div>
+</div>
                             @endforeach
                         </div>
                         <button type="button" id="add-item" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow mt-4">
                             <i class="bi bi-plus-circle"></i> Tambah Item
                         </button>
                     </div>
+
+                    <!-- TAMBAH BAGIAN INI: Summary dengan Discount Total -->
+<div class="bg-gray-50 p-4 rounded-lg mb-6">
+    <h2 class="text-lg font-semibold mb-4 text-gray-800">Ringkasan Order</h2>
+    <div class="grid md:grid-cols-4 gap-4">
+        <div>
+            <label class="block font-medium mb-1">Subtotal</label>
+            <div id="display-subtotal" class="text-lg font-semibold text-gray-800">Rp {{ number_format($salesOrder->subtotal, 0, ',', '.') }}</div>
+        </div>
+        <div>
+            <label for="discount_total" class="block font-medium mb-1">Diskon Total</label>
+            <input type="number" name="discount_total" id="discount_total" 
+                   class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
+                   min="0" step="0.01" value="{{ old('discount_total', $salesOrder->discount_total) }}"
+                   placeholder="0">
+            @error('discount_total')
+                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+            @enderror
+        </div>
+        <div>
+            <label class="block font-medium mb-1">Grand Total</label>
+            <div id="display-grand-total" class="text-lg font-bold text-blue-600">Rp {{ number_format($salesOrder->grand_total, 0, ',', '.') }}</div>
+            <input type="hidden" name="grand_total" id="grand_total" value="{{ $salesOrder->grand_total }}">
+        </div>
+    </div>
+</div>
 
                     <button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded shadow">
                         <i class="bi bi-save"></i> Simpan Perubahan
@@ -428,27 +452,26 @@ document.addEventListener('DOMContentLoaded', function () {
         const newRow = document.createElement('div');
         newRow.className = 'item-row grid md:grid-cols-5 gap-4 mt-4';
         newRow.innerHTML = `
-            <div class="relative">
-                <label class="block font-medium mb-1">Produk</label>
-                <input type="text" 
-                       class="product-search border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
-                       placeholder="Ketik nama produk..."
-                       autocomplete="off">
-                <input type="hidden" name="items[${itemIndex}][product_id]" class="product-id">
-                <input type="hidden" name="items[${itemIndex}][product_name]" class="product-name">
-                <div class="product-results hidden absolute z-20 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto"></div>
-            </div>
-            <div><label class="block font-medium mb-1">SKU</label>
-                <input type="text" name="items[${itemIndex}][sku]" class="sku border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" readonly></div>
-            <div><label class="block font-medium mb-1">Harga</label>
-                <input type="number" name="items[${itemIndex}][sale_price]" class="sale-price border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" step="0.01" required></div>
-            <div><label class="block font-medium mb-1">Qty</label>
-                <input type="number" name="items[${itemIndex}][qty]" class="qty border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" min="1" value="1" required></div>
-            <div><label class="block font-medium mb-1">Diskon</label>
-                <input type="number" name="items[${itemIndex}][discount]" class="discount border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" min="0" step="0.01" value="0">
-                <button type="button" class="remove-item text-red-600 hover:text-red-800 mt-2"><i class="bi bi-trash"></i></button>
-            </div>
-        `;
+    <div class="relative md:col-span-2">
+        <label class="block font-medium mb-1">Produk</label>
+        <input type="text" 
+               class="product-search border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
+               placeholder="Ketik nama produk..."
+               autocomplete="off">
+        <input type="hidden" name="items[${itemIndex}][product_id]" class="product-id">
+        <input type="hidden" name="items[${itemIndex}][product_name]" class="product-name">
+        <input type="hidden" name="items[${itemIndex}][sku]" class="sku"> <!-- SKU jadi hidden -->
+        <div class="product-results hidden absolute z-20 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto"></div>
+    </div>
+    <div><label class="block font-medium mb-1">Harga</label>
+        <input type="number" name="items[${itemIndex}][sale_price]" class="sale-price border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" step="0.01" required></div>
+    <div><label class="block font-medium mb-1">Qty</label>
+        <input type="number" name="items[${itemIndex}][qty]" class="qty border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" min="1" value="1" required></div>
+    <div><label class="block font-medium mb-1">Diskon</label>
+        <input type="number" name="items[${itemIndex}][discount]" class="discount border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" min="0" step="0.01" value="0">
+        <button type="button" class="remove-item text-red-600 hover:text-red-800 mt-2"><i class="bi bi-trash"></i></button>
+    </div>
+`;
         itemsContainer.appendChild(newRow);
         setTimeout(() => {
             initializeProductSearchForEdit(newRow, itemIndex);
@@ -632,9 +655,12 @@ document.addEventListener('DOMContentLoaded', function () {
     // === INISIALISASI AWAL ===
     updateGrandTotal();
     if (paymentMethod) paymentMethod.dispatchEvent(new Event('change'));
-    if (addToPurchase.checked) {
-        supplierSection.classList.remove('hidden');
-    }
+// Initialize supplier section based on add_to_purchase value
+if ({{ $salesOrder->add_to_purchase ? 'true' : 'false' }}) {
+    supplierSection.classList.remove('hidden');
+    document.getElementById('supplier_display_name').textContent = 'Pre-order Customer';
+    selectedSupplierDiv.classList.remove('hidden');
+}
 });
 </script>
 </body>

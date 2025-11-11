@@ -17,19 +17,7 @@
     <div class="flex-1 lg:w-5/6">
         <x-navbar-top-kepala-toko />
         <div class="p-4 lg:p-8">
-            <!-- Debug Info -->
-            <!-- <div class="bg-gray-100 p-4 rounded-xl mb-6">
-                <h4 class="font-semibold text-gray-700">Debug Info</h4>
-                <p class="text-sm text-gray-600">
-                    Active Shift: {{ $activeShift ? 'Yes (ID: ' . $activeShift->id . ')' : 'No' }}<br>
-                    User Role: {{ Auth::user()->hasRole('kepala-toko') ? 'kepala-toko' : 'Other' }}<br>
-                    SO Status: {{ $salesOrder->status }}<br>
-                    Approved By: {{ $salesOrder->approved_by ? $salesOrder->approver->name : 'Not Approved' }}<br>
-                    Paid Total: Rp {{ number_format($salesOrder->paid_total, 0, ',', '.') }}<br>
-                    Grand Total: Rp {{ number_format($salesOrder->grand_total, 0, ',', '.') }}<br>
-                    Editable: {{ $salesOrder->isEditable() ? 'Yes' : 'No' }}
-                </p>
-            </div> -->
+
 
             <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
                 <div class="flex justify-between items-center">
@@ -42,13 +30,11 @@
                            class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded shadow">
                             <i class="bi bi-arrow-left"></i> Kembali
                         </a>
-                        @if($salesOrder->isEditable() && $activeShift && Auth::user()->hasRole('kepala_toko'))
                             <a href="{{ route('kepala-toko.sales.edit', $salesOrder) }}"
                                class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded shadow">
                                 <i class="bi bi-pencil"></i> Edit
                             </a>
-                        @endif
-                        @if($salesOrder->status === 'pending' && $salesOrder->approved_by === null && $activeShift && Auth::user()->hasRole('kepala_toko'))
+                        @if($salesOrder->status === 'pending' && $salesOrder->approved_by === null)
                             <form action="{{ route('kepala-toko.sales.approve', $salesOrder) }}" method="POST">
                                 @csrf
                                 <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow">
@@ -56,15 +42,33 @@
                                 </button>
                             </form>
                         @endif
-                        @if($salesOrder->status === 'pending' && $salesOrder->approved_by !== null && $salesOrder->paid_total >= $salesOrder->grand_total * 0.5 && $activeShift && Auth::user()->hasRole('kepala_toko'))
-                            <form action="{{ route('kepala-toko.sales.startProcess', $salesOrder) }}" method="POST">
-                                @csrf
-                                <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow">
-                                    <i class="bi bi-play-circle"></i> Mulai Proses
-                                </button>
-                            </form>
-                        @endif
-                        @if($salesOrder->order_type === 'jahit_sendiri' && $salesOrder->status === 'request_kain' && $activeShift && Auth::user()->hasRole('kepala_toko'))
+@php
+    // Validasi payment: untuk transfer/split, boleh ada proof_path ATAU reference_number
+    $canStartProcess = $salesOrder->status === 'pending' 
+        && $salesOrder->approved_by !== null 
+        && $salesOrder->paid_total >= $salesOrder->grand_total * 0.5;
+    
+    if ($canStartProcess && in_array($salesOrder->payment_method, ['transfer', 'split'])) {
+        // Cek apakah semua payment punya bukti ATAU no referensi
+        $invalidPayments = $salesOrder->payments()
+            ->where(function($q) {
+                $q->whereNull('proof_path')->whereNull('reference_number');
+            })
+            ->count();
+        
+        $canStartProcess = $invalidPayments == 0;
+    }
+@endphp
+
+@if($canStartProcess)
+    <form action="{{ route('kepala-toko.sales.startProcess', $salesOrder) }}" method="POST">
+        @csrf
+        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow">
+            <i class="bi bi-play-circle"></i> Mulai Proses
+        </button>
+    </form>
+@endif
+                        @if($salesOrder->order_type === 'jahit_sendiri' && $salesOrder->status === 'request_kain')
                             <form action="{{ route('kepala-toko.sales.processJahit', $salesOrder) }}" method="POST">
                                 @csrf
                                 <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow">
@@ -72,7 +76,7 @@
                                 </button>
                             </form>
                         @endif
-                        @if($salesOrder->order_type === 'jahit_sendiri' && $salesOrder->status === 'proses_jahit' && $activeShift && Auth::user()->hasRole('kepala_toko'))
+                        @if($salesOrder->order_type === 'jahit_sendiri' && $salesOrder->status === 'proses_jahit')
                             <form action="{{ route('kepala-toko.sales.markAsJadi', $salesOrder) }}" method="POST">
                                 @csrf
                                 <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow">
@@ -80,7 +84,7 @@
                                 </button>
                             </form>
                         @endif
-                        @if(($salesOrder->order_type === 'jahit_sendiri' && $salesOrder->status === 'jadi') || ($salesOrder->order_type === 'beli_jadi' && $salesOrder->status === 'di proses') && $activeShift && Auth::user()->hasRole('kepala_toko'))
+                        @if(($salesOrder->order_type === 'jahit_sendiri' && $salesOrder->status === 'jadi') || ($salesOrder->order_type === 'beli_jadi' && $salesOrder->status === 'di proses'))
                             <form action="{{ route('kepala-toko.sales.markAsDiterimaToko', $salesOrder) }}" method="POST">
                                 @csrf
                                 <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow">
@@ -88,7 +92,7 @@
                                 </button>
                             </form>
                         @endif
-                        @if($salesOrder->status === 'diterima_toko' && $salesOrder->remaining_amount == 0 && $activeShift && Auth::user()->hasRole('kepala_toko'))
+                        @if($salesOrder->status === 'diterima_toko' && $salesOrder->remaining_amount == 0)
                             <form action="{{ route('kepala-toko.sales.complete', $salesOrder) }}" method="POST">
                                 @csrf
                                 <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow">
@@ -99,12 +103,6 @@
                     </div>
                 </div>
             </div>
-
-            @if(!$activeShift)
-                <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-6">
-                    Shift belum dimulai. Anda tidak bisa menambah pembayaran atau melakukan aksi lain. Silakan mulai shift terlebih dahulu di <a href="{{ route('kepala-toko.shift.dashboard') }}" class="underline">Dashboard Shift</a>.
-                </div>
-            @endif
 
             @if($salesOrder->status === 'pending')
                 @php
@@ -212,6 +210,7 @@
                         <div class="flex justify-between"><span class="text-gray-600">SO Number:</span><span class="font-mono font-semibold">{{ $salesOrder->so_number }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-600">Tipe Order:</span><span class="capitalize">{{ str_replace('_', ' ', $salesOrder->order_type) }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-600">Tanggal Order:</span><span>{{ \Carbon\Carbon::parse($salesOrder->order_date)->format('d/m/Y') }}</span></div>
+                        <div class="flex justify-between"><span class="text-gray-600">Tanggal Deadline:</span><span>{{ \Carbon\Carbon::parse($salesOrder->deadline)->format('d/m/Y') }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-600">Customer:</span><span>{{ $salesOrder->customer ? $salesOrder->customer->name : 'Umum' }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-600">Dibuat Oleh:</span><span>{{ $salesOrder->creator->name ?? 'System' }}</span></div>
                         @if($salesOrder->approved_by)
@@ -240,7 +239,7 @@
                 </div>
             </div>
 
-            @if($salesOrder->status !== 'selesai' && $activeShift && Auth::user()->hasRole('kepala_toko'))
+            @if($salesOrder->status !== 'selesai')
                 <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
                     <h2 class="text-lg font-semibold mb-4 text-gray-800">Tambah Pembayaran</h2>
                     <form action="{{ route('kepala-toko.sales.addPayment', $salesOrder) }}" method="POST" enctype="multipart/form-data" id="paymentForm">
@@ -258,14 +257,16 @@
                                 @enderror
                             </div>
                             <div>
-                                <label for="payment_amount" class="block font-medium mb-1">Jumlah Pembayaran</label>
-                                <input type="number" name="payment_amount" id="payment_amount" min="0" step="0.01"
-                                       required class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
-                                       value="{{ old('payment_amount', $salesOrder->remaining_amount) }}">
-                                @error('payment_amount')
-                                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                                @enderror
-                            </div>
+    <label for="payment_amount" class="block font-medium mb-1">Jumlah Pembayaran</label>
+    <input type="number" name="payment_amount" id="payment_amount" min="0" step="0.01"
+           required class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
+           placeholder="Sisa: Rp {{ number_format($salesOrder->remaining_amount, 0, ',', '.') }}"
+           value="{{ old('payment_amount') }}">
+    <p class="text-sm text-gray-600 mt-1">Sisa yang harus dibayar: <span class="font-semibold">Rp {{ number_format($salesOrder->remaining_amount, 0, ',', '.') }}</span></p>
+    @error('payment_amount')
+        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+    @enderror
+</div>
                             <div id="split-payment-fields" class="hidden col-span-2">
                                 <div class="grid md:grid-cols-2 gap-4">
                                     <div>
@@ -293,6 +294,7 @@
                                     <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                                 @enderror
                             </div>
+                            
                             <div>
         <label for="reference_number" class="block font-medium mb-1">No Referensi Transfer (Opsional)</label>
         <input type="text" name="reference_number" id="reference_number" 
@@ -395,35 +397,38 @@
         @if($payment->note)
             <small class="text-gray-600">{{ $payment->note }}</small><br>
         @endif
-        @if($payment->proof_path)
-            <a href="{{ route('owner.sales.payment-proof', $payment) }}" target="_blank" class="text-blue-500 text-xs hover:underline inline-flex items-center">
-                <i class="bi bi-file-earmark-image mr-1"></i> Lihat Bukti
-            </a>
-        @elseif(in_array($payment->method, ['transfer', 'split']) && $activeShift && Auth::user()->hasRole('owner'))
-            <form action="{{ route('owner.sales.uploadProof', ['salesOrder' => $salesOrder, 'payment' => $payment]) }}" method="POST" enctype="multipart/form-data" class="upload-proof-form mt-2">
-                @csrf
-                <input type="file" name="proof_path" accept=".jpg,.jpeg,.png,.pdf" class="border rounded px-2 py-1 text-xs w-full" required>
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs mt-1 w-full">
-                    <i class="bi bi-upload"></i> Upload Bukti
-                </button>
-                @error('proof_path')
-                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                @enderror
-            </form>
-        @endif
+<!-- Tampilkan Link Bukti jika sudah upload -->
+@if($payment->proof_path)
+    <a href="{{ route('kepala-toko.sales.payment-proof', $payment) }}" target="_blank" class="text-blue-500 text-xs hover:underline inline-flex items-center">
+        <i class="bi bi-file-earmark-image mr-1"></i> Lihat Bukti
+    </a>
+@elseif(in_array($payment->method, ['transfer', 'split']))
+    {{-- Form Upload Bukti jika belum ada bukti --}} 
+    <!-- PERBAIKAN: TETAP tampilkan form upload, meskipun reference_number sudah ada -->
+    <form action="{{ route('kepala-toko.sales.uploadProof', ['salesOrder' => $salesOrder, 'payment' => $payment]) }}" method="POST" enctype="multipart/form-data" class="upload-proof-form mt-2">
+        @csrf
+        <input type="file" name="proof_path" accept=".jpg,.jpeg,.png,.pdf" class="border rounded px-2 py-1 text-xs w-full" required>
+        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs mt-1 w-full">
+            <i class="bi bi-upload"></i> Upload Bukti
+        </button>
+        @error('proof_path')
+            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+        @enderror
+    </form>
+@endif
     </td>
     <td class="px-4 py-2 border text-center">
         <div class="flex justify-center gap-2">
             <button onclick="printPaymentNota({{ $payment->id }})" class="text-green-600 hover:underline" title="Print Langsung">
                 <i class="bi bi-printer"></i>
             </button>
-            <a href="{{ route('owner.sales.printNota', $payment) }}" class="text-blue-600 hover:underline" title="Download PDF">
+            <a href="{{ route('kepala-toko.sales.printNota', $payment) }}" class="text-blue-600 hover:underline" title="Download PDF">
                 <i class="bi bi-download"></i>
             </a>
         </div>
     </td>
-</tr>                
-@empty
+</tr>
+                @empty
                     <tr>
                         <td colspan="6" class="text-center text-gray-500 px-4 py-4">Belum ada pembayaran</td>
                     </tr>
@@ -639,137 +644,153 @@
         }
     }
 });
-    function printPaymentNota(paymentId) {
-    // Tampilkan loading
+function printPaymentNota(paymentId) {
     const printBtn = event.target;
     const originalHTML = printBtn.innerHTML;
     printBtn.innerHTML = '<i class="bi bi-hourglass"></i>';
     printBtn.disabled = true;
 
-    // Cari data payment berdasarkan ID
     const payment = getPaymentById(paymentId);
     if (!payment) {
         alert('Data pembayaran tidak ditemukan!');
-        printBtn.innerHTML = originalHTML;
-        printBtn.disabled = false;
+        resetButton(printBtn, originalHTML);
         return;
     }
 
-    // Format plain text yang sudah terbukti work
-    const textContent = `PARECUSTOM
-NOTA PEMBAYARAN
-${''.padEnd(32, '-')}
-SO Number  : {{ $salesOrder->so_number }}
-Customer   : {{ $salesOrder->customer ? $salesOrder->customer->name : 'Umum' }}
-Tanggal    : ${new Date().toLocaleDateString('id-ID')} ${new Date().toLocaleTimeString('id-ID')}
-${''.padEnd(32, '-')}
-Grand Total: Rp ${formatNumber({{ $salesOrder->grand_total }})}
-Total Bayar: Rp ${formatNumber({{ $salesOrder->paid_total }})}
-Sisa       : Rp ${formatNumber({{ $salesOrder->remaining_amount }})}
-${''.padEnd(32, '-')}
-DETAIL PEMBAYARAN
-${''.padEnd(32, '-')}
-Tanggal Bayar: ${formatDate(payment.paid_at)}
-Metode      : ${payment.method.toUpperCase()}
-Jumlah      : Rp ${formatNumber(payment.amount)}
-${payment.method === 'split' ? `- Cash     : Rp ${formatNumber(payment.cash_amount)}
-- Transfer : Rp ${formatNumber(payment.transfer_amount)}` : ''}
-${payment.reference ? `Referensi  : ${payment.reference}` : ''}
-${payment.note ? `Catatan    : ${payment.note}` : ''}
-${''.padEnd(32, '-')}
-Operator   : ${payment.creator_name || 'System'}
-${''.padEnd(32, '-')}
-Terima kasih atas pembayarannya
-*** ${new Date().toLocaleDateString('id-ID')} ${new Date().toLocaleTimeString('id-ID')} ***`;
+    // === Ambil data dari Blade (dijamin aman karena di-encode via JSON) ===
+    const soNumber = '{{ addslashes($salesOrder->so_number) }}';
+    const customerName = '{{ addslashes($salesOrder->customer ? $salesOrder->customer->name : 'Umum') }}';
+    const kasirName = payment.creator_name || 'System';
+    const orderDate = '{{ \Carbon\Carbon::parse($salesOrder->order_date)->format('d/m/Y') }}';
+    const grandTotal = {{ $salesOrder->grand_total }};
+    const paidTotal = {{ $salesOrder->paid_total }};
+    const remaining = {{ $salesOrder->remaining_amount }};
+    const paymentStatus = '{{ $salesOrder->payment_status }}';
+    const items = {!! json_encode($salesOrder->items->map(function($item) {
+        return [
+            'name' => substr($item->product_name, 0, 22),
+            'qty' => $item->qty,
+            'price' => $item->sale_price,
+            'subtotal' => $item->line_total
+        ];
+    })) !!};
 
-    // Buka window baru untuk print
-    const printWindow = window.open('', '_blank', 'width=230,height=500');
-    
-    if (!printWindow) {
-        alert('Popup diblokir! Izinkan popup untuk cetak.');
-        printBtn.innerHTML = originalHTML;
-        printBtn.disabled = false;
-        return;
+    // === Bangun teks nota thermal (58mm, monospace) ===
+    let text = "PARE CUSTOM\n";
+    text += "NOTA PEMBAYARAN\n";
+    text += "--------------------------------\n";
+    text += `SO Number   : ${soNumber}\n`;
+    text += `Tgl Order   : ${orderDate}\n`;
+    text += `Customer    : ${customerName}\n`;
+    text += `Kasir       : ${kasirName}\n`;
+    text += "--------------------------------\n";
+
+    // Item list (max 22 char nama)
+    items.forEach(item => {
+        const name = item.name.padEnd(16, ' ').substring(0, 16);
+        const qty = String(item.qty).padStart(2, ' ');
+        const price = formatNumber(item.price).padStart(10, ' ');
+        text += `${name}${qty}x${price}\n`;
+    });
+
+    text += "--------------------------------\n";
+    text += `TOTAL       : ${formatNumber(grandTotal).padStart(16, ' ')}\n`;
+    text += `BAYAR       : ${formatNumber(paidTotal).padStart(16, ' ')}\n`;
+    text += `SISA        : ${formatNumber(remaining).padStart(16, ' ')}\n`;
+    text += `STATUS      : ${paymentStatus.toUpperCase().padEnd(16, ' ')}\n`;
+    text += "--------------------------------\n";
+    text += "PEMBAYARAN\n";
+    text += "--------------------------------\n";
+    text += `Tgl Bayar   : ${formatDate(payment.paid_at)}\n`;
+    text += `Metode      : ${payment.method.toUpperCase()}\n`;
+    text += `Jumlah      : ${formatNumber(payment.amount).padStart(16, ' ')}\n`;
+
+    if (payment.method === 'split') {
+        text += `- Cash     : ${formatNumber(payment.cash_amount).padStart(16, ' ')}\n`;
+        text += `- Transfer : ${formatNumber(payment.transfer_amount).padStart(16, ' ')}\n`;
     }
 
-    const html = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Print Payment Nota</title>
-            <meta charset="UTF-8">
-            <style>
-                body {
-                    font-family: 'Courier New', monospace;
-                    font-size: 11px;
-                    width: 58mm;
-                    margin: 0;
-                    padding: 5px;
-                    line-height: 1.2;
-                }
-                pre {
-                    margin: 0;
-                    white-space: pre;
-                    font-family: 'Courier New', monospace;
-                }
-                @media print {
-                    body { margin: 0; padding: 5px; }
-                }
-            </style>
-        </head>
-        <body>
-            <pre>${textContent}</pre>
-            <script>
-                window.onload = function() {
-                    setTimeout(function() {
-                        window.print();
-                        setTimeout(function() {
-                            window.close();
-                        }, 100);
-                    }, 100);
-                };
-            <\/script>
-        </body>
-        </html>
-    `;
+    if (payment.reference_number) {
+        text += `Ref         : ${payment.reference_number}\n`;
+    }
+    if (payment.note) {
+        text += `Catatan     : ${payment.note}\n`;
+    }
 
-    printWindow.document.write(html);
-    printWindow.document.close();
+    text += "--------------------------------\n";
+    text += "Terima kasih atas pembayarannya!\n";
+    text += `*** ${new Date().toLocaleDateString('id-ID')} ${new Date().toLocaleTimeString('id-ID')} ***\n`;
+    text += "\x1B\x69"; // ESC/POS cut command
 
-    // Reset tombol setelah 3 detik
-    setTimeout(function() {
-        printBtn.innerHTML = originalHTML;
-        printBtn.disabled = false;
-    }, 3000);
+    // Deteksi device
+    const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+
+    if (isMobile) {
+        // Kirim ke RawBT
+        const encoded = encodeURIComponent(text);
+        window.location.href = `rawbt://print?text=${encoded}`;
+        setTimeout(() => resetButton(printBtn, originalHTML), 2000);
+    } else {
+        // Print via browser (PC)
+        const printWin = window.open('', '_blank', 'width=230,height=600');
+        if (!printWin) {
+            alert('Popup diblokir! Izinkan popup untuk cetak.');
+            resetButton(printBtn, originalHTML);
+            return;
+        }
+        const html = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Nota ${soNumber}</title>
+                <meta charset="UTF-8">
+                <style>
+                    body { font-family: 'Courier New', monospace; font-size: 12px; width: 58mm; margin: 0; padding: 5px; line-height: 1.3; }
+                    pre { margin: 0; white-space: pre; }
+                </style>
+            </head>
+            <body><pre>${text.replace(/\x1B\x69/g, '')}</pre></body>
+            </html>
+        `;
+        printWin.document.write(html);
+        printWin.document.close();
+        printWin.print();
+        setTimeout(() => {
+            printWin.close();
+            resetButton(printBtn, originalHTML);
+        }, 3000);
+    }
 }
 
-// Helper functions
+function resetButton(btn, html) {
+    btn.innerHTML = html;
+    btn.disabled = false;
+}
+
 function formatNumber(num) {
     return parseInt(num).toLocaleString('id-ID');
 }
 
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('id-ID') + ' ' + date.toLocaleTimeString('id-ID');
+function formatDate(dateStr) {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('id-ID') + ' ' + d.toLocaleTimeString('id-ID', { hour12: false });
 }
 
-// Function untuk mendapatkan data payment dari JavaScript
-function getPaymentById(paymentId) {
-    const payments = {!! json_encode($salesOrder->payments->map(function($payment) {
+function getPaymentById(id) {
+    const payments = {!! json_encode($salesOrder->payments->map(function($p) {
         return [
-            'id' => $payment->id,
-            'amount' => $payment->amount,
-            'method' => $payment->method,
-            'cash_amount' => $payment->cash_amount,
-            'transfer_amount' => $payment->transfer_amount,
-            'reference' => $payment->reference,
-            'note' => $payment->note,
-            'paid_at' => $payment->paid_at,
-            'creator_name' => $payment->creator->name ?? 'System'
+            'id' => $p->id,
+            'amount' => $p->amount,
+            'method' => $p->method,
+            'cash_amount' => $p->cash_amount,
+            'transfer_amount' => $p->transfer_amount,
+            'reference_number' => $p->reference_number,
+            'note' => $p->note,
+            'paid_at' => $p->paid_at,
+            'creator_name' => $p->creator->name ?? 'System'
         ];
     })) !!};
-    
-    return payments.find(p => p.id === paymentId);
+    return payments.find(p => p.id === id);
 }
 </script>
 </body>

@@ -277,6 +277,7 @@ Route::middleware(['auth', 'finance'])->prefix('finance')->name('finance.')->gro
         Route::get('/{shift}', [\App\Http\Controllers\Finance\ShiftController::class, 'show'])->name('show');
         Route::get('/export', [\App\Http\Controllers\Finance\ShiftController::class, 'export'])->name('export');
         Route::get('/{shift}/export-detail', [\App\Http\Controllers\Finance\ShiftController::class, 'exportDetail'])->name('export-detail');
+        Route::get('/{shift}/export-detail-pdf', [App\Http\Controllers\Finance\ShiftController::class, 'exportDetailPdf'])->name('export-detail-pdf');
         // TIDAK ADA route post (start, end, expense) untuk finance
     });
     // Admin routes - TAMBAHKAN INI SETELAH SHIFT ROUTES
@@ -335,12 +336,21 @@ Route::middleware(['auth', 'kepala_toko'])->prefix('kepala-toko')->name('kepala-
 
     // Inventory Kepala Toko routes
     Route::prefix('inventory')->name('inventory.')->group(function () {
-        Route::view('/', 'kepala-toko.inventory.index')->name('index');
+        Route::get('/', [\App\Http\Controllers\Owner\InventoryController::class, 'index'])->name('index');
+
         Route::get('stock-ins', [\App\Http\Controllers\Owner\StockInController::class, 'index'])->name('stock-ins.index');  // Read-only
         Route::prefix('stock-opnames')->name('stock-opnames.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Owner\StockOpnameController::class, 'index'])->name('index');
             Route::get('{id}', [\App\Http\Controllers\Owner\StockOpnameController::class, 'show'])->name('show');
             Route::post('{id}/approve', [\App\Http\Controllers\Owner\StockOpnameController::class, 'approve'])->name('approve');
+            Route::get('template', [\App\Http\Controllers\Owner\StockOpnameController::class, 'downloadTemplate'])->name('template');
+            Route::get('create', [\App\Http\Controllers\Owner\StockOpnameController::class, 'create'])->name('create');
+            Route::post('import', [\App\Http\Controllers\Owner\StockOpnameController::class, 'import'])->name('import');
+            Route::get('{stockOpname}/edit', [\App\Http\Controllers\Owner\StockOpnameController::class, 'edit'])->name('edit');
+            Route::put('{stockOpname}', [\App\Http\Controllers\Owner\StockOpnameController::class, 'update'])->name('update');
+            Route::delete('{stockOpname}', [\App\Http\Controllers\Owner\StockOpnameController::class, 'destroy'])->name('destroy');
+            Route::get('{stockOpname}/pdf', [\App\Http\Controllers\Owner\StockOpnameController::class, 'exportPdf'])->name('pdf');
+            Route::post('{stockOpname}/approve', [\App\Http\Controllers\Owner\StockOpnameController::class, 'approve'])->name('approve');
             // No create/edit/delete
         });
         Route::get('stock-movements', [\App\Http\Controllers\Owner\StockMovementController::class, 'index'])->name('stock-movements.index');  // Read-only
@@ -423,6 +433,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         return view('admin.dashboard');
     })->name('dashboard');
 
+    Route::get('/customers/search', [\App\Http\Controllers\Admin\SalesOrderController::class, 'searchCustomers'])->name('customers.search');
+
     Route::resource('product', \App\Http\Controllers\Admin\ProductAdminController::class);
     Route::get('catalog/products/search', [\App\Http\Controllers\Admin\ProductAdminController::class, 'search'])->name('catalog.products.search');
     Route::post('admin/product/import', [\App\Http\Controllers\Admin\ProductAdminController::class, 'import'])->name('product.import');
@@ -503,6 +515,11 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         Route::get('/shift/{shift}/export-detail', [App\Http\Controllers\Admin\ShiftController::class, 'exportDetail'])->name('shift.export-detail');
         Route::get('/shift/{shift}/export-detail-pdf', [App\Http\Controllers\Admin\ShiftController::class, 'exportDetailPdf'])->name('shift.export-detail-pdf');
 
+        Route::get('/sales/import', [\App\Http\Controllers\Admin\SalesOrderController::class, 'importForm'])->name('sales.import-form');
+        Route::post('/sales/import', [\App\Http\Controllers\Admin\SalesOrderController::class, 'import'])->name('sales.import');
+        Route::get('/sales/export', [\App\Http\Controllers\Admin\SalesOrderController::class, 'export'])->name('sales.export');
+        Route::get('/sales/download-template', [\App\Http\Controllers\Admin\SalesOrderController::class, 'downloadTemplate'])->name('sales.download-template');
+
 // Admin routes - TAMBAHKAN INI SETELAH SHIFT ROUTES
 Route::middleware(['auth', 'admin', 'check.shift'])->group(function () {
     Route::resource('sales', \App\Http\Controllers\Admin\SalesOrderController::class)
@@ -517,6 +534,21 @@ Route::middleware(['auth', 'admin', 'check.shift'])->group(function () {
     Route::get('/payments/{payment}/nota', [\App\Http\Controllers\Admin\SalesOrderController::class, 'printNota'])->name('sales.printNota');
     Route::get('/payments/{payment}/nota-direct', [\App\Http\Controllers\Admin\SalesOrderController::class, 'printNotaDirect'])->name('sales.printNotaDirect');
     Route::post('/sales/{salesOrder}/payment/{payment}/upload-proof', [\App\Http\Controllers\Admin\SalesOrderController::class, 'uploadProof'])->name('sales.uploadProof');
+    Route::get('/sales/payment-proof/{payment}', function (\App\Models\Payment $payment) {
+        // Cek apakah user punya akses
+        if (!Auth::check() || !Auth::user()->hasRole('admin')) {
+            abort(403, 'Unauthorized');
+        }
+    
+        // Cek apakah file ada
+        if (!$payment->proof_path || !Storage::disk('public')->exists($payment->proof_path)) {
+            abort(404, 'File tidak ditemukan');
+        }
+    
+        // Serve file
+        $path = Storage::disk('public')->path($payment->proof_path);
+        return response()->file($path);
+    })->name('sales.payment-proof');
 });
 });
 

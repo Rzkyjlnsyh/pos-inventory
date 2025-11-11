@@ -35,28 +35,28 @@
       <i class="bi bi-list"></i>
     </button>
 
-    <x-navbar-owner></x-navbar-owner>
+    <x-navbar-kepala-toko></x-navbar-kepala-toko>
 
     <div class="flex-1 lg:w-5/6">
-      <x-navbar-top-owner></x-navbar-top-owner>
+      <x-navbar-top-kepala-toko></x-navbar-top-kepala-toko>
 
       <div class="p-4 lg:p-8">
         <div class="bg-white p-6 rounded-xl shadow-lg">
           <div class="flex border-b mb-4">
-            <a href="{{ route('owner.inventory.index') }}" 
-               class="px-4 py-2 font-semibold {{ request()->routeIs('owner.inventory.index') ? 'border-b-2 border-[#005281] text-[#005281]' : 'text-gray-500 hover:text-[#005281] hover:border-b-2 hover:border-gray-300' }}">
+            <a href="{{ route('kepala-toko.inventory.index') }}" 
+               class="px-4 py-2 font-semibold {{ request()->routeIs('kepala-toko.inventory.index') ? 'border-b-2 border-[#005281] text-[#005281]' : 'text-gray-500 hover:text-[#005281] hover:border-b-2 hover:border-gray-300' }}">
               Overview
             </a>
-            <a href="{{ route('owner.inventory.stock-ins.index') }}" 
-               class="px-4 py-2 font-semibold {{ request()->routeIs('owner.inventory.stock-ins.*') ? 'border-b-2 border-[#005281] text-[#005281]' : 'text-gray-500 hover:text-[#005281] hover:border-b-2 hover:border-gray-300' }}">
+            <a href="{{ route('kepala-toko.inventory.stock-ins.index') }}" 
+               class="px-4 py-2 font-semibold {{ request()->routeIs('kepala-toko.inventory.stock-ins.*') ? 'border-b-2 border-[#005281] text-[#005281]' : 'text-gray-500 hover:text-[#005281] hover:border-b-2 hover:border-gray-300' }}">
               Stok Masuk
             </a>
-            <a href="{{ route('owner.inventory.stock-opnames.index') }}" 
-               class="px-4 py-2 font-semibold {{ request()->routeIs('owner.inventory.stock-opnames.*') ? 'border-b-2 border-[#005281] text-[#005281]' : 'text-gray-500 hover:text-[#005281] hover:border-b-2 hover:border-gray-300' }}">
+            <a href="{{ route('kepala-toko.inventory.stock-opnames.index') }}" 
+               class="px-4 py-2 font-semibold {{ request()->routeIs('kepala-toko.inventory.stock-opnames.*') ? 'border-b-2 border-[#005281] text-[#005281]' : 'text-gray-500 hover:text-[#005281] hover:border-b-2 hover:border-gray-300' }}">
               Stock Opname
             </a>
-            <a href="{{ route('owner.inventory.stock-movements.index') }}" 
-               class="px-4 py-2 font-semibold {{ request()->routeIs('owner.inventory.stock-movements.*') ? 'border-b-2 border-[#005281] text-[#005281]' : 'text-gray-500 hover:text-[#005281] hover:border-b-2 hover:border-gray-300' }}">
+            <a href="{{ route('kepala-toko.inventory.stock-movements.index') }}" 
+               class="px-4 py-2 font-semibold {{ request()->routeIs('kepala-toko.inventory.stock-movements.*') ? 'border-b-2 border-[#005281] text-[#005281]' : 'text-gray-500 hover:text-[#005281] hover:border-b-2 hover:border-gray-300' }}">
               Pergerakan Stok
             </a>
           </div>
@@ -64,13 +64,13 @@
           <nav class="mb-4 flex bg-gray-100 p-3 rounded-lg">
             <ol class="inline-flex items-center space-x-1 md:space-x-3 text-sm">
               <li>
-                <a href="{{ route('owner.dashboard') }}" class="text-gray-700 hover:text-[#005281] flex items-center">
+                <a href="{{ route('kepala-toko.dashboard') }}" class="text-gray-700 hover:text-[#005281] flex items-center">
                   <i class="bi bi-house-door mr-1"></i> Dashboard
                 </a>
               </li>
               <li>
                 <span class="text-gray-400 mx-1">/</span>
-                <a href="{{ route('owner.inventory.index') }}" class="text-gray-700 hover:text-[#005281]">Inventory</a>
+                <a href="{{ route('kepala-toko.inventory.index') }}" class="text-gray-700 hover:text-[#005281]">Inventory</a>
               </li>
               <li>
                 <span class="text-gray-400 mx-1">/</span>
@@ -82,7 +82,7 @@
           <div class="flex justify-between items-center mb-4">
             <h3 class="text-lg font-semibold">Stock Opname</h3>
             <div class="flex space-x-2">
-              <a href="{{ route('owner.inventory.stock-opnames.template') }}"
+              <a href="{{ route('kepala-toko.inventory.stock-opnames.template') }}"
                  class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700">
                 <i class="bi bi-download mr-2"></i> Download Template
               </a>
@@ -90,7 +90,7 @@
                       class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
                 <i class="bi bi-upload mr-2"></i> Import XLSX
               </button>
-              <a href="{{ route('owner.inventory.stock-opnames.create') }}"
+              <a href="{{ route('kepala-toko.inventory.stock-opnames.create') }}"
                  class="bg-[#005281] text-white px-4 py-2 rounded-lg hover:bg-[#00446a]">
                 <i class="bi bi-plus-circle"></i> Tambah Opname
               </a>
@@ -101,7 +101,7 @@
           <div id="importModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
             <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
               <h3 class="text-lg font-semibold mb-4">Import Stock Opname</h3>
-              <form action="{{ route('owner.inventory.stock-opnames.import') }}" method="POST" enctype="multipart/form-data">
+              <form action="{{ route('kepala-toko.inventory.stock-opnames.import') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <div class="mb-4">
                   <label class="block text-gray-700 mb-2">Pilih File XLSX</label>
@@ -145,7 +145,7 @@
               </thead>
               <tbody>
                 @forelse($stockOpnames as $opname)
-                  <tr class="border-b clickable-row hover:bg-gray-50" onclick="window.location='{{ route('owner.inventory.stock-opnames.show', $opname->id) }}'">
+                  <tr class="border-b clickable-row hover:bg-gray-50" onclick="window.location='{{ route('kepala-toko.inventory.stock-opnames.show', $opname->id) }}'">
                     <td class="px-4 py-2">{{ $opname->document_number }}</td>
                     <td class="px-4 py-2">
                       {{ \Carbon\Carbon::parse($opname->date)->format('d M Y') }}
@@ -166,17 +166,17 @@
                     <td class="px-4 py-2 action-buttons" onclick="event.stopPropagation()">
                       <div class="flex space-x-2">
                         @if($opname->status === 'draft')
-                          <a href="{{ route('owner.inventory.stock-opnames.edit', $opname->id) }}" 
+                          <a href="{{ route('kepala-toko.inventory.stock-opnames.edit', $opname->id) }}" 
                              class="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600">
                             <i class="bi bi-pencil"></i>
                           </a>
-                          <form action="{{ route('owner.inventory.stock-opnames.approve', $opname->id) }}" method="POST">
+                          <form action="{{ route('kepala-toko.inventory.stock-opnames.approve', $opname->id) }}" method="POST">
                             @csrf
                             <button type="submit" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">
                               <i class="bi bi-check-circle"></i>
                             </button>
                           </form>
-                          <form action="{{ route('owner.inventory.stock-opnames.destroy', $opname->id) }}" method="POST">
+                          <form action="{{ route('kepala-toko.inventory.stock-opnames.destroy', $opname->id) }}" method="POST">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"

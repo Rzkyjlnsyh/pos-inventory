@@ -10,6 +10,7 @@ use App\Models\Expense;
 use App\Models\Income;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
@@ -42,17 +43,28 @@ class ShiftController extends Controller
             return back()->withErrors(['error' => 'Anda sudah memiliki shift aktif. Akhiri shift sebelumnya terlebih dahulu.']);
         }
     
-        // === LOGIC AUTO KAS AWAL ===
+        // === LOGIC AUTO KAS AWAL DENGAN SANITY CHECK ===
         $latestClosedShift = Shift::whereNotNull('end_time')->latest('end_time')->first();
         
         if ($latestClosedShift) {
-            // AUTO: ambil final_cash dari shift sebelumnya sebagai initial_cash
-            $initialCash = $latestClosedShift->final_cash;
+            // SANITY CHECK: final_cash tidak boleh lebih dari 3x initial_cash
+            $maxAllowed = $latestClosedShift->initial_cash * 3;
+            if ($latestClosedShift->final_cash > $maxAllowed) {
+                \Log::error("Suspicious final_cash detected. Shift: {$latestClosedShift->id}, Final: {$latestClosedShift->final_cash}, Initial: {$latestClosedShift->initial_cash}");
+                
+                // Fallback: hitung ulang dari data real
+                $realFinalCash = $this->calculateRealFinalCash($latestClosedShift);
+                $initialCash = $realFinalCash;
+                
+                \Log::info("Auto-corrected final_cash from {$latestClosedShift->final_cash} to {$realFinalCash}");
+            } else {
+                $initialCash = $latestClosedShift->final_cash;
+            }
             $message = 'Shift dimulai dengan kas awal otomatis: Rp ' . number_format($initialCash, 0, ',', '.');
         } else {
             // FIRST TIME: manual input required
             $validated = $request->validate([
-                'initial_cash' => ['required', 'numeric', 'min:0'],
+                'initial_cash' => ['required', 'numeric', 'min:0', 'max:100000000'],
             ]);
             $initialCash = $validated['initial_cash'];
             $message = 'Shift pertama dimulai dengan kas awal: Rp ' . number_format($initialCash, 0, ',', '.');
@@ -65,7 +77,7 @@ class ShiftController extends Controller
             'status' => 'open',
         ]);
     
-        return redirect()->route('kepala-toko.shift.dashboard')->with('success', $message);
+        return redirect()->route('admin.shift.dashboard')->with('success', $message);
     }
 
     public function end(Request $request): Response|RedirectResponse|BinaryFileResponse
@@ -80,16 +92,14 @@ class ShiftController extends Controller
             return back()->withErrors(['error' => 'Anda tidak memiliki shift aktif. Mulai shift terlebih dahulu.']);
         }
     
-        // === AUTO CALCULATE FINAL CASH ===
-        $expectedCash = $shift->initial_cash + $shift->cash_total - $shift->expense_total;
+        // === HITUNG REAL-TIME DARI DATA ASLI (JANGAN PERCAYA cash_total) ===
+        $realFinalCash = $this->calculateRealFinalCash($shift);
         
-        // FINAL CASH = EXPECTED CASH (tidak ada input manual)
-        $finalCash = $expectedCash;
-        $discrepancy = 0; // Selalu 0 karena tidak ada input manual
-    
+        // Update dengan nilai yang benar
         $shift->update([
-            'final_cash' => $finalCash,
-            'discrepancy' => $discrepancy,
+            'final_cash' => $realFinalCash,
+            'cash_total' => $this->calculateRealCashTotal($shift), // Perbaiki cash_total yang korup
+            'discrepancy' => 0,
             'end_time' => now(),
             'notes' => $validated['notes'] ?? null,
             'status' => 'closed',
@@ -99,15 +109,43 @@ class ShiftController extends Controller
         $pdfPath = $this->printShiftSummary($shift->id);
     
         if ($request->has('print_summary')) {
-            // Langsung download PDF
             return $this->downloadSummary($shift->id);
         }
     
-        return redirect()->route('kepala-toko.shift.history')->with('success', 
+        return redirect()->route('admin.shift.history')->with('success', 
             'Shift diakhiri. ' .
-            'Kas akhir: Rp ' . number_format($finalCash, 0, ',', '.') . '. ' .
+            'Kas akhir: Rp ' . number_format($realFinalCash, 0, ',', '.') . '. ' .
             'Tidak ada selisih karena perhitungan sistem.'
         );
+    }
+
+    // METHOD BARU: HITUNG REAL CASH TOTAL DARI DATA ASLI
+    private function calculateRealCashTotal(Shift $shift): float
+    {
+        $payments = Payment::where('created_by', $shift->user_id)
+            ->where('created_at', '>=', $shift->start_time)
+            ->where('created_at', '<=', $shift->end_time ?? now())
+            ->get();
+
+        $totalCashFromPayments = 0;
+        foreach ($payments as $payment) {
+            if ($payment->method === 'cash') {
+                $totalCashFromPayments += $payment->amount;
+            } elseif ($payment->method === 'split') {
+                $totalCashFromPayments += $payment->cash_amount;
+            }
+        }
+
+        $totalIncome = Income::where('shift_id', $shift->id)->sum('amount');
+        
+        return $totalCashFromPayments + $totalIncome;
+    }
+
+    // METHOD BARU: HITUNG REAL FINAL CASH DARI DATA ASLI
+    private function calculateRealFinalCash(Shift $shift): float
+    {
+        $realCashTotal = $this->calculateRealCashTotal($shift);
+        return $shift->initial_cash + $realCashTotal - $shift->expense_total;
     }
 // Method untuk print summary (struk thermal)
 public function printSummary($id)
@@ -162,52 +200,83 @@ public function printPreview($id)
     public function income(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'income_amount' => ['required', 'numeric', 'min:0.01'],
+            'income_amount' => ['required', 'numeric', 'min:1000', 'max:10000000'], // BATASI MAX!
             'income_description' => ['required', 'string', 'max:255'],
         ]);
 
-        $shift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
-        if (!$shift) {
-            return back()->withErrors(['error' => 'Anda tidak memiliki shift aktif. Mulai shift terlebih dahulu.']);
-        }
+        // PAKAI DB TRANSACTION UNTUK HINDARI RACE CONDITION
+        return DB::transaction(function () use ($validated) {
+            $shift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
+            
+            if (!$shift) {
+                return back()->withErrors(['error' => 'Anda tidak memiliki shift aktif. Mulai shift terlebih dahulu.']);
+            }
 
-        Income::create([
-            'shift_id' => $shift->id,
-            'amount' => $validated['income_amount'],
-            'description' => $validated['income_description'],
-        ]);
+            // CEK DUPLIKAT 5 MENIT TERAKHIR
+            $recentIncome = Income::where('shift_id', $shift->id)
+                ->where('description', $validated['income_description'])
+                ->where('amount', $validated['income_amount'])
+                ->where('created_at', '>=', now()->subMinutes(5))
+                ->first();
+                
+            if ($recentIncome) {
+                return back()->withErrors(['error' => 'Pemasukan serupa sudah ditambahkan 5 menit yang lalu.']);
+            }
 
-        $shift->increment('income_total', $validated['income_amount']);
-        $shift->increment('cash_total', $validated['income_amount']);
+            Income::create([
+                'shift_id' => $shift->id,
+                'amount' => $validated['income_amount'],
+                'description' => $validated['income_description'],
+            ]);
 
-        \Log::info('Pemasukan ditambahkan: ' . $validated['income_description'] . ' - Rp ' . number_format($validated['income_amount'], 0, ',', '.'));
+            $shift->increment('income_total', $validated['income_amount']);
+            $shift->increment('cash_total', $validated['income_amount']);
 
-        return back()->with('success', 'Pemasukan berhasil ditambahkan.');
+            \Log::info('Pemasukan ditambahkan: ' . $validated['income_description'] . ' - Rp ' . number_format($validated['income_amount'], 0, ',', '.'));
+
+            return back()->with('success', 'Pemasukan berhasil ditambahkan.');
+        });
     }
 
     public function expense(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'expense_amount' => ['required', 'numeric', 'min:0.01'],
+            'expense_amount' => ['required', 'numeric', 'min:1000', 'max:10000000'], // BATASI MAX!
             'expense_description' => ['required', 'string', 'max:255'],
         ]);
 
-        $shift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
-        if (!$shift) {
-            return back()->withErrors(['error' => 'Anda tidak memiliki shift aktif. Mulai shift terlebih dahulu.']);
-        }
+        // PAKAI DB TRANSACTION UNTUK HINDARI RACE CONDITION
+        return DB::transaction(function () use ($validated) {
+            $shift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
+            
+            if (!$shift) {
+                return back()->withErrors(['error' => 'Anda tidak memiliki shift aktif. Mulai shift terlebih dahulu.']);
+            }
 
-        Expense::create([
-            'shift_id' => $shift->id,
-            'amount' => $validated['expense_amount'],
-            'description' => $validated['expense_description'],
-            'created_at' => now(),
-        ]);
+            // CEK DUPLIKAT 5 MENIT TERAKHIR
+            $recentExpense = Expense::where('shift_id', $shift->id)
+                ->where('description', $validated['expense_description'])
+                ->where('amount', $validated['expense_amount'])
+                ->where('created_at', '>=', now()->subMinutes(5))
+                ->first();
+                
+            if ($recentExpense) {
+                return back()->withErrors(['error' => 'Pengeluaran serupa sudah ditambahkan 5 menit yang lalu.']);
+            }
 
-        $shift->increment('expense_total', $validated['expense_amount']);
-        \Log::info('Pengeluaran ditambahkan: ' . $validated['expense_description'] . ' - Rp ' . number_format($validated['expense_amount'], 0, ',', '.'));
+            Expense::create([
+                'shift_id' => $shift->id,
+                'amount' => $validated['expense_amount'],
+                'description' => $validated['expense_description'],
+                'created_at' => now(),
+            ]);
 
-        return back()->with('success', 'Pengeluaran berhasil ditambahkan.');
+            $shift->increment('expense_total', $validated['expense_amount']);
+
+            \Log::info('Pengeluaran ditambahkan: ' . $validated['expense_description'] . ' - Rp ' . number_format($validated['expense_amount'], 0, ',', '.'));
+
+            return back()->with('success', 'Pengeluaran berhasil ditambahkan.');
+        });
     }
 
     public function dashboard(): View

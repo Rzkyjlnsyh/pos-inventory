@@ -16,6 +16,7 @@ use Illuminate\View\View;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\ShiftHistoryExport;
 use App\Exports\ShiftDetailExport;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 
 
@@ -176,6 +177,30 @@ public function dashboard(Request $request): View
         );
     }
 
+    public function printSummary($id)
+{
+    $shift = Shift::with('user')->findOrFail($id);
+    
+    $payments = Payment::where('created_by', $shift->user_id)
+        ->where('created_at', '>=', $shift->start_time)
+        ->where('created_at', '<=', $shift->end_time ?? now())
+        ->with('salesOrder')
+        ->get();
+        
+    $incomes = Income::where('shift_id', $id)->get();
+    $expenses = Expense::where('shift_id', $id)->get();
+
+    $pdf = PDF::loadView('finance.shift.closing_summary', compact('shift', 'incomes', 'expenses', 'payments'));
+    
+    // Set paper size dan margin
+    $pdf->setPaper('a4', 'portrait'); // Default A4
+    $pdf->setOption('margin-top', 0);
+    $pdf->setOption('margin-right', 0);
+    $pdf->setOption('margin-bottom', 0);
+    $pdf->setOption('margin-left', 0);
+    
+    return $pdf->stream('closing_summary_shift_' . $shift->id . '.pdf');
+}
     /**
      * Riwayat Shift untuk Finance - Lihat SEMUA shift
      */
@@ -207,23 +232,28 @@ public function dashboard(Request $request): View
     /**
      * Detail Shift untuk Finance - Lihat detail (read-only)
      */
-    public function show(Shift $shift): View
+    public function show(Shift $shift)
     {
-        $shift->load(['user', 'expenses', 'incomes']);
-        
-        // Calculate detailed payments (pakai logic dari admin)
+        $incomes = Income::where('shift_id', $shift->id)->get();
+        $expenses = Expense::where('shift_id', $shift->id)->get();
+    
+        $salesOrders = SalesOrder::whereHas('payments', function ($query) use ($shift) {
+            $query->where('created_by', $shift->user_id)
+                  ->where('created_at', '>=', $shift->start_time)
+                  ->where('created_at', '<=', $shift->end_time ?? now());
+        })->with(['customer', 'payments'])->get();
+    
         $payments = Payment::where('created_by', $shift->user_id)
             ->where('created_at', '>=', $shift->start_time)
             ->where('created_at', '<=', $shift->end_time ?? now())
             ->with('salesOrder')
             ->get();
-
+    
         $cashLunas = $cashDp = $cashPelunasan = $transferLunas = $transferDp = $transferPelunasan = 0;
-
+    
         foreach ($payments as $payment) {
             $so = $payment->salesOrder;
             $isLunasSekaliBayar = ($payment->category === 'pelunasan' && $so->payments->count() === 1);
-            
             if ($payment->method === 'cash') {
                 if ($isLunasSekaliBayar) {
                     $cashLunas += $payment->amount;
@@ -253,23 +283,10 @@ public function dashboard(Request $request): View
                 }
             }
         }
-
-        // Sales orders in this shift
-        $salesOrders = SalesOrder::where('created_by', $shift->user_id)
-            ->whereBetween('created_at', [$shift->start_time, $shift->end_time ?? now()])
-            ->with(['customer', 'payments', 'items'])
-            ->get();
-
-        $paymentDetails = compact(
-            'cashLunas', 'cashDp', 'cashPelunasan',
-            'transferLunas', 'transferDp', 'transferPelunasan'
-        );
-
-        return view('finance.shift.show', compact(
-            'shift', 
-            'salesOrders', 
-            'paymentDetails'
-        ));
+    
+        $totalPendapatan = $cashLunas + $cashDp + $cashPelunasan + $transferLunas + $transferDp + $transferPelunasan;
+    
+        return view('finance.shift.show', compact('shift', 'incomes', 'expenses', 'salesOrders', 'cashLunas', 'cashDp', 'cashPelunasan', 'transferLunas', 'transferDp', 'transferPelunasan', 'totalPendapatan'));
     }
 
     /**
@@ -286,5 +303,24 @@ public function dashboard(Request $request): View
     public function exportDetail(Shift $shift)
     {
         return Excel::download(new ShiftDetailExport($shift), 'shift_detail_' . $shift->id . '_' . date('Ymd_His') . '.xlsx');
+    }
+
+    public function exportDetailPdf(Shift $shift)
+    {
+        // Ambil SO yang memiliki pembayaran dalam rentang shift
+        $salesOrders = SalesOrder::whereHas('payments', function ($query) use ($shift) {
+            $query->where('created_by', $shift->user_id)
+                  ->where('created_at', '>=', $shift->start_time)
+                  ->where('created_at', '<=', $shift->end_time ?? now());
+        })->with(['payments' => function ($query) use ($shift) {
+            $query->where('created_at', '>=', $shift->start_time)
+                  ->where('created_at', '<=', $shift->end_time ?? now());
+        }])->get();
+    
+        $expenses = Expense::where('shift_id', $shift->id)->get();
+        $incomes = Income::where('shift_id', $shift->id)->get();
+
+        $pdf = Pdf::loadView('finance.shift.detail_pdf', compact('shift', 'salesOrders', 'expenses', 'incomes'));
+        return $pdf->download('shift_detail_' . $shift->id . '_' . date('Ymd_His') . '.pdf');
     }
 }

@@ -39,7 +39,8 @@ class PurchaseOrderController extends BaseController
             'kainReceiver',
             'printer',
             'tailor',
-            'finisher'
+            'finisher',
+            'salesOrder.customer'
         ]);
 
         return view('finance.purchases.show', compact('purchase'));

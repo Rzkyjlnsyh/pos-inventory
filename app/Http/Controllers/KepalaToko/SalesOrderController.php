@@ -269,16 +269,11 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
     {
         $salesOrder->load(['customer', 'items', 'creator', 'approver', 'payments.creator', 'logs.user']);
         $payment = $salesOrder->payments->first() ?? new Payment();
-        $activeShift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
-        return view('kepala-toko.sales.show', compact('salesOrder', 'payment', 'activeShift'));
+        return view('kepala-toko.sales.show', compact('salesOrder', 'payment'));
     }
 
     public function edit(SalesOrder $salesOrder): View|RedirectResponse
     {
-        $shiftCheck = $this->checkActiveShift();
-        if ($shiftCheck !== true) {
-            return $shiftCheck;
-        }
 
         if (!$salesOrder->isEditable()) {
             \Log::warning('Attempt to edit non-editable SO: ' . $salesOrder->so_number);
@@ -286,16 +281,11 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
         }
         $customers = Customer::orderBy('name')->get();
         $products = Product::where('is_active', true)->where('price', '>', 0)->orderBy('name')->get();
-        $activeShift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
-        return view('kepala-toko.sales.edit', compact('salesOrder', 'customers', 'products', 'activeShift'));
+        return view('kepala-toko.sales.edit', compact('salesOrder', 'customers', 'products'));
     }
 
     public function update(Request $request, SalesOrder $salesOrder): RedirectResponse
     {
-        $shiftCheck = $this->checkActiveShift();
-        if ($shiftCheck !== true) {
-            return $shiftCheck;
-        }
 
         if (!$salesOrder->isEditable()) {
             \Log::warning('Attempt to update non-editable SO: ' . $salesOrder->so_number);
@@ -531,10 +521,6 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
 
     public function approve(Request $request, SalesOrder $salesOrder): RedirectResponse
     {
-        $shiftCheck = $this->checkActiveShift();
-        if ($shiftCheck !== true) {
-            return $shiftCheck;
-        }
         if ($salesOrder->status !== 'pending') {
             \Log::warning('Attempt to approve non-pending SO: ' . $salesOrder->so_number);
             return back()->withErrors(['status' => 'Hanya pending yang bisa di-approve.']);
@@ -634,10 +620,6 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
 
     public function startProcess(SalesOrder $salesOrder): RedirectResponse
     {
-        $shiftCheck = $this->checkActiveShift();
-        if ($shiftCheck !== true) {
-            return $shiftCheck;
-        }
     
         if ($salesOrder->status !== 'pending') {
             \Log::warning('Attempt to start process on non-pending SO: ' . $salesOrder->so_number);
@@ -685,10 +667,6 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
 
     public function processJahit(SalesOrder $salesOrder): RedirectResponse
     {
-        $shiftCheck = $this->checkActiveShift();
-        if ($shiftCheck !== true) {
-            return $shiftCheck;
-        }
         if ($salesOrder->order_type !== 'jahit_sendiri' || $salesOrder->status !== 'request_kain') {
             \Log::warning('Invalid state for jahit process on SO: ' . $salesOrder->so_number, ['order_type' => $salesOrder->order_type, 'status' => $salesOrder->status]);
             return back()->withErrors(['status' => 'Hanya SO jahit sendiri dengan status request kain yang bisa diproses jahit.']);
@@ -707,10 +685,6 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
 
     public function markAsJadi(SalesOrder $salesOrder): RedirectResponse
     {
-        $shiftCheck = $this->checkActiveShift();
-        if ($shiftCheck !== true) {
-            return $shiftCheck;
-        }
         if ($salesOrder->order_type !== 'jahit_sendiri' || $salesOrder->status !== 'proses_jahit') {
             \Log::warning('Invalid state for marking jadi on SO: ' . $salesOrder->so_number, ['order_type' => $salesOrder->order_type, 'status' => $salesOrder->status]);
             return back()->withErrors(['status' => 'Hanya SO jahit sendiri dengan status proses jahit yang bisa ditandai jadi.']);
@@ -729,10 +703,6 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
 
     public function markAsDiterimaToko(SalesOrder $salesOrder): RedirectResponse
     {
-        $shiftCheck = $this->checkActiveShift();
-        if ($shiftCheck !== true) {
-            return $shiftCheck;
-        }
         $validStatuses = $salesOrder->order_type === 'jahit_sendiri' ? ['jadi'] : ['di proses'];
         if (!in_array($salesOrder->status, $validStatuses)) {
             \Log::warning('Invalid state for marking diterima toko on SO: ' . $salesOrder->so_number, ['status' => $salesOrder->status]);
@@ -752,10 +722,6 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
 
     public function complete(SalesOrder $salesOrder): RedirectResponse
     {
-        $shiftCheck = $this->checkActiveShift();
-        if ($shiftCheck !== true) {
-            return $shiftCheck;
-        }
         if ($salesOrder->status !== 'diterima_toko') {
             \Log::warning('Attempt to complete non-diterima_toko SO: ' . $salesOrder->so_number);
             return back()->withErrors(['status' => 'Hanya SO yang sudah diterima toko yang bisa diselesaikan.']);

@@ -89,7 +89,7 @@
               <tbody>
                 @forelse($stockIns as $s)
                 <tr class="{{ $s->purchaseOrder ? 'clickable-row' : 'non-clickable-row' }} border-b {{ $s->purchaseOrder ? 'hover:bg-gray-50' : '' }}"
-                    @if($s->purchaseOrder) onclick="window.location='{{ route('owner.purchases.show', $s->purchaseOrder->id) }}'" @endif>
+                    @if($s->purchaseOrder) onclick="window.location='{{ route('admin.purchases.show', $s->purchaseOrder->id) }}'" @endif>
                     <td class="px-3 py-2">{{ $s->stock_in_number }}</td>
                     <td class="px-3 py-2">{{ \Carbon\Carbon::parse($s->received_date)->format('d M Y') }}</td>
                     <td class="px-3 py-2">{{ $s->supplier?->name ?? '-' }}</td>

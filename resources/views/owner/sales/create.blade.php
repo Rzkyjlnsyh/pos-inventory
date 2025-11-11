@@ -437,11 +437,6 @@
                 const grandInput = document.getElementById('grand_total');
                 if (grandInput) grandInput.value = grandTotal.toFixed(2);
 
-                // update DP info
-                if (dpInfo) {
-                    dpInfo.textContent = grandTotal > 0 ? `DP minimal 50%: Rp ${Math.ceil(grandTotal * 0.5).toLocaleString('id-ID')}` : '';
-                }
-
                 // jika metode split, sinkron jumlah
                 updatePaymentAmount();
                 updatePaymentStatus();
@@ -658,14 +653,6 @@
                 } else {
                     paymentStatus.value = 'dp';
                 }
-
-                // update dpInfo khusus jika status dipilih dp
-                if (paymentStatus.value === 'dp' && amount > 0) {
-                    const minDp = Math.ceil(grandTotal * 0.5);
-                    dpInfo.textContent = `Minimal DP 50%: Rp ${minDp.toLocaleString('id-ID')}`;
-                } else {
-                    dpInfo.textContent = grandTotal > 0 ? `DP minimal 50%: Rp ${Math.ceil(grandTotal * 0.5).toLocaleString('id-ID')}` : '';
-                }
             }
 
             // Event binding payment fields
@@ -707,17 +694,17 @@
                     }
 
                     if (amount > 0) {
-                        if (paymentStatus.value === 'dp' && amount < (grandTotal * 0.5)) {
-                            e.preventDefault();
-                            alert(`Jumlah pembayaran kurang dari DP minimal 50%: Rp ${(grandTotal * 0.5).toLocaleString('id-ID')}`);
-                            return;
-                        }
-                        if (amount > grandTotal) {
-                            e.preventDefault();
-                            alert(`Jumlah pembayaran melebihi grand total: Rp ${grandTotal.toLocaleString('id-ID')}`);
-                            return;
-                        }
-                    }
+    if (paymentStatus.value === 'dp' && amount <= 0) {
+        e.preventDefault();
+        alert(`Jumlah pembayaran DP harus lebih dari Rp 0`);
+        return;
+    }
+    if (amount > grandTotal) {
+        e.preventDefault();
+        alert(`Jumlah pembayaran melebihi grand total: Rp ${grandTotal.toLocaleString('id-ID')}`);
+        return;
+    }
+}
 
                     // kalau lolos semua, biarkan submit
                 });

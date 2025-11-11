@@ -184,7 +184,7 @@ class StockOpnameController extends Controller
 
     public function approve($id)
     {
-        if (! in_array(auth()->user()->usertype, ['finance', 'kepala-toko', 'owner'])) {
+        if (! in_array(auth()->user()->usertype, ['finance', 'kepala_toko', 'owner'])) {
             return back()->with('error', 'Akses ditolak.');
         }
         $stockOpname = StockOpname::with('items.product')->findOrFail($id);
@@ -312,7 +312,7 @@ class StockOpnameController extends Controller
     public function downloadTemplate()
     {
         // Cek permission berdasarkan route current
-        $allowedRoles = ['owner', 'admin', 'finance', 'kepala-toko', 'editor'];
+        $allowedRoles = ['owner', 'admin', 'finance', 'kepala_toko', 'editor'];
         $currentRole = null;
         
         foreach ($allowedRoles as $role) {

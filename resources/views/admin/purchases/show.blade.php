@@ -56,67 +56,86 @@
         <div class="flex-1 lg:w-5/6">
             <x-navbar-top-admin></x-navbar-top-admin>
 
-            <div class="p-4 lg:p-8">
-                <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
-                    <div class="flex items-center justify-between">
-                        <h2 class="text-xl font-semibold text-gray-700">Detail Pembelian</h2>
-                        <a href="{{ route('admin.purchases.index') }}" class="px-4 py-2 border rounded hover:bg-gray-50 transition-colors">Kembali</a>
+    <div class="p-4 lg:p-8">
+        <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
+            <div class="flex items-center justify-between">
+                <h2 class="text-xl font-semibold text-gray-700">Detail Pembelian</h2>
+                <a href="{{ route('admin.purchases.index') }}" class="px-4 py-2 border rounded hover:bg-gray-50 transition-colors">Kembali</a>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Main Information -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Purchase Info Card -->
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <div class="text-sm text-gray-500">No. Pembelian</div>
+                            <div class="text-lg font-semibold">{{ $purchase->po_number }}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm text-gray-500">Status</div>
+                            <span class="px-3 py-1 rounded text-sm font-medium
+                            @if($purchase->status === 'draft') bg-gray-100 text-gray-800
+                            @elseif($purchase->status === 'pending') bg-yellow-100 text-yellow-800
+                            @elseif($purchase->status === 'approved') bg-blue-100 text-blue-800
+                            @elseif($purchase->status === 'payment') bg-purple-100 text-purple-800
+                            @elseif($purchase->status === 'kain_diterima') bg-indigo-100 text-indigo-800
+                            @elseif($purchase->status === 'printing') bg-orange-100 text-orange-800
+                            @elseif($purchase->status === 'jahit') bg-pink-100 text-pink-800
+                            @elseif($purchase->status === 'selesai') bg-green-100 text-green-800
+                            @elseif($purchase->status === 'cancelled') bg-red-100 text-red-800
+                            @endif">
+                                {{ $purchase->getStatusLabel() }}
+                            </span>
+                        </div>
                     </div>
-                </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <!-- Main Information -->
-                    <div class="lg:col-span-2 space-y-6">
-                        <!-- Purchase Info Card -->
-                        <div class="bg-white p-6 rounded-xl shadow-lg">
-                            <div class="flex items-center justify-between mb-4">
-                                <div>
-                                    <div class="text-sm text-gray-500">No. Pembelian</div>
-                                    <div class="text-lg font-semibold">{{ $purchase->po_number }}</div>
-                                </div>
-                                <div class="text-right">
-                                    <div class="text-sm text-gray-500">Status</div>
-                                    <span class="px-3 py-1 rounded text-sm font-medium
-                                    @if($purchase->status === 'draft') bg-gray-100 text-gray-800
-                                    @elseif($purchase->status === 'pending') bg-yellow-100 text-yellow-800
-                                    @elseif($purchase->status === 'approved') bg-blue-100 text-blue-800
-                                    @elseif($purchase->status === 'payment') bg-purple-100 text-purple-800
-                                    @elseif($purchase->status === 'kain_diterima') bg-indigo-100 text-indigo-800
-                                    @elseif($purchase->status === 'printing') bg-orange-100 text-orange-800
-                                    @elseif($purchase->status === 'jahit') bg-pink-100 text-pink-800
-                                    @elseif($purchase->status === 'selesai') bg-green-100 text-green-800
-                                    @elseif($purchase->status === 'cancelled') bg-red-100 text-red-800
-                                    @endif">
-                                        {{ $purchase->getStatusLabel() }}
-                                    </span>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <div class="text-sm text-gray-500">Tipe Pembelian</div>
+                            <span class="px-2 py-1 rounded text-sm {{ $purchase->purchase_type === 'kain' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800' }}">
+                                {{ $purchase->getTypeLabel() }}
+                            </span>
+                        </div>
+                        <div>
+                            <div class="text-sm text-gray-500">Tanggal Pembelian</div>
+                            <div>{{ \Carbon\Carbon::parse($purchase->order_date)->format('d M Y') }}</div>
+                        </div>
+                        @if($purchase->deadline)
+                        <div>
+                            <div class="text-sm text-gray-500">Deadline</div>
+                            <div>{{ \Carbon\Carbon::parse($purchase->deadline)->format('d M Y') }}</div>
+                        </div>
+                        @endif
+                        <div>
+                            <div class="text-sm text-gray-500">Supplier</div>
+                            <div>{{ $purchase->supplier?->name ?? '-' }}</div>
+                        </div>
+                        <div>
+                            <div class="text-sm text-gray-500">Dibuat Oleh</div>
+                            <div>{{ $purchase->creator->name ?? 'System' }}</div>
+                        </div>
+                        
+                        <!-- 🔧 FIX: Tampilkan informasi customer jika dari sales -->
+                        @if($purchase->is_from_sales)
+                        <div class="md:col-span-2 border-t pt-4 mt-4">
+                            <div class="text-sm text-gray-500 mb-2">Informasi Customer</div>
+                            <div class="bg-blue-50 p-3 rounded-lg">
+                                <div class="flex items-center space-x-2">
+                                    <i class="bi bi-person text-blue-600"></i>
+                                    <div>
+                                        <div class="font-medium text-blue-800">{{ $purchase->customer_name }}</div>
+                                        @if($purchase->salesOrder && $purchase->salesOrder->so_number)
+                                        <div class="text-sm text-blue-600">Dari Sales Order: {{ $purchase->salesOrder->so_number }}</div>
+                                        @endif
+                                    </div>
                                 </div>
                             </div>
-
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                <div>
-                                    <div class="text-sm text-gray-500">Tipe Pembelian</div>
-                                    <span class="px-2 py-1 rounded text-sm {{ $purchase->purchase_type === 'kain' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800' }}">
-                                        {{ $purchase->getTypeLabel() }}
-                                    </span>
-                                </div>
-                                <div>
-                                    <div class="text-sm text-gray-500">Tanggal Pembelian</div>
-                                    <div>{{ \Carbon\Carbon::parse($purchase->order_date)->format('d M Y') }}</div>
-                                </div>
-                                @if($purchase->deadline)
-    <div>
-        <strong>Deadline:</strong> {{ \Carbon\Carbon::parse($purchase->deadline)->format('d M Y') }}
-    </div>
-    @endif
-                                <div>
-                                    <div class="text-sm text-gray-500">Supplier</div>
-                                    <div>{{ $purchase->supplier?->name ?? '-' }}</div>
-                                </div>
-                                <div>
-                                    <div class="text-sm text-gray-500">Dibuat Oleh</div>
-                                    <div>{{ $purchase->creator->name ?? 'System' }}</div>
-                                </div>
-                            </div>
+                        </div>
+                        @endif
+                    </div>
 
                             <!-- Financial Summary -->
                             <div class="border-t pt-4">

@@ -1,10 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+<meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>Login - Pare Custom</title>
+
+  <title>Pare Custom POS | Login</title>
+  <meta name="description" content="Masuk ke sistem POS Pare Custom untuk mengelola transaksi, stok, dan laporan penjualan dengan mudah.">
+  <meta name="keywords" content="Pare Custom, POS, login, kasir, sablon, toko kaos, manajemen penjualan">
+  <meta name="robots" content="index, follow">
+  <meta name="author" content="Pare Custom">
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* Loader styles */
@@ -87,7 +92,7 @@
     <div class="p-8 rounded-lg w-full max-w-md">
       <!-- Logo -->
       <div class="text-center mb-6">
-        <img src="{{ asset('assets/logo.png') }}" alt="Pare Custom Logo" class="w-48 mx-auto">
+        <img src="{{ asset('https://parecustom.com/public/assets/logo.png') }}" alt="Pare Custom Logo" class="w-48 mx-auto">
       </div>
 
       @auth
@@ -111,7 +116,7 @@
             Go to Dashboard
           </a>
         @elseif(Auth::user()->usertype == 'finance')
-          <a href="{{ route('finance-toko.dashboard') }}" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#005281] hover:bg-[#153c53] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+          <a href="{{ route('finance.dashboard') }}" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#005281] hover:bg-[#153c53] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
             Go to Dashboard
           </a>
         @endif

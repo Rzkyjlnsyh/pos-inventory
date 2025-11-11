@@ -155,20 +155,20 @@ public function update(Request $request, PurchaseOrder $purchase): RedirectRespo
 $changes = [];
 
 // 1. Deteksi perubahan header - PAKAI FORMAT YANG SAMA
-$oldDate = \Carbon\Carbon::parse($oldData['order_date'])->format('Y-m-d');
-$newDate = \Carbon\Carbon::parse($validated['order_date'])->format('Y-m-d');
+$oldDate = Carbon::parse($oldData['order_date'])->format('Y-m-d');
+$newDate = Carbon::parse($validated['order_date'])->format('Y-m-d');
 if ($oldDate != $newDate) {
-    $changes[] = "Tanggal order dari " . \Carbon\Carbon::parse($oldData['order_date'])->format('d/m/Y') . " ke " . \Carbon\Carbon::parse($validated['order_date'])->format('d/m/Y');
+    $changes[] = "Tanggal order dari " . Carbon::parse($oldData['order_date'])->format('d/m/Y') . " ke " . Carbon::parse($validated['order_date'])->format('d/m/Y');
 }
 
 // Deadline - handle null values
-$oldDeadline = $oldData['deadline'] ? \Carbon\Carbon::parse($oldData['deadline'])->format('Y-m-d') : null;
-$newDeadline = $validated['deadline'] ? \Carbon\Carbon::parse($validated['deadline'])->format('Y-m-d') : null;
+$oldDeadline = $oldData['deadline'] ? Carbon::parse($oldData['deadline'])->format('Y-m-d') : null;
+$newDeadline = $validated['deadline'] ? Carbon::parse($validated['deadline'])->format('Y-m-d') : null;
 if ($oldDeadline != $newDeadline) {
     if ($oldDeadline && $newDeadline) {
-        $changes[] = "Deadline dari " . \Carbon\Carbon::parse($oldData['deadline'])->format('d/m/Y') . " ke " . \Carbon\Carbon::parse($validated['deadline'])->format('d/m/Y');
+        $changes[] = "Deadline dari " . Carbon::parse($oldData['deadline'])->format('d/m/Y') . " ke " . Carbon::parse($validated['deadline'])->format('d/m/Y');
     } elseif ($newDeadline) {
-        $changes[] = "Deadline ditambahkan: " . \Carbon\Carbon::parse($validated['deadline'])->format('d/m/Y');
+        $changes[] = "Deadline ditambahkan: " . Carbon::parse($validated['deadline'])->format('d/m/Y');
     } elseif ($oldDeadline) {
         $changes[] = "Deadline dihapus";
     }
@@ -336,7 +336,8 @@ if (!empty($allChanges)) {
             'printer',
             'tailor',
             'finisher',
-            'logs.user' // TAMBAH INI UNTUK LOAD LOGS
+            'logs.user', // TAMBAH INI UNTUK LOAD LOGS
+            'salesOrder.customer'
         ]);
         $availableStatuses = $purchase->getNextAvailableStatuses();
 

@@ -21,7 +21,7 @@ class CheckActiveShift
         $user = Auth::user();
     
         // OWNER: boleh akses SEMUA (GET/POST/PUT/DELETE) tanpa shift aktif
-        if ($user->hasRole('owner')) {
+        if ($user->hasRole('owner') || $user->hasRole('kepala_toko')) {
             return $next($request);
         }
     
@@ -36,7 +36,6 @@ class CheckActiveShift
             $route = match($user->usertype) {
                 'admin' => 'admin.shift.dashboard',
                 'finance' => 'finance.shift.dashboard', 
-                'kepala_toko' => 'kepalatoko.shift.dashboard',
                 default => 'dashboard'
             };
             return redirect()->route($route)->with('error', 'Silakan mulai shift terlebih dahulu untuk melakukan aksi ini.');

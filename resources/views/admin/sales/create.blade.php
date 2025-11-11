@@ -150,58 +150,52 @@
                                 </div>
                             </div>
                             <div class="relative">
-                                <label for="customer_search" class="block font-medium mb-1">Customer (Opsional)</label>
-                                <input type="text" id="customer_search"
-                                    class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
-                                    placeholder="Ketik nama customer atau biarkan kosong..." autocomplete="off">
+    <label for="customer_search" class="block font-medium mb-1">Customer (Opsional)</label>
+    
+    <!-- Input untuk search customer dengan autocomplete -->
+    <input type="text" 
+           id="customer_search"
+           class="customer-autocomplete border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
+           placeholder="Ketik minimal 3 huruf nama customer..."
+           autocomplete="off"
+           value="{{ old('customer_name') }}">
 
-                                <!-- Hidden fields untuk data customer -->
-                                <input type="hidden" name="customer_id" id="customer_id"
-                                    value="{{ old('customer_id') }}">
-                                <input type="hidden" name="customer_name" id="customer_name"
-                                    value="{{ old('customer_name') }}">
-                                <input type="hidden" name="customer_phone" id="customer_phone"
-                                    value="{{ old('customer_phone') }}">
+    <!-- Hidden fields untuk data customer -->
+    <input type="hidden" name="customer_id" id="customer_id" value="{{ old('customer_id') }}">
+    <input type="hidden" name="customer_name" id="customer_name" value="{{ old('customer_name') }}">
+    <input type="hidden" name="customer_phone" id="customer_phone" value="{{ old('customer_phone') }}">
 
-                                <!-- Dropdown untuk existing customers -->
-                                <div id="customer_dropdown"
-                                    class="hidden absolute z-10 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto">
-                                    <!-- Existing customers akan dimuat di sini -->
-                                    @foreach($customers as $customer)
-                                        <div class="p-2 hover:bg-gray-100 cursor-pointer customer-option"
-                                            data-id="{{ $customer->id }}" data-name="{{ $customer->name }}"
-                                            data-phone="{{ $customer->phone ?? '' }}">
-                                            {{ $customer->name }} @if($customer->phone)({{ $customer->phone }})@endif
-                                        </div>
-                                    @endforeach
-                                </div>
+    <!-- Dropdown untuk hasil autocomplete -->
+    <div id="customer_autocomplete_results" 
+         class="hidden absolute z-20 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto">
+    </div>
 
-                                <!-- Info customer yang dipilih -->
-                                <div id="selected_customer" class="mt-2 p-2 bg-blue-50 rounded hidden">
-                                    <span id="customer_display_name" class="font-medium"></span>
-                                    <span id="customer_display_phone" class="text-sm text-gray-600 ml-2"></span>
-                                    <button type="button" id="clear_customer" class="text-red-600 ml-2">✕</button>
-                                </div>
+    <!-- Info customer yang dipilih -->
+    <div id="selected_customer" class="mt-2 p-2 bg-blue-50 rounded {{ old('customer_id') ? '' : 'hidden' }}">
+        <span id="customer_display_name" class="font-medium">{{ old('customer_name') }}</span>
+        <span id="customer_display_phone" class="text-sm text-gray-600 ml-2">{{ old('customer_phone') ? '(' . old('customer_phone') . ')' : '' }}</span>
+        <button type="button" id="clear_customer" class="text-red-600 ml-2">✕</button>
+    </div>
 
-                                <!-- Fields untuk customer baru - TAMBAH INPUT PHONE DISINI -->
-                                <div id="new_customer_fields" class="hidden mt-2">
-                                    <div class="grid md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label class="block font-medium mb-1">Nama Customer Baru *</label>
-                                            <input type="text" id="new_customer_name"
-                                                class="border rounded px-3 py-2 w-full"
-                                                placeholder="Nama customer baru">
-                                        </div>
-                                        <div>
-                                            <label class="block font-medium mb-1">Nomor Telepon</label>
-                                            <input type="text" id="new_customer_phone"
-                                                class="border rounded px-3 py-2 w-full"
-                                                placeholder="Contoh: 08123456789">
-                                        </div>
-                                    </div>
-                                    <p class="text-sm text-gray-600 mt-1">* Customer baru akan otomatis dibuat</p>
-                                </div>
-                            </div>
+    <!-- Fields untuk customer baru -->
+    <div id="new_customer_fields" class="hidden mt-2">
+        <div class="grid md:grid-cols-2 gap-4">
+            <div>
+                <label class="block font-medium mb-1">Nama Customer Baru *</label>
+                <input type="text" id="new_customer_name"
+                    class="border rounded px-3 py-2 w-full"
+                    placeholder="Nama customer baru">
+            </div>
+            <div>
+                <label class="block font-medium mb-1">Nomor Telepon</label>
+                <input type="text" id="new_customer_phone"
+                    class="border rounded px-3 py-2 w-full"
+                    placeholder="Contoh: 08123456789">
+            </div>
+        </div>
+        <p class="text-sm text-gray-600 mt-1">* Customer baru akan otomatis dibuat</p>
+    </div>
+</div>
                             <div>
                                 <label for="payment_method" class="block font-medium mb-1">Metode Pembayaran</label>
                                 <select name="payment_method" id="payment_method" required
@@ -304,63 +298,68 @@
                         <div class="mb-6">
                             <h2 class="text-lg font-semibold mb-4 text-gray-800">Item Order</h2>
                             <div id="items-container" class="space-y-4">
-                                <div class="item-row grid md:grid-cols-5 gap-4">
-                                    <div class="relative">
-                                        <label class="block font-medium mb-1">Produk</label>
-                                        <input type="text"
-                                            class="product-search border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
-                                            placeholder="Ketik nama produk, SKU, atau barcode..." autocomplete="off">
-                                        <input type="hidden" name="items[0][product_id]" class="product-id">
-                                        <input type="hidden" name="items[0][product_name]" class="product-name">
-
-                                        <!-- Dropdown untuk hasil search -->
-                                        <div
-                                            class="product-results hidden absolute z-20 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto">
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label class="block font-medium mb-1">SKU</label>
-                                        <input type="text" name="items[0][sku]"
-                                            class="sku border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
-                                            readonly>
-                                        @error('items.0.sku')
-                                            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                                        @enderror
-                                    </div>
-                                    <div>
-                                        <label class="block font-medium mb-1">Harga</label>
-                                        <input type="number" name="items[0][sale_price]"
-                                            class="sale-price border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
-                                            step="0.01" required>
-                                        @error('items.0.sale_price')
-                                            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                                        @enderror
-                                    </div>
-                                    <div>
-                                        <label class="block font-medium mb-1">Qty</label>
-                                        <input type="number" name="items[0][qty]"
-                                            class="qty border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
-                                            min="1" required>
-                                        @error('items.0.qty')
-                                            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                                        @enderror
-                                    </div>
-                                    <div>
-                                        <label class="block font-medium mb-1">Diskon</label>
-                                        <input type="number" name="items[0][discount]"
-                                            class="discount border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
-                                            min="0" step="0.01" value="0">
-                                        @error('items.0.discount')
-                                            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                                        @enderror
-                                    </div>
-                                </div>
+                            <div class="item-row grid md:grid-cols-3 gap-4">
+    <div class="relative md:col-span-2">
+        <label class="block font-medium mb-1">Produk</label>
+        <input type="text"
+            class="product-search border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
+            placeholder="Ketik nama produk..." autocomplete="off">
+        <input type="hidden" name="items[0][product_id]" class="product-id">
+        <input type="hidden" name="items[0][product_name]" class="product-name">
+        <input type="hidden" name="items[0][sku]" class="sku">
+        <div class="product-results hidden absolute z-20 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto"></div>
+    </div>
+    <div>
+        <label class="block font-medium mb-1">Harga</label>
+        <input type="number" name="items[0][sale_price]"
+            class="sale-price border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
+            step="0.01" required>
+        @error('items.0.sale_price')
+            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+        @enderror
+    </div>
+    <div>
+        <label class="block font-medium mb-1">Qty</label>
+        <input type="number" name="items[0][qty]"
+            class="qty border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
+            min="1" required>
+        @error('items.0.qty')
+            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+        @enderror
+    </div>
+</div>
                             </div>
                             <button type="button" id="add-item"
                                 class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow mt-4">
                                 <i class="bi bi-plus-circle"></i> Tambah Item
                             </button>
                         </div>
+
+                        <!-- TAMBAH BAGIAN INI: Summary dengan Discount Total -->
+<div class="bg-gray-50 p-4 rounded-lg mb-6">
+    <h2 class="text-lg font-semibold mb-4 text-gray-800">Ringkasan Order</h2>
+    <div class="grid md:grid-cols-4 gap-4">
+        <div>
+            <label class="block font-medium mb-1">Subtotal</label>
+            <div id="display-subtotal" class="text-lg font-semibold text-gray-800">Rp 0</div>
+        </div>
+        <div>
+            <label for="discount_total" class="block font-medium mb-1">Diskon Total</label>
+            <input type="number" name="discount_total" id="discount_total" 
+                   class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
+                   min="0" step="0.01" value="{{ old('discount_total', 0) }}"
+                   placeholder="0">
+            @error('discount_total')
+                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+            @enderror
+        </div>
+        <div>
+            <label class="block font-medium mb-1">Grand Total</label>
+            <div id="display-grand-total" class="text-lg font-bold text-blue-600">Rp 0</div>
+            <input type="hidden" name="grand_total" id="grand_total" value="0">
+        </div>
+    </div>
+</div>
 
                         <div class="flex gap-3">
     <button type="submit" name="status" value="pending"
@@ -407,42 +406,33 @@
 
             // --- Fungsi utama: hitung grand total ---
             function updateGrandTotal() {
-                const rows = document.querySelectorAll('.item-row');
-                let subtotal = 0;
-                let discountTotal = 0;
+    const rows = document.querySelectorAll('.item-row');
+    let subtotal = 0;
 
-                rows.forEach(row => {
-                    const price = parseFloat(row.querySelector('.sale-price').value) || 0;
-                    const qty = parseInt(row.querySelector('.qty').value) || 0;
-                    const discount = parseFloat(row.querySelector('.discount').value) || 0;
+    // Hitung subtotal dari semua items
+    rows.forEach(row => {
+        const price = parseFloat(row.querySelector('.sale-price').value) || 0;
+        const qty = parseInt(row.querySelector('.qty').value) || 0;
+        subtotal += price * qty;
+    });
 
-                    const itemSubtotal = price * qty;
-                    const itemDiscount = discount * qty;
-                    subtotal += itemSubtotal;
-                    discountTotal += itemDiscount;
+    // Ambil discount total dari input
+    const discountTotal = parseFloat(document.getElementById('discount_total').value) || 0;
+    
+    // Hitung grand total
+    grandTotal = Math.max(0, subtotal - discountTotal);
 
-                    // jika ada elemen subtotal atau display per row, kita bisa set (opsional)
-                    const displaySubtotal = row.querySelector('.display-subtotal');
-                    if (displaySubtotal) {
-                        displaySubtotal.textContent = (itemSubtotal - itemDiscount).toLocaleString('id-ID');
-                    }
-                });
+    // Update display
+    document.getElementById('display-subtotal').textContent = 'Rp ' + subtotal.toLocaleString('id-ID');
+    document.getElementById('display-grand-total').textContent = 'Rp ' + grandTotal.toLocaleString('id-ID');
+    document.getElementById('grand_total').value = grandTotal.toFixed(2);
 
-                grandTotal = subtotal - discountTotal;
-
-                // update hidden field
-                const grandInput = document.getElementById('grand_total');
-                if (grandInput) grandInput.value = grandTotal.toFixed(2);
-
-                // update DP info
-                if (dpInfo) {
-                    dpInfo.textContent = grandTotal > 0 ? `DP minimal 50%: Rp ${Math.ceil(grandTotal * 0.5).toLocaleString('id-ID')}` : '';
-                }
-
-                // jika metode split, sinkron jumlah
-                updatePaymentAmount();
-                updatePaymentStatus();
-            }
+    // Update payment fields
+    updatePaymentAmount();
+    updatePaymentStatus();
+}
+// Event listener untuk discount total
+document.getElementById('discount_total').addEventListener('input', updateGrandTotal);
 
             // === PRODUCT SEARCH AUTCOMPLETE FUNCTION ===
             function initializeProductSearch(row) {
@@ -555,36 +545,27 @@
                 const newRow = document.createElement('div');
                 newRow.className = 'item-row grid md:grid-cols-5 gap-4 mt-4';
                 newRow.innerHTML = `
-            <div class="relative">
-                <label class="block font-medium mb-1">Produk</label>
-                <input type="text" 
-                       class="product-search border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
-                       placeholder="Ketik nama produk, SKU, atau barcode..."
-                       autocomplete="off">
-                <input type="hidden" name="items[${itemIndex}][product_id]" class="product-id">
-                <input type="hidden" name="items[${itemIndex}][product_name]" class="product-name">
-                
-                <!-- Dropdown untuk hasil search -->
-                <div class="product-results hidden absolute z-20 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto"></div>
-            </div>
-            <div>
-                <label class="block font-medium mb-1">SKU</label>
-                <input type="text" name="items[${itemIndex}][sku]" class="sku border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" readonly>
-            </div>
-            <div>
-                <label class="block font-medium mb-1">Harga</label>
-                <input type="number" name="items[${itemIndex}][sale_price]" class="sale-price border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" step="0.01" required>
-            </div>
-            <div>
-                <label class="block font-medium mb-1">Qty</label>
-                <input type="number" name="items[${itemIndex}][qty]" class="qty border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" min="1" value="1" required>
-            </div>
-            <div>
-                <label class="block font-medium mb-1">Diskon</label>
-                <input type="number" name="items[${itemIndex}][discount]" class="discount border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" min="0" step="0.01" value="0">
-                <button type="button" class="remove-item text-red-600 hover:text-red-800 mt-2"><i class="bi bi-trash"></i></button>
-            </div>
-        `;
+    <div class="relative md:col-span-2">
+        <label class="block font-medium mb-1">Produk</label>
+        <input type="text" 
+               class="product-search border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
+               placeholder="Ketik nama produk..."
+               autocomplete="off">
+        <input type="hidden" name="items[${itemIndex}][product_id]" class="product-id">
+        <input type="hidden" name="items[${itemIndex}][product_name]" class="product-name">
+        <input type="hidden" name="items[${itemIndex}][sku]" class="sku">
+        <div class="product-results hidden absolute z-20 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto"></div>
+    </div>
+    <div>
+        <label class="block font-medium mb-1">Harga</label>
+        <input type="number" name="items[${itemIndex}][sale_price]" class="sale-price border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" step="0.01" required>
+    </div>
+    <div>
+        <label class="block font-medium mb-1">Qty</label>
+        <input type="number" name="items[${itemIndex}][qty]" class="qty border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" min="1" value="1" required>
+        <button type="button" class="remove-item text-red-600 hover:text-red-800 mt-2"><i class="bi bi-trash"></i></button>
+    </div>
+`;
                 itemsContainer.appendChild(newRow);
                 itemIndex++;
 
@@ -655,14 +636,6 @@
                 } else {
                     paymentStatus.value = 'dp';
                 }
-
-                // update dpInfo khusus jika status dipilih dp
-                if (paymentStatus.value === 'dp' && amount > 0) {
-                    const minDp = Math.ceil(grandTotal * 0.5);
-                    dpInfo.textContent = `Minimal DP 50%: Rp ${minDp.toLocaleString('id-ID')}`;
-                } else {
-                    dpInfo.textContent = grandTotal > 0 ? `DP minimal 50%: Rp ${Math.ceil(grandTotal * 0.5).toLocaleString('id-ID')}` : '';
-                }
             }
 
             // Event binding payment fields
@@ -704,18 +677,18 @@ if (method === 'split' || method === 'transfer') {
     }
 }
 
-                    if (amount > 0) {
-                        if (paymentStatus.value === 'dp' && amount < (grandTotal * 0.5)) {
-                            e.preventDefault();
-                            alert(`Jumlah pembayaran kurang dari DP minimal 50%: Rp ${(grandTotal * 0.5).toLocaleString('id-ID')}`);
-                            return;
-                        }
-                        if (amount > grandTotal) {
-                            e.preventDefault();
-                            alert(`Jumlah pembayaran melebihi grand total: Rp ${grandTotal.toLocaleString('id-ID')}`);
-                            return;
-                        }
-                    }
+if (amount > 0) {
+    if (paymentStatus.value === 'dp' && amount <= 0) {
+        e.preventDefault();
+        alert(`Jumlah pembayaran DP harus lebih dari Rp 0`);
+        return;
+    }
+    if (amount > grandTotal) {
+        e.preventDefault();
+        alert(`Jumlah pembayaran melebihi grand total: Rp ${grandTotal.toLocaleString('id-ID')}`);
+        return;
+    }
+}
 
                     // kalau lolos semua, biarkan submit
                 });
@@ -732,94 +705,156 @@ if (method === 'split' || method === 'transfer') {
             if (paymentMethod) paymentMethod.dispatchEvent(new Event('change'));
         });
 
-        // === SIMPLE CUSTOMER SEARCH FIX ===
-        const customerSearch = document.getElementById('customer_search');
-        const customerDropdown = document.getElementById('customer_dropdown');
-        const customerIdInput = document.getElementById('customer_id');
-        const customerNameInput = document.getElementById('customer_name');
-        const customerPhoneInput = document.getElementById('customer_phone');
-        const selectedCustomerDiv = document.getElementById('selected_customer');
-        const newCustomerFields = document.getElementById('new_customer_fields');
-        const newCustomerName = document.getElementById('new_customer_name');
-        const newCustomerPhone = document.getElementById('new_customer_phone');
+// === AUTOCOMPLETE CUSTOMER SEARCH ===
+const customerSearch = document.getElementById('customer_search');
+const customerResults = document.getElementById('customer_autocomplete_results');
+const customerIdInput = document.getElementById('customer_id');
+const customerNameInput = document.getElementById('customer_name');
+const customerPhoneInput = document.getElementById('customer_phone');
+const selectedCustomerDiv = document.getElementById('selected_customer');
+const newCustomerFields = document.getElementById('new_customer_fields');
+const newCustomerName = document.getElementById('new_customer_name');
+const newCustomerPhone = document.getElementById('new_customer_phone');
 
-        // Show dropdown when clicking search
-        customerSearch.addEventListener('click', function () {
-            customerDropdown.classList.remove('hidden');
-        });
+let searchTimeout = null;
 
-        // Hide dropdown when clicking outside
-        document.addEventListener('click', function (e) {
-            if (!e.target.closest('.relative')) {
-                customerDropdown.classList.add('hidden');
+// Real-time search dengan debounce
+customerSearch.addEventListener('input', function () {
+    const searchTerm = this.value.trim();
+    
+    // Clear previous timeout
+    if (searchTimeout) {
+        clearTimeout(searchTimeout);
+    }
+    
+    // Hide results if search term is too short
+    if (searchTerm.length < 2) {
+        customerResults.classList.add('hidden');
+        checkNewCustomerFields(searchTerm);
+        return;
+    }
+    
+    // Debounce search - wait 300ms after user stops typing
+    searchTimeout = setTimeout(() => {
+        searchCustomers(searchTerm);
+    }, 300);
+});
+
+// Function untuk search customers via AJAX
+function searchCustomers(searchTerm) {
+    fetch(`/admin/customers/search?q=${encodeURIComponent(searchTerm)}`)
+        .then(response => {
+            if (!response.ok) throw new Error('Network error');
+            return response.json();
+        })
+        .then(customers => {
+            customerResults.innerHTML = '';
+            
+            if (customers.length === 0) {
+                // No existing customers found
+                const noResult = document.createElement('div');
+                noResult.className = 'p-2 text-gray-500';
+                noResult.textContent = 'Customer tidak ditemukan. Akan dibuat customer baru.';
+                customerResults.appendChild(noResult);
+                customerResults.classList.remove('hidden');
+                
+                // Show new customer fields
+                checkNewCustomerFields(searchTerm);
+                return;
             }
-        });
-
-        // Select existing customer
-        customerDropdown.addEventListener('click', function (e) {
-            const customerOption = e.target.closest('.customer-option');
-            if (customerOption) {
-                const id = customerOption.getAttribute('data-id');
-                const name = customerOption.getAttribute('data-name');
-                const phone = customerOption.getAttribute('data-phone');
-
-                customerIdInput.value = id;
-                customerNameInput.value = name;
-                customerPhoneInput.value = phone || '';
-
-                // Show selected customer info
-                document.getElementById('customer_display_name').textContent = name;
-                document.getElementById('customer_display_phone').textContent = phone ? `(${phone})` : '';
-                selectedCustomerDiv.classList.remove('hidden');
-
-                // Hide dropdown and clear search
-                customerDropdown.classList.add('hidden');
-                customerSearch.value = '';
-            }
-        });
-
-        // Clear customer selection
-        document.getElementById('clear_customer').addEventListener('click', function () {
-            customerIdInput.value = '';
-            customerNameInput.value = '';
-            customerPhoneInput.value = '';
-            selectedCustomerDiv.classList.add('hidden');
+            
+            // Show matching customers
+            customers.forEach(customer => {
+                const div = document.createElement('div');
+                div.className = 'p-2 hover:bg-gray-100 cursor-pointer customer-option border-b';
+                div.innerHTML = `
+                    <div class="font-medium">${customer.name}</div>
+                    <div class="text-sm text-gray-600">${customer.phone ? `(${customer.phone})` : 'No phone'}</div>
+                `;
+                div.setAttribute('data-id', customer.id);
+                div.setAttribute('data-name', customer.name);
+                div.setAttribute('data-phone', customer.phone || '');
+                
+                div.addEventListener('click', function () {
+                    selectCustomer(customer.id, customer.name, customer.phone || '');
+                });
+                
+                customerResults.appendChild(div);
+            });
+            
+            customerResults.classList.remove('hidden');
             newCustomerFields.classList.add('hidden');
-            customerSearch.value = '';
-            newCustomerName.value = '';
-            newCustomerPhone.value = '';
+        })
+        .catch(error => {
+            console.error('Error searching customers:', error);
+            customerResults.innerHTML = '<div class="p-2 text-red-500">Error loading customers</div>';
+            customerResults.classList.remove('hidden');
         });
+}
 
-        // Create new customer - show fields when typing
-        customerSearch.addEventListener('input', function () {
-            const searchTerm = this.value.trim();
+// Function untuk select customer
+function selectCustomer(id, name, phone) {
+    customerIdInput.value = id;
+    customerNameInput.value = name;
+    customerPhoneInput.value = phone;
+    
+    // Update display
+    document.getElementById('customer_display_name').textContent = name;
+    document.getElementById('customer_display_phone').textContent = phone ? `(${phone})` : '';
+    selectedCustomerDiv.classList.remove('hidden');
+    
+    // Clear search and hide results
+    customerSearch.value = '';
+    customerResults.classList.add('hidden');
+    newCustomerFields.classList.add('hidden');
+}
 
-            if (searchTerm.length > 0) {
-                // Check if customer exists
-                const existingCustomer = Array.from(customerDropdown.querySelectorAll('.customer-option'))
-                    .find(opt => opt.getAttribute('data-name').toLowerCase() === searchTerm.toLowerCase());
+// Function untuk check if we should show new customer fields
+function checkNewCustomerFields(searchTerm) {
+    if (searchTerm.length >= 3 && !customerIdInput.value) {
+        newCustomerName.value = searchTerm;
+        customerNameInput.value = searchTerm;
+        newCustomerFields.classList.remove('hidden');
+    } else {
+        newCustomerFields.classList.add('hidden');
+    }
+}
 
-                if (!existingCustomer) {
-                    // Show new customer fields
-                    newCustomerName.value = searchTerm;
-                    customerNameInput.value = searchTerm;
-                    newCustomerFields.classList.remove('hidden');
-                } else {
-                    newCustomerFields.classList.add('hidden');
-                }
-            } else {
-                newCustomerFields.classList.add('hidden');
-            }
-        });
+// Clear customer selection
+document.getElementById('clear_customer').addEventListener('click', function () {
+    customerIdInput.value = '';
+    customerNameInput.value = '';
+    customerPhoneInput.value = '';
+    selectedCustomerDiv.classList.add('hidden');
+    newCustomerFields.classList.add('hidden');
+    customerSearch.value = '';
+    newCustomerName.value = '';
+    newCustomerPhone.value = '';
+    customerResults.classList.add('hidden');
+});
 
-        // Sync new customer fields
-        newCustomerName.addEventListener('input', function () {
-            customerNameInput.value = this.value;
-        });
+// Sync new customer fields
+newCustomerName.addEventListener('input', function () {
+    customerNameInput.value = this.value;
+});
 
-        newCustomerPhone.addEventListener('input', function () {
-            customerPhoneInput.value = this.value;
-        });
+newCustomerPhone.addEventListener('input', function () {
+    customerPhoneInput.value = this.value;
+});
+
+// Hide dropdown when clicking outside
+document.addEventListener('click', function (e) {
+    if (!e.target.closest('.relative')) {
+        customerResults.classList.add('hidden');
+    }
+});
+
+// Show dropdown when focusing on search
+customerSearch.addEventListener('focus', function () {
+    if (this.value.trim().length >= 3) {
+        this.dispatchEvent(new Event('input'));
+    }
+});
 
         // === SUPPLIER SEARCH LOGIC ===
 document.getElementById('add_to_purchase').addEventListener('change', function() {

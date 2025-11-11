@@ -15,7 +15,6 @@ class ProductImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnF
 {
     use SkipsFailures;
 
-    // Tambahkan variabel untuk menghitung baris yang berhasil diimport
     private $rowCount = 0;
 
     public function model(array $row)
@@ -36,6 +35,15 @@ class ProductImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnF
             $categoryId = $category->id;
         }
 
+        // 🔧 FIX: Konversi format Indonesia ke format database
+        $costPrice = $this->convertToFloat($row['cost_price']);
+        $price = $this->convertToFloat($row['price']);
+
+        // Validasi harga jual tidak boleh lebih kecil dari harga modal
+        if ($price < $costPrice) {
+            throw new \Exception("Harga jual tidak boleh lebih kecil dari harga modal. Baris: " . ($this->rowCount + 1));
+        }
+
         // Tambah hitungan baris
         $this->rowCount++;
 
@@ -43,8 +51,8 @@ class ProductImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnF
             'sku' => $row['sku'] ?? null,
             'name' => $row['name'],
             'category_id' => $categoryId,
-            'cost_price' => $row['cost_price'],
-            'price' => $row['price'],
+            'cost_price' => $costPrice,
+            'price' => $price,
             'stock_qty' => $row['stock_qty'],
             'is_active' => (bool) $row['is_active'],
         ]);
@@ -56,23 +64,101 @@ class ProductImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnF
             'sku' => ['nullable', 'string', 'max:100', Rule::unique('products', 'sku')],
             'name' => ['required', 'string', 'max:255'],
             'category_name' => ['nullable', 'string', 'max:255'],
-            'cost_price' => ['required', 'numeric', 'min:0'],
-            'price' => ['required', 'numeric', 'min:0'],
-            'stock_qty' => ['required', 'integer'], // ❌ hapus min:0
+            // 🔧 FIX: Custom validation untuk format Indonesia
+            'cost_price' => ['required', function ($attribute, $value, $fail) {
+                $converted = $this->convertToFloat($value);
+                if ($converted === false || $converted < 0) {
+                    $fail('Harga modal harus berupa angka yang valid dan tidak negatif.');
+                }
+            }],
+            'price' => ['required', function ($attribute, $value, $fail) {
+                $converted = $this->convertToFloat($value);
+                if ($converted === false || $converted < 0) {
+                    $fail('Harga jual harus berupa angka yang valid dan tidak negatif.');
+                }
+            }],
+            'stock_qty' => ['required', 'integer'],
             'is_active' => ['required', 'in:0,1'],
         ];
+    }
+
+    /**
+     * 🔧 FIX: Konversi format Indonesia ke float
+     * Contoh: 
+     * - "61998,77" → 61998.77
+     * - "17.000" → 17000.00
+     * - "17.000,77" → 17000.77
+     * - "1.234,56" → 1234.56
+     */
+    private function convertToFloat($value)
+    {
+        // Jika sudah numeric, langsung return
+        if (is_numeric($value)) {
+            return (float) $value;
+        }
+
+        // Jika string, bersihkan format Indonesia
+        $value = trim(strval($value));
+        
+        // Jika kosong, return false
+        if ($value === '') {
+            return false;
+        }
+
+        // Hapus karakter selain angka, koma, dan titik
+        $cleaned = preg_replace('/[^\d,.]/', '', $value);
+        
+        // Jika tidak ada digit, return false
+        if (!preg_match('/\d/', $cleaned)) {
+            return false;
+        }
+
+        // Handle berbagai format
+        if (strpos($cleaned, ',') !== false && strpos($cleaned, '.') !== false) {
+            // Format: 1.234,56 → hapus titik (thousand separator), ganti koma dengan titik (decimal separator)
+            $cleaned = str_replace('.', '', $cleaned);
+            $cleaned = str_replace(',', '.', $cleaned);
+        } elseif (strpos($cleaned, ',') !== false && strpos($cleaned, '.') === false) {
+            // Format: 1234,56 atau 61.998,77 → cek jika koma sebagai decimal separator
+            $parts = explode(',', $cleaned);
+            if (count($parts) === 2 && strlen($parts[1]) <= 2) {
+                // Format: 1234,56 → ganti koma dengan titik
+                $cleaned = str_replace(',', '.', $cleaned);
+            } else {
+                // Format: 61.998,77 → hapus titik, ganti koma dengan titik
+                $cleaned = str_replace('.', '', $cleaned);
+                $cleaned = str_replace(',', '.', $cleaned);
+            }
+        } elseif (strpos($cleaned, '.') !== false) {
+            // Format: 17000.00 (sudah format internasional) - biarkan
+            // Atau 17.000 (format Indonesia) - perlu dikonversi
+            $parts = explode('.', $cleaned);
+            if (count($parts) > 2) {
+                // Format: 17.000 → hapus semua titik
+                $cleaned = str_replace('.', '', $cleaned);
+            }
+            // Jika hanya 1 titik, biarkan sebagai decimal separator
+        }
+
+        // Konversi ke float
+        $result = (float) $cleaned;
+        
+        // Validasi hasil konversi
+        if ($result < 0) {
+            return false;
+        }
+
+        return $result;
     }
 
     public function customValidationMessages()
     {
         return [
-            // Tambah pesan custom jika perlu, misalnya:
             'sku.unique' => 'SKU sudah digunakan.',
             'name.required' => 'Nama produk wajib diisi.',
-            'cost_price.required' => 'Harga modal wajib diisi.',
-            'price.required' => 'Harga jual wajib diisi.',
             'stock_qty.required' => 'Jumlah stok wajib diisi.',
             'is_active.required' => 'Status aktif wajib diisi (0 atau 1).',
+            'is_active.in' => 'Status aktif harus 0 atau 1.',
         ];
     }
 
@@ -81,7 +167,6 @@ class ProductImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnF
         return ['category_name' => 'nama kategori'];
     }
 
-    // Method untuk mendapatkan jumlah baris yang berhasil diimport
     public function getRowCount(): int
     {
         return $this->rowCount;

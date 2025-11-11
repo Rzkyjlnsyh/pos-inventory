@@ -18,9 +18,9 @@
 
 <body class="bg-gray-100">
   <div class="flex">
-    <x-navbar-owner></x-navbar-owner>
+    <x-navbar-kepala-toko></x-navbar-kepala-toko>
   <div class="flex-1">
-    <x-navbar-top-owner></x-navbar-top-owner>
+    <x-navbar-top-kepala-toko></x-navbar-top-kepala-toko>
     <div class="p-4 lg:p-8">
       <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
         <div class="flex items-center justify-between">
@@ -29,7 +29,7 @@
       </div>
 
       <div class="bg-white p-6 rounded-xl shadow-lg">
-        <form action="{{ route('owner.inventory.stock-opnames.store') }}" method="POST" x-data="opnameForm()">
+        <form action="{{ route('kepala-toko.inventory.stock-opnames.store') }}" method="POST" x-data="opnameForm()">
           @csrf
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -96,7 +96,7 @@
           </div>
 
           <div class="flex justify-end space-x-4 pt-6 border-t">
-            <a href="{{ route('owner.inventory.stock-opnames.index') }}"
+            <a href="{{ route('kepala-toko.inventory.stock-opnames.index') }}"
               class="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
               <i class="bi bi-arrow-left mr-2"></i>
               Kembali

@@ -613,10 +613,8 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
     {
     
         $validated = $request->validate([
-            'payment_amount' => ['required', 'numeric', 'min:0', function ($attribute, $value, $fail) use ($salesOrder) {
-                if ($salesOrder->paid_total == 0 && $value < $salesOrder->grand_total * 0.5) {
-                    $fail('DP minimal 50% dari grand total: Rp ' . number_format($salesOrder->grand_total * 0.5, 0, ',', '.'));
-                }
+            'payment_amount' => ['required', 'numeric', 'min:1', function ($attribute, $value, $fail) use ($salesOrder) {
+                // Hapus syarat minimal 50%
                 if ($value > $salesOrder->remaining_amount) {
                     $fail('Jumlah tidak boleh melebihi sisa: Rp ' . number_format($salesOrder->remaining_amount, 0, ',', '.'));
                 }

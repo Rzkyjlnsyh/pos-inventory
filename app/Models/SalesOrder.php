@@ -27,6 +27,7 @@ class SalesOrder extends Model
         'approved_at',
         'completed_at',
         'deadline', // tambah ini
+        'add_to_purchase', // ✅ tambahkan ini
     ];
 
     protected $casts = [
@@ -37,6 +38,7 @@ class SalesOrder extends Model
         'deadline' => 'date', // TAMBAH INI
         'approved_at' => 'datetime',
         'completed_at' => 'datetime',
+        'add_to_purchase' => 'boolean',
     ];
 
     // === RELASI ===

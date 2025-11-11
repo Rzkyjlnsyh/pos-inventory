@@ -93,6 +93,26 @@
                             </span>
                         @endif
                     </form>
+                    <!-- Di dalam div Filter + Button, tambahkan setelah tombol Buat SO Baru -->
+<div class="flex flex-col md:flex-row md:items-center md:space-x-4 space-y-2 md:space-y-0 mt-4 md:mt-0">
+    <!-- Tombol Export -->
+    <a href="{{ route('admin.sales.export', request()->query()) }}" 
+       class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow flex items-center justify-center">
+        <i class="bi bi-download mr-2"></i> Export Excel
+    </a>
+    
+    <!-- Tombol Download Template -->
+    <a href="{{ route('admin.sales.download-template') }}" 
+       class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow flex items-center justify-center">
+        <i class="bi bi-file-earmark-spreadsheet mr-2"></i> Download Template
+    </a>
+    
+    <!-- Tombol Import -->
+    <a href="{{ route('admin.sales.import-form') }}" 
+       class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded shadow flex items-center justify-center">
+        <i class="bi bi-upload mr-2"></i> Import Excel
+    </a>
+</div>
                 </div>
 
                 <!-- Table -->

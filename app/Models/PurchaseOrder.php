@@ -61,6 +61,7 @@ class PurchaseOrder extends Model
         'selesai_at',
         'selesai_by',
         'deadline', // tambah ini
+        'sales_order_id',
     ];
 
     protected $casts = [
@@ -74,6 +75,40 @@ class PurchaseOrder extends Model
         'jahit_at' => 'datetime',
         'selesai_at' => 'datetime',
     ];
+
+    public function salesOrder(): BelongsTo
+    {
+        return $this->belongsTo(SalesOrder::class)->withDefault([
+            'so_number' => 'N/A',
+            'customer' => null
+        ]);
+    }
+
+    // Helper method untuk mendapatkan nama customer dari sales order
+    public function getCustomerNameAttribute(): string
+    {
+        if ($this->salesOrder && $this->salesOrder->customer) {
+            return $this->salesOrder->customer->name;
+        }
+        
+        // Fallback: cari dari log description
+        $log = $this->logs()->where('description', 'like', '%Dari Penjualan%')->first();
+        if ($log) {
+            // Extract customer info dari log jika ada
+            preg_match('/Dari Penjualan : ([A-Z0-9]+)/', $log->description, $matches);
+            if (isset($matches[1])) {
+                return "Customer (SO: {$matches[1]})";
+            }
+        }
+        
+        return '-';
+    }
+
+    // Helper method untuk mengecek apakah purchase berasal dari sales
+    public function getIsFromSalesAttribute(): bool
+    {
+        return !is_null($this->sales_order_id);
+    }
 
     public function supplier(): BelongsTo
     {

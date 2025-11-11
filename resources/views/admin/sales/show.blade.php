@@ -55,6 +55,7 @@
             @csrf
             @method('PUT')
             <input type="hidden" name="status" value="pending">
+            <input type="hidden" name="add_to_purchase" value="{{ $salesOrder->add_to_purchase ? '1' : '0' }}">
             <input type="hidden" name="order_type" value="{{ $salesOrder->order_type }}">
             <input type="hidden" name="order_date" value="{{ $salesOrder->order_date->format('Y-m-d\TH:i') }}">
             <input type="hidden" name="deadline" value="{{ $salesOrder->deadline?->format('Y-m-d') }}">
@@ -1307,9 +1308,19 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('payment_amount').value = total.toFixed(2);
     }
 
-    function updateProofRequired(method) {
-        proofInput.required = (method === 'transfer' || method === 'split');
-    }
+        // === PERBAIKAN: Function updateProofRequired yang baru ===
+        function updateProofRequired(method) {
+            if (!proofInput || !referenceInput) return;
+            
+            if (method === 'transfer' || method === 'split') {
+                // Untuk transfer/split, bukti dan referensi jadi opsional (salah satu wajib)
+                proofInput.required = false;
+                referenceInput.required = false;
+            } else {
+                proofInput.required = false;
+                referenceInput.required = false;
+            }
+        }
 
     updateProofRequired(paymentMethod);
 

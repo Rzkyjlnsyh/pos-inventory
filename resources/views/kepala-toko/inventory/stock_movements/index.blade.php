@@ -20,29 +20,29 @@
       <i class="bi bi-list"></i>
     </button>
 
-    <x-navbar-owner></x-navbar-owner>
+    <x-navbar-kepala-toko></x-navbar-kepala-toko>
 
     <div class="flex-1 lg:w-5/6">
-      <x-navbar-top-owner></x-navbar-top-owner>
+      <x-navbar-top-kepala-toko></x-navbar-top-kepala-toko>
 
       <div class="p-4 lg:p-8">
         <div class="bg-white p-6 rounded-xl shadow-lg">
           {{-- Tabs (sama seperti Overview) --}}
           <div class="flex border-b mb-4">
-            <a href="{{ route('owner.inventory.index') }}" 
-               class="px-4 py-2 font-semibold {{ request()->routeIs('owner.inventory.index') ? 'border-b-2 border-[#005281] text-[#005281]' : 'text-gray-500 hover:text-[#005281] hover:border-b-2 hover:border-gray-300' }}">
+            <a href="{{ route('kepala-toko.inventory.index') }}" 
+               class="px-4 py-2 font-semibold {{ request()->routeIs('kepala-toko.inventory.index') ? 'border-b-2 border-[#005281] text-[#005281]' : 'text-gray-500 hover:text-[#005281] hover:border-b-2 hover:border-gray-300' }}">
               Overview
             </a>
-            <a href="{{ route('owner.inventory.stock-ins.index') }}" 
-               class="px-4 py-2 font-semibold {{ request()->routeIs('owner.inventory.stock-ins.*') ? 'border-b-2 border-[#005281] text-[#005281]' : 'text-gray-500 hover:text-[#005281] hover:border-b-2 hover:border-gray-300' }}">
+            <a href="{{ route('kepala-toko.inventory.stock-ins.index') }}" 
+               class="px-4 py-2 font-semibold {{ request()->routeIs('kepala-toko.inventory.stock-ins.*') ? 'border-b-2 border-[#005281] text-[#005281]' : 'text-gray-500 hover:text-[#005281] hover:border-b-2 hover:border-gray-300' }}">
               Stok Masuk
             </a>
-            <a href="{{ route('owner.inventory.stock-opnames.index') }}" 
-               class="px-4 py-2 font-semibold {{ request()->routeIs('owner.inventory.stock-opnames.*') ? 'border-b-2 border-[#005281] text-[#005281]' : 'text-gray-500 hover:text-[#005281] hover:border-b-2 hover:border-gray-300' }}">
+            <a href="{{ route('kepala-toko.inventory.stock-opnames.index') }}" 
+               class="px-4 py-2 font-semibold {{ request()->routeIs('kepala-toko.inventory.stock-opnames.*') ? 'border-b-2 border-[#005281] text-[#005281]' : 'text-gray-500 hover:text-[#005281] hover:border-b-2 hover:border-gray-300' }}">
               Stock Opname
             </a>
-            <a href="{{ route('owner.inventory.stock-movements.index') }}" 
-               class="px-4 py-2 font-semibold {{ request()->routeIs('owner.inventory.stock-movements.*') ? 'border-b-2 border-[#005281] text-[#005281]' : 'text-gray-500 hover:text-[#005281] hover:border-b-2 hover:border-gray-300' }}">
+            <a href="{{ route('kepala-toko.inventory.stock-movements.index') }}" 
+               class="px-4 py-2 font-semibold {{ request()->routeIs('kepala-toko.inventory.stock-movements.*') ? 'border-b-2 border-[#005281] text-[#005281]' : 'text-gray-500 hover:text-[#005281] hover:border-b-2 hover:border-gray-300' }}">
               Pergerakan Stok
             </a>
           </div>
@@ -55,7 +55,7 @@
               <button type="submit" class="bg-[#005281] text-white px-4 py-1 rounded hover:bg-[#00446a]">
                 <i class="bi bi-funnel"></i> Filter
               </button>
-              <a href="{{ route('owner.inventory.stock-movements.index') }}" 
+              <a href="{{ route('kepala-toko.inventory.stock-movements.index') }}" 
                  class="bg-gray-300 text-gray-700 px-4 py-1 rounded hover:bg-gray-400 flex items-center">
                 <i class="bi bi-arrow-clockwise"></i> Reset
               </a>
@@ -161,7 +161,7 @@
     function showMovementDetails(productId, date) {
         document.getElementById('modalContent').innerHTML = '<div class="text-center py-8">Loading...</div>';
         document.getElementById('movementModal').classList.remove('hidden');
-        fetch(`/owner/inventory/stock-movements/${productId}/${date}`)
+        fetch(`/kepala-toko/inventory/stock-movements/${productId}/${date}`)
             .then(response => {
                 if (!response.ok) throw new Error('Network response was not ok');
                 return response.json();

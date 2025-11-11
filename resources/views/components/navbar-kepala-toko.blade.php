@@ -26,7 +26,7 @@
 >
     <!-- Sidebar Header -->
     <div class="flex items-center justify-between mb-4 p-4">
-        <img src="{{ asset('assets/logo.png') }}" alt="" class="w-auto h-40 mx-auto xl:h-40 lg:h-36">
+        <img src="{{ asset('https://parecustom.com/public/assets/logo.png') }}" alt="" class="w-auto h-40 mx-auto xl:h-40 lg:h-36">
         <button
             class="lg:hidden text-gray-400 hover:text-gray-600"
             onclick="toggleSidebar()"
@@ -73,7 +73,7 @@
         </a>
 
     <!-- Inventory -->
-    <a href="{{ url('kepala-toko/inventory') }}" class="flex items-center p-3 rounded-md bg-none transition hover-link">
+    <a href="{{ route('kepala-toko.inventory.index') }}" class="flex items-center p-3 rounded-md bg-none transition hover-link">
       <i class="bi bi-clipboard-data"></i>
       <span class="ml-3 nav-text font-semibold">Inventory</span>
     </a>
