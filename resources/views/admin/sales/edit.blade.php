@@ -70,12 +70,12 @@
            class="customer-autocomplete border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
            placeholder="Ketik minimal 3 huruf nama customer..."
            autocomplete="off"
-           value="{{ old('customer_name') }}">
+           value="{{ old('customer_name', $salesOrder->customer ? $salesOrder->customer->name : '') }}">
 
     <!-- Hidden fields untuk data customer -->
-    <input type="hidden" name="customer_id" id="customer_id" value="{{ old('customer_id') }}">
-    <input type="hidden" name="customer_name" id="customer_name" value="{{ old('customer_name') }}">
-    <input type="hidden" name="customer_phone" id="customer_phone" value="{{ old('customer_phone') }}">
+    <input type="hidden" name="customer_id" id="customer_id" value="{{ old('customer_id', $salesOrder->customer_id) }}">
+    <input type="hidden" name="customer_name" id="customer_name" value="{{ old('customer_name', $salesOrder->customer ? $salesOrder->customer->name : '') }}">
+    <input type="hidden" name="customer_phone" id="customer_phone" value="{{ old('customer_phone', $salesOrder->customer ? $salesOrder->customer->phone : '') }}">
 
     <!-- Dropdown untuk hasil autocomplete -->
     <div id="customer_autocomplete_results" 
@@ -83,9 +83,13 @@
     </div>
 
     <!-- Info customer yang dipilih -->
-    <div id="selected_customer" class="mt-2 p-2 bg-blue-50 rounded {{ old('customer_id') ? '' : 'hidden' }}">
-        <span id="customer_display_name" class="font-medium">{{ old('customer_name') }}</span>
-        <span id="customer_display_phone" class="text-sm text-gray-600 ml-2">{{ old('customer_phone') ? '(' . old('customer_phone') . ')' : '' }}</span>
+    <div id="selected_customer" class="mt-2 p-2 bg-blue-50 rounded {{ $salesOrder->customer || old('customer_id') ? '' : 'hidden' }}">
+        <span id="customer_display_name" class="font-medium">
+            {{ old('customer_name', $salesOrder->customer ? $salesOrder->customer->name : '') }}
+        </span>
+        <span id="customer_display_phone" class="text-sm text-gray-600 ml-2">
+            {{ ($salesOrder->customer && $salesOrder->customer->phone) || old('customer_phone') ? '(' . old('customer_phone', $salesOrder->customer ? $salesOrder->customer->phone : '') . ')' : '' }}
+        </span>
         <button type="button" id="clear_customer" class="text-red-600 ml-2">✕</button>
     </div>
 
@@ -94,15 +98,11 @@
         <div class="grid md:grid-cols-2 gap-4">
             <div>
                 <label class="block font-medium mb-1">Nama Customer Baru *</label>
-                <input type="text" id="new_customer_name"
-                    class="border rounded px-3 py-2 w-full"
-                    placeholder="Nama customer baru">
+                <input type="text" id="new_customer_name" class="border rounded px-3 py-2 w-full" placeholder="Nama customer baru">
             </div>
             <div>
                 <label class="block font-medium mb-1">Nomor Telepon</label>
-                <input type="text" id="new_customer_phone"
-                    class="border rounded px-3 py-2 w-full"
-                    placeholder="Contoh: 08123456789">
+                <input type="text" id="new_customer_phone" class="border rounded px-3 py-2 w-full" placeholder="Contoh: 08123456789">
             </div>
         </div>
         <p class="text-sm text-gray-600 mt-1">* Customer baru akan otomatis dibuat</p>
