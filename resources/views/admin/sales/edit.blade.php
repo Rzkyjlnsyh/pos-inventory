@@ -215,39 +215,50 @@
                     <div class="mb-6">
                         <h2 class="text-lg font-semibold mb-4 text-gray-800">Item Order</h2>
                         <div id="items-container" class="space-y-4">
-                            @foreach($salesOrder->items as $index => $item)
-                            <div class="item-row grid md:grid-cols-3 gap-4">
-    <div class="relative md:col-span-2">
-        <label class="block font-medium mb-1">Produk</label>
-        <input type="text"
-            class="product-search border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
-            placeholder="Ketik nama produk..." autocomplete="off">
-        <input type="hidden" name="items[0][product_id]" class="product-id">
-        <input type="hidden" name="items[0][product_name]" class="product-name">
-        <input type="hidden" name="items[0][sku]" class="sku">
-        <div class="product-results hidden absolute z-20 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto"></div>
+    @foreach($salesOrder->items as $index => $item)
+    <div class="item-row grid md:grid-cols-5 gap-4">
+        <div class="relative md:col-span-2">
+            <label class="block font-medium mb-1">Produk</label>
+            <input type="text"
+                class="product-search border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
+                placeholder="Ketik nama produk..." 
+                autocomplete="off"
+                value="{{ $item->product_name }}">
+            <input type="hidden" name="items[{{ $index }}][product_id]" class="product-id" value="{{ $item->product_id }}">
+            <input type="hidden" name="items[{{ $index }}][product_name]" class="product-name" value="{{ $item->product_name }}">
+            <input type="hidden" name="items[{{ $index }}][sku]" class="sku" value="{{ $item->sku }}">
+            <div class="product-results hidden absolute z-20 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto"></div>
+        </div>
+        <div>
+            <label class="block font-medium mb-1">Harga</label>
+            <input type="number" name="items[{{ $index }}][sale_price]"
+                class="sale-price border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
+                step="0.01" required value="{{ $item->sale_price }}">
+            @error('items.'.$index.'.sale_price')
+                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+            @enderror
+        </div>
+        <div>
+            <label class="block font-medium mb-1">Qty</label>
+            <input type="number" name="items[{{ $index }}][qty]"
+                class="qty border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
+                min="1" required value="{{ $item->qty }}">
+            @error('items.'.$index.'.qty')
+                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+            @enderror
+        </div>
+        <div>
+            <label class="block font-medium mb-1">Diskon</label>
+            <input type="number" name="items[{{ $index }}][discount]" 
+                   class="discount border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
+                   min="0" step="0.01" value="{{ $item->discount }}">
+            <button type="button" class="remove-item text-red-600 hover:text-red-800 mt-2">
+                <i class="bi bi-trash"></i> Hapus
+            </button>
+        </div>
     </div>
-    <div>
-        <label class="block font-medium mb-1">Harga</label>
-        <input type="number" name="items[0][sale_price]"
-            class="sale-price border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
-            step="0.01" required>
-        @error('items.0.sale_price')
-            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-        @enderror
-    </div>
-    <div>
-        <label class="block font-medium mb-1">Qty</label>
-        <input type="number" name="items[0][qty]"
-            class="qty border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
-            min="1" required>
-        @error('items.0.qty')
-            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-        @enderror
-    </div>
+    @endforeach
 </div>
-                            @endforeach
-                        </div>
                         <button type="button" id="add-item" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow mt-4">
                             <i class="bi bi-plus-circle"></i> Tambah Item
                         </button>
@@ -379,10 +390,22 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Inisialisasi untuk semua row yang sudah ada
-    document.querySelectorAll('.item-row').forEach((row, index) => {
-        initializeProductSearchForEdit(row, index);
-    });
+// Inisialisasi existing items dengan data yang benar
+document.querySelectorAll('.item-row').forEach((row, index) => {
+    initializeProductSearchForEdit(row, index);
+    
+    // Trigger update grand total untuk existing items
+    const priceInput = row.querySelector('.sale-price');
+    const qtyInput = row.querySelector('.qty');
+    const discountInput = row.querySelector('.discount');
+    
+    if (priceInput && qtyInput && discountInput) {
+        // Simulasikan input event untuk kalkulasi awal
+        setTimeout(() => {
+            updateGrandTotal();
+        }, 100);
+    }
+});
 
     // === FUNGSI UMUM ===
     function updateGrandTotal() {
