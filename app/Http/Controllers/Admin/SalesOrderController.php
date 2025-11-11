@@ -510,9 +510,10 @@ public function import(Request $request): RedirectResponse
         $subtotal = collect($items)->reduce(function ($carry, $item) {
             return $carry + ((float)$item['sale_price'] * (int)$item['qty']);
         }, 0);
-        $discountTotal = collect($items)->sum(function ($item) {
-            return (float)($item['discount'] ?? 0) * (int)$item['qty'];
-        });
+        
+        // ✅ GUNAKAN DISCOUNT TOTAL DARI INPUT, BUKAN HITUNG ULANG
+        $discountTotal = (float)($validated['discount_total'] ?? 0);
+        
         $grandTotal = $subtotal - $discountTotal;
     
         $cashAmount = 0;
