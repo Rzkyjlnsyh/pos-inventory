@@ -53,7 +53,7 @@ class ShiftController extends Controller
                 \Log::error("Suspicious final_cash detected. Shift: {$latestClosedShift->id}, Final: {$latestClosedShift->final_cash}, Initial: {$latestClosedShift->initial_cash}");
                 
                 // Fallback: hitung ulang dari data real
-                $realFinalCash = $this->calculateRealFinalCash($latestClosedShift);
+                $realFinalCash = $this->calculateRealFinalCashForShift($latestClosedShift); // ✅ PAKAI METHOD BARU
                 $initialCash = $realFinalCash;
                 
                 \Log::info("Auto-corrected final_cash from {$latestClosedShift->final_cash} to {$realFinalCash}");
@@ -142,11 +142,36 @@ class ShiftController extends Controller
     }
 
     // METHOD BARU: HITUNG REAL FINAL CASH DARI DATA ASLI
-    private function calculateRealFinalCash(Shift $shift): float
-    {
-        $realCashTotal = $this->calculateRealCashTotal($shift);
-        return $shift->initial_cash + $realCashTotal - $shift->expense_total;
+private function calculateRealFinalCash(Shift $shift): float
+{
+    $realCashTotal = $this->calculateRealCashTotal($shift);
+    $totalCashTransfers = \App\Models\CashTransfer::where('shift_id', $shift->id)->sum('amount');
+    
+    return $shift->initial_cash + $realCashTotal - $shift->expense_total - $totalCashTransfers;
+}
+
+    // METHOD BARU: Hitung real final cash untuk shift lain (bukan shift aktif)
+private function calculateRealFinalCashForShift(Shift $shift): float
+{
+    $payments = Payment::where('created_by', $shift->user_id)
+        ->where('created_at', '>=', $shift->start_time)
+        ->where('created_at', '<=', $shift->end_time ?? now())
+        ->get();
+
+    $totalCashFromPayments = 0;
+    foreach ($payments as $payment) {
+        if ($payment->method === 'cash') {
+            $totalCashFromPayments += $payment->amount;
+        } elseif ($payment->method === 'split') {
+            $totalCashFromPayments += $payment->cash_amount;
+        }
     }
+
+    $totalIncome = Income::where('shift_id', $shift->id)->sum('amount');
+    $totalCashTransfers = \App\Models\CashTransfer::where('shift_id', $shift->id)->sum('amount');
+    
+    return $shift->initial_cash + $totalCashFromPayments + $totalIncome - $shift->expense_total - $totalCashTransfers;
+}
 // Method untuk print summary (struk thermal)
 public function printSummary($id)
 {
@@ -528,4 +553,55 @@ public function printPreview($id)
         return back()->withErrors(['error' => 'File tidak ditemukan: ' . $e->getMessage()]);
     }
 }
+
+public function cashTransfer(Request $request): RedirectResponse
+{
+    $validated = $request->validate([
+        'transfer_amount' => ['required', 'numeric', 'min:1000', 'max:10000000'],
+        'transfer_description' => ['required', 'string', 'max:255'],
+        'transfer_type' => ['required', 'in:setor,tukar,other'],
+        'transfer_notes' => ['nullable', 'string', 'max:500'],
+    ]);
+
+    return DB::transaction(function () use ($validated) {
+        $shift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
+        
+        if (!$shift) {
+            return back()->withErrors(['error' => 'Anda tidak memiliki shift aktif. Mulai shift terlebih dahulu.']);
+        }
+
+        // CEK APAKAH KAS LACI CUKUP
+        $realFinalCash = $this->calculateRealFinalCash($shift);
+        if ($validated['transfer_amount'] > $realFinalCash) {
+            return back()->withErrors([
+                'transfer_amount' => 'Jumlah melebihi kas di laci. Kas tersedia: Rp ' . number_format($realFinalCash, 0, ',', '.')
+            ])->withInput();
+        }
+
+        // CEK DUPLIKAT 5 MENIT TERAKHIR
+        $recentTransfer = \App\Models\CashTransfer::where('shift_id', $shift->id)
+            ->where('description', $validated['transfer_description'])
+            ->where('amount', $validated['transfer_amount'])
+            ->where('created_at', '>=', now()->subMinutes(5))
+            ->first();
+            
+        if ($recentTransfer) {
+            return back()->withErrors(['error' => 'Transfer tunai serupa sudah ditambahkan 5 menit yang lalu.']);
+        }
+
+        // CREATE CASH TRANSFER
+        \App\Models\CashTransfer::create([
+            'shift_id' => $shift->id,
+            'amount' => $validated['transfer_amount'],
+            'description' => $validated['transfer_description'],
+            'type' => $validated['transfer_type'],
+            'notes' => $validated['transfer_notes'] ?? null,
+        ]);
+
+        \Log::info('Cash transfer ditambahkan: ' . $validated['transfer_description'] . ' - Rp ' . number_format($validated['transfer_amount'], 0, ',', '.'));
+
+        return back()->with('success', 'Setor/Tukar tunai berhasil dicatat.');
+    });
+}
+
 }

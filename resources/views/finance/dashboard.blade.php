@@ -138,6 +138,26 @@
                     <p class="text-xs text-gray-500 mt-1">Pengeluaran operasional</p>
                 </div>
 
+                    <!-- CASH TRANSFER (CARD BARU) -->
+    <div class="bg-white p-6 rounded-xl shadow border-l-4 border-purple-500">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <p class="text-gray-500 text-sm font-medium">TRANSFER TUNAI</p>
+                <p class="text-2xl font-bold text-purple-600">
+                    @php
+                        $totalCashTransfer = \App\Models\CashTransfer::whereBetween('created_at', [$start, $end])->sum('amount') ?? 0;
+                    @endphp
+                    Rp {{ number_format($totalCashTransfer, 0, ',', '.') }}
+                </p>
+            </div>
+            <div class="p-3 bg-purple-100 rounded-full">
+                <i class="bi bi-arrow-left-right text-purple-600 text-xl"></i>
+            </div>
+        </div>
+        <p class="text-xs text-gray-600">Setor/Tukar Tunai</p>
+        <p class="text-xs text-purple-500 mt-1">Tidak mempengaruhi profit</p>
+    </div>
+
                 <!-- PROFIT -->
                 <div class="bg-white p-6 rounded-xl shadow border-l-4 border-blue-500">
                     <div class="flex items-center justify-between mb-4">
@@ -157,6 +177,99 @@
                     </p>
                 </div>
             </div>
+
+            <!-- BREAKDOWN STATUS PEMBAYARAN -->
+<div class="bg-white p-6 rounded-xl shadow mb-6">
+    <h2 class="text-lg font-semibold text-gray-800 mb-4">📊 Breakdown Status Pembayaran</h2>
+    
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <!-- TOTAL ORDERS -->
+        <div class="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-blue-600 text-sm font-medium">Total Orders</p>
+                    <p class="text-2xl font-bold text-blue-800">{{ $salesBreakdown->total_orders ?? 0 }}</p>
+                </div>
+                <i class="bi bi-receipt text-blue-500 text-xl"></i>
+            </div>
+            <p class="text-xs text-blue-600 mt-2">Exclude Draft</p>
+        </div>
+
+        <!-- LUNAS -->
+        <div class="bg-green-50 p-4 rounded-lg border-l-4 border-green-500">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-green-600 text-sm font-medium">Lunas</p>
+                    <p class="text-2xl font-bold text-green-800">{{ $salesBreakdown->lunas_count ?? 0 }}</p>
+                    <p class="text-sm text-green-700">Rp {{ number_format($salesBreakdown->lunas_amount ?? 0, 0, ',', '.') }}</p>
+                </div>
+                <i class="bi bi-check-circle text-green-500 text-xl"></i>
+            </div>
+            <div class="w-full bg-green-200 rounded-full h-2 mt-2">
+                <div class="bg-green-600 h-2 rounded-full" style="width: {{ $salesBreakdown->total_orders > 0 ? round(($salesBreakdown->lunas_count / $salesBreakdown->total_orders) * 100) : 0 }}%"></div>
+            </div>
+            <p class="text-xs text-green-600 mt-1">
+                {{ $salesBreakdown->total_orders > 0 ? round(($salesBreakdown->lunas_count / $salesBreakdown->total_orders) * 100) : 0 }}% dari total
+            </p>
+        </div>
+
+        <!-- DP -->
+        <div class="bg-yellow-50 p-4 rounded-lg border-l-4 border-yellow-500">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-yellow-600 text-sm font-medium">DP</p>
+                    <p class="text-2xl font-bold text-yellow-800">{{ $salesBreakdown->dp_count ?? 0 }}</p>
+                    <p class="text-sm text-yellow-700">Rp {{ number_format($salesBreakdown->dp_amount ?? 0, 0, ',', '.') }}</p>
+                </div>
+                <i class="bi bi-currency-dollar text-yellow-500 text-xl"></i>
+            </div>
+            <div class="w-full bg-yellow-200 rounded-full h-2 mt-2">
+                <div class="bg-yellow-600 h-2 rounded-full" style="width: {{ $salesBreakdown->total_orders > 0 ? round(($salesBreakdown->dp_count / $salesBreakdown->total_orders) * 100) : 0 }}%"></div>
+            </div>
+            <p class="text-xs text-yellow-600 mt-1">
+                {{ $salesBreakdown->total_orders > 0 ? round(($salesBreakdown->dp_count / $salesBreakdown->total_orders) * 100) : 0 }}% dari total
+            </p>
+        </div>
+
+        <!-- BELUM BAYAR -->
+        <div class="bg-red-50 p-4 rounded-lg border-l-4 border-red-500">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-red-600 text-sm font-medium">Belum Bayar</p>
+                    <p class="text-2xl font-bold text-red-800">{{ $salesBreakdown->belum_bayar_count ?? 0 }}</p>
+                    <p class="text-sm text-red-700">Rp {{ number_format($salesBreakdown->belum_bayar_amount ?? 0, 0, ',', '.') }}</p>
+                </div>
+                <i class="bi bi-clock text-red-500 text-xl"></i>
+            </div>
+            <div class="w-full bg-red-200 rounded-full h-2 mt-2">
+                <div class="bg-red-600 h-2 rounded-full" style="width: {{ $salesBreakdown->total_orders > 0 ? round(($salesBreakdown->belum_bayar_count / $salesBreakdown->total_orders) * 100) : 0 }}%"></div>
+            </div>
+            <p class="text-xs text-red-600 mt-1">
+                {{ $salesBreakdown->total_orders > 0 ? round(($salesBreakdown->belum_bayar_count / $salesBreakdown->total_orders) * 100) : 0 }}% dari total
+            </p>
+        </div>
+    </div>
+
+    <!-- PELUNASAN (BAYAR BERTAHAP) -->
+    @if($pelunasanData && $pelunasanData->count > 0)
+    <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="font-semibold text-purple-800 flex items-center">
+                    <i class="bi bi-arrow-repeat mr-2"></i> Pembayaran Pelunasan
+                </h3>
+                <p class="text-sm text-purple-600">
+                    {{ $pelunasanData->count }} transaksi pelunasan • 
+                    Rp {{ number_format($pelunasanData->amount, 0, ',', '.') }}
+                </p>
+            </div>
+            <span class="bg-purple-200 text-purple-800 px-3 py-1 rounded-full text-sm font-medium">
+                Bayar Bertahap
+            </span>
+        </div>
+    </div>
+    @endif
+</div>
 
 <!-- THREE COLUMN LAYOUT -->
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
@@ -193,34 +306,72 @@
         </div>
     </div>
 
-    <!-- RECENT TRANSACTIONS -->
-    <div class="bg-white p-6 rounded-xl shadow">
-        <h2 class="text-lg font-semibold text-gray-800 mb-4">📋 Transaksi Terbaru</h2>
-        
-        @if($recentSales->count() > 0)
-        <div class="space-y-3">
-            @foreach($recentSales as $sale)
-            <div class="flex justify-between items-center p-3 border rounded-lg">
-                <div>
-                    <p class="font-medium text-sm">{{ $sale->so_number }}</p>
-                    <p class="text-xs text-gray-600">{{ $sale->customer->name ?? 'Guest' }}</p>
+<!-- RECENT TRANSACTIONS -->
+<div class="bg-white p-6 rounded-xl shadow">
+    <h2 class="text-lg font-semibold text-gray-800 mb-4">📋 Transaksi Terbaru</h2>
+    
+    @if($recentSales->count() > 0)
+    <div class="space-y-3">
+        @foreach($recentSales as $sale)
+        <div class="flex justify-between items-center p-3 border rounded-lg hover:bg-gray-50">
+            <div class="flex-1">
+                <div class="flex justify-between items-start mb-1">
+                    <div>
+                        <p class="font-medium text-sm">{{ $sale->so_number }}</p>
+                        <p class="text-xs text-gray-600">{{ $sale->customer->name ?? 'Guest' }}</p>
+                    </div>
+                    <div class="text-right">
+                        <!-- STATUS PEMBAYARAN -->
+                        @if($sale->payment_status === 'lunas')
+                            <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-medium">
+                                <i class="bi bi-check-circle mr-1"></i>Lunas
+                            </span>
+                        @elseif($sale->payment_status === 'dp')
+                            <span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-medium">
+                                <i class="bi bi-currency-dollar mr-1"></i>DP
+                            </span>
+                        @else
+                            <span class="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-medium">
+                                <i class="bi bi-clock mr-1"></i>Belum Bayar
+                            </span>
+                        @endif
+                    </div>
                 </div>
-                <div class="text-right">
-                    <p class="font-semibold text-green-600 text-sm">
-                        Rp {{ number_format($sale->grand_total, 0, ',', '.') }}
-                    </p>
-                    <p class="text-xs text-gray-500">{{ $sale->created_at->format('d/m H:i') }}</p>
+                
+                <!-- DETAIL PEMBAYARAN -->
+                <div class="grid grid-cols-3 gap-2 text-xs text-gray-600 mt-2">
+                    <div>
+                        <span class="font-medium">Total:</span>
+                        <br>Rp {{ number_format($sale->grand_total, 0, ',', '.') }}
+                    </div>
+                    <div>
+                        <span class="font-medium">Dibayar:</span>
+                        <br>Rp {{ number_format($sale->paid_total, 0, ',', '.') }}
+                    </div>
+                    <div class="{{ $sale->remaining_amount > 0 ? 'text-red-600' : 'text-green-600' }}">
+                        <span class="font-medium">Sisa:</span>
+                        <br>Rp {{ number_format($sale->remaining_amount, 0, ',', '.') }}
+                    </div>
+                </div>
+                
+                <!-- STATUS ORDER -->
+                <div class="mt-2">
+                    <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
+                        {{ ucfirst(str_replace('_', ' ', $sale->status)) }}
+                    </span>
                 </div>
             </div>
-            @endforeach
         </div>
-        @else
-        <div class="text-center py-8 text-gray-500">
-            <i class="bi bi-receipt text-3xl text-gray-400 mb-2"></i>
-            <p>Tidak ada transaksi</p>
-        </div>
-        @endif
+        @endforeach
     </div>
+    @else
+    <div class="text-center py-8 text-gray-500">
+        <i class="bi bi-receipt text-3xl text-gray-400 mb-2"></i>
+        <p>Tidak ada transaksi</p>
+        <p class="text-sm">(Exclude draft orders)</p>
+    </div>
+    @endif
+</div>
 
     <!-- PRODUK TERLARIS -->
     <div class="bg-white p-6 rounded-xl shadow">

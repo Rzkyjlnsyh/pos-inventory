@@ -22,15 +22,6 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class SalesOrderController extends Controller
 {
-    private function checkActiveShift(): bool|RedirectResponse
-    {
-        $activeShift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
-        if (!$activeShift) {
-            \Log::warning('No active shift for user: ' . Auth::id());
-            return redirect()->route('finance.shift.dashboard')->with('error', 'Silakan mulai shift terlebih dahulu untuk melakukan aksi ini.');
-        }
-        return true;
-    }
 
     private function logAction(SalesOrder $salesOrder, string $action, string $description): void
     {
@@ -64,11 +55,7 @@ class SalesOrderController extends Controller
 
     public function create(): View|RedirectResponse
     {
-        $activeShift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
-        if (!$activeShift) {
-            \Log::warning('No active shift for user: ' . Auth::id());
-            return redirect()->route('finance.shift.dashboard')->with('error', 'Silakan mulai shift dan masukkan kas awal terlebih dahulu.');
-        }
+
         $customers = Customer::orderBy('name')->get();
         $products = Product::where('is_active', true)->where('price', '>', 0)->orderBy('name')->get();
         return view('finance.sales.create', compact('customers', 'products', 'activeShift'));
@@ -78,11 +65,7 @@ class SalesOrderController extends Controller
     {
         \Log::info('Store request received', $request->all());
 
-        $activeShift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
-        if (!$activeShift) {
-            \Log::error('No active shift found for user: ' . Auth::id());
-            return back()->withErrors(['error' => 'Tidak ada shift aktif. Silakan mulai shift terlebih dahulu.'])->withInput();
-        }
+
 
         $validated = $request->validate([
             'order_type' => ['required', 'in:jahit_sendiri,beli_jadi'],
@@ -147,8 +130,27 @@ class SalesOrderController extends Controller
         $status = 'pending';
 
         try {
-            $salesOrder = DB::transaction(function () use ($validated, $request, $cashAmount, $transferAmount, $paymentAmount, $grandTotal, $activeShift, $status, $subtotal, $discountTotal) {
-                $customerId = $validated['customer_id'];
+            $salesOrder = DB::transaction(function () use ($validated, $request, $cashAmount, $transferAmount, $paymentAmount, $grandTotal, $status, $subtotal, $discountTotal) {
+// === AUTO CREATE CUSTOMER LOGIC ===
+$customerId = $validated['customer_id'] ?? null;
+if (empty($customerId) && !empty($validated['customer_name'])) {
+    $existingCustomer = Customer::where('name', $validated['customer_name'])->first();
+    if ($existingCustomer) {
+        $customerId = $existingCustomer->id;
+        \Log::info('Using existing customer', ['customer_id' => $customerId, 'name' => $existingCustomer->name]);
+    } else {
+        $customer = Customer::create([
+            'name' => $validated['customer_name'],
+            'phone' => $validated['customer_phone'] ?? null,
+            'email' => null,
+            'address' => null,
+            'notes' => 'Auto-created from sales order',
+            'is_active' => true,
+        ]);
+        $customerId = $customer->id;
+        \Log::info('Auto-created customer', ['customer_id' => $customerId, 'name' => $customer->name, 'phone' => $customer->phone]);
+    }
+}
 
                 $soNumber = $this->generateSoNumber();
 
@@ -203,10 +205,6 @@ class SalesOrderController extends Controller
 
                     \Log::info('Payment created', ['payment_id' => $payment->id, 'amount' => $paymentAmount, 'proof_path' => $proofPath ?? 'none']);
 
-                    if ($cashAmount > 0 && $activeShift) {
-                        $activeShift->increment('cash_total', $cashAmount);
-                    }
-
                     $this->logAction($salesOrder, 'payment_added', "Pembayaran ditambahkan: {$paymentCategory}, Jumlah: Rp " . number_format($paymentAmount, 0, ',', '.') . ", Metode: {$validated['payment_method']}" . ($proofPath ? "" : ", tanpa bukti"));
                 }
 
@@ -244,10 +242,6 @@ class SalesOrderController extends Controller
 
     public function edit(SalesOrder $salesOrder): View|RedirectResponse
     {
-        $shiftCheck = $this->checkActiveShift();
-        if ($shiftCheck !== true) {
-            return $shiftCheck;
-        }
 
         if (!$salesOrder->isEditable()) {
             \Log::warning('Attempt to edit non-editable SO: ' . $salesOrder->so_number);
@@ -261,10 +255,6 @@ class SalesOrderController extends Controller
 
     public function update(Request $request, SalesOrder $salesOrder): RedirectResponse
     {
-        $shiftCheck = $this->checkActiveShift();
-        if ($shiftCheck !== true) {
-            return $shiftCheck;
-        }
 
         if (!$salesOrder->isEditable()) {
             \Log::warning('Attempt to update non-editable SO: ' . $salesOrder->so_number);
@@ -404,11 +394,6 @@ class SalesOrderController extends Controller
 
                         $this->logAction($salesOrder, 'payment_added', "Pembayaran ditambahkan: {$paymentCategory}, Jumlah: Rp " . number_format($paymentAmount, 0, ',', '.') . ", Metode: {$validated['payment_method']}" . ($proofPath ? "" : ", tanpa bukti"));
                     }
-
-                    $activeShift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
-                    if ($activeShift && $cashAmount > 0) {
-                        $activeShift->increment('cash_total', $cashAmount);
-                    }
                 }
 
                 $this->logAction($salesOrder, 'updated', "Sales order diperbarui: Tipe: {$validated['order_type']}, Total: Rp " . number_format($grandTotal, 0, ',', '.'));
@@ -441,10 +426,6 @@ class SalesOrderController extends Controller
 
     public function addPayment(Request $request, SalesOrder $salesOrder): RedirectResponse
     {
-        $shiftCheck = $this->checkActiveShift();
-        if ($shiftCheck !== true) {
-            return $shiftCheck;
-        }
 
         $validated = $request->validate([
             'payment_amount' => ['required', 'numeric', 'min:0', function ($attribute, $value, $fail) use ($salesOrder) {
@@ -504,11 +485,6 @@ class SalesOrderController extends Controller
 
                 $salesOrder->update(['payment_status' => ($newPaidTotal >= $salesOrder->grand_total) ? 'lunas' : 'dp']);
 
-                $activeShift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
-                if ($activeShift && $cashAmount > 0) {
-                    $activeShift->increment('cash_total', $cashAmount);
-                }
-
                 $this->logAction($salesOrder, 'payment_added', "Pembayaran ditambahkan: {$paymentCategory}, Jumlah: Rp " . number_format($validated['payment_amount'], 0, ',', '.') . ", Metode: {$validated['payment_method']}");
             });
 
@@ -541,4 +517,21 @@ class SalesOrderController extends Controller
         $pdf = Pdf::loadView('finance.sales.nota', compact('salesOrder', 'payment'));
         return $pdf->download('nota_' . $salesOrder->so_number . '_payment_' . $payment->id . '.pdf');
     }
+
+    public function searchCustomers(Request $request)
+{
+    $query = $request->get('q');
+    
+    if (strlen($query) < 2) {
+        return response()->json([]);
+    }
+    
+    $customers = Customer::where('name', 'like', "%{$query}%")
+        ->orWhere('phone', 'like', "%{$query}%")
+        ->where('is_active', true)
+        ->limit(10)
+        ->get(['id', 'name', 'phone']);
+    
+    return response()->json($customers);
+}
 }

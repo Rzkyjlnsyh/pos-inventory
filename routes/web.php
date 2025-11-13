@@ -216,6 +216,8 @@ Route::middleware(['auth', 'finance'])->prefix('finance')->name('finance.')->gro
     Route::get('/', [\App\Http\Controllers\Finance\FinanceController::class, 'index'])->name('index');
     Route::get('dashboard', [\App\Http\Controllers\Finance\FinanceController::class, 'dashboard'])->name('dashboard');
 
+        Route::get('/customers/search', [\App\Http\Controllers\Finance\SalesOrderController::class, 'searchCustomers'])->name('customers.search');
+
     // Contacts (Customer & Supplier)
     Route::get('contacts', [FinanceContactController::class, 'index'])->name('contacts.index');
     Route::post('contacts/customers', [FinanceContactController::class, 'storeCustomer'])->name('contacts.customers.store');
@@ -280,7 +282,7 @@ Route::middleware(['auth', 'finance'])->prefix('finance')->name('finance.')->gro
         Route::get('/{shift}/export-detail-pdf', [App\Http\Controllers\Finance\ShiftController::class, 'exportDetailPdf'])->name('export-detail-pdf');
         // TIDAK ADA route post (start, end, expense) untuk finance
     });
-    // Admin routes - TAMBAHKAN INI SETELAH SHIFT ROUTES
+
 Route::middleware(['auth', 'finance', 'check.shift'])->group(function () {
     Route::resource('sales', \App\Http\Controllers\Finance\SalesOrderController::class)
         ->parameters(['sales' => 'salesOrder']);
@@ -511,6 +513,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         Route::post('shift/expense', [App\Http\Controllers\Admin\ShiftController::class, 'expense'])->name('shift.expense');
         Route::get('/shift/history', [App\Http\Controllers\Admin\ShiftController::class, 'history'])->name('shift.history');
         Route::post('shift/income', [App\Http\Controllers\Admin\ShiftController::class, 'income'])->name('shift.income'); // <-- TAMBAH INI
+        Route::post('shift/cash-transfer', [\App\Http\Controllers\Admin\ShiftController::class, 'cashTransfer'])->name('shift.cashTransfer');
         Route::get('/shift/{shift}', [App\Http\Controllers\Admin\ShiftController::class, 'show'])->name('shift.show');
         Route::get('/shift/{shift}/export-detail', [App\Http\Controllers\Admin\ShiftController::class, 'exportDetail'])->name('shift.export-detail');
         Route::get('/shift/{shift}/export-detail-pdf', [App\Http\Controllers\Admin\ShiftController::class, 'exportDetailPdf'])->name('shift.export-detail-pdf');

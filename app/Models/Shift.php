@@ -88,9 +88,18 @@ class Shift extends Model
     }
 
         // METHOD BARU: HITUNG REAL FINAL CASH
+        public function cashTransfers()
+        {
+            return $this->hasMany(CashTransfer::class);
+        }
+        
+        // Update method calculateRealFinalCash untuk include cash transfer
         public function calculateRealFinalCash(): float
         {
-            return $this->initial_cash + $this->calculateRealCashTotal() - $this->expense_total;
+            $realCashTotal = $this->calculateRealCashTotal();
+            $totalCashTransfers = $this->cashTransfers->sum('amount');
+            
+            return $this->initial_cash + $realCashTotal - $this->expense_total - $totalCashTransfers;
         }
     public function isFirstShift(): bool
 {

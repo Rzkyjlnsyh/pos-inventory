@@ -25,53 +25,79 @@ class FinanceController extends Controller
         
         $start = Carbon::parse($startDate);
         $end = Carbon::parse($endDate);
-
-        // 2. HITUNG OMSET - Total Penjualan + Pemasukan Manual
-        $totalSales = SalesOrder::whereBetween('created_at', [$start, $end])->sum('grand_total') ?? 0;
+    
+        // 2. HITUNG OMSET - Total Penjualan + Pemasukan Manual (EXCLUDE DRAFT)
+        $totalSales = SalesOrder::whereBetween('created_at', [$start, $end])
+            ->where('status', '!=', 'draft') // ✅ EXCLUDE DRAFT
+            ->sum('grand_total') ?? 0;
+            
         $manualIncome = Income::whereBetween('created_at', [$start, $end])->sum('amount') ?? 0;
         $omset = $totalSales + $manualIncome;
-
+    
         // 3. HITUNG HPP - Total Pembelian SELESAI
         $hpp = PurchaseOrder::whereBetween('created_at', [$start, $end])
-            ->where('status', 'selesai') // PASTIKAN NAMA STATUSNYA BENER
+            ->where('status', 'selesai')
             ->sum('grand_total') ?? 0;
-
+    
         // 4. HITUNG OPERASIONAL - Pengeluaran Manual
         $operasional = Expense::whereBetween('created_at', [$start, $end])->sum('amount') ?? 0;
-
+    
         // 5. HITUNG PROFIT
         $profit = $omset - $hpp - $operasional;
-
+    
         // 6. DATA TAMBAHAN 
         $salesByPaymentMethod = Payment::whereBetween('paid_at', [$start, $end])
             ->selectRaw('method, SUM(amount) as total_amount, COUNT(*) as transaction_count')
             ->groupBy('method')
             ->get();
-
+    
+        // ✅ FIX: Recent Sales EXCLUDE DRAFT
         $recentSales = SalesOrder::with(['customer', 'payments'])
             ->whereBetween('created_at', [$start, $end])
+            ->where('status', '!=', 'draft') // ✅ EXCLUDE DRAFT
             ->orderBy('created_at', 'desc')
             ->limit(5)
             ->get();
-
-// === PRODUK TERLARIS - SIMPLE VERSION ===
-$bestSellingProducts = \App\Models\SalesOrderItem::selectRaw('
-        product_id,
-        products.name as product_name,
-        products.sku as product_sku,
-        SUM(sales_order_items.qty) as total_terjual
-    ')
-    ->join('sales_orders', 'sales_order_items.sales_order_id', '=', 'sales_orders.id')
-    ->join('products', 'sales_order_items.product_id', '=', 'products.id')
-    ->whereBetween('sales_orders.created_at', [$start, $end])
-    ->where('sales_orders.status', 'selesai')
-    ->groupBy('product_id', 'products.name', 'products.sku')
-    ->orderBy('total_terjual', 'desc')
-    ->limit(5)
-    ->get();
-
+    
+        // ✅ NEW: BREAKDOWN STATUS PEMBAYARAN
+        $salesBreakdown = SalesOrder::whereBetween('created_at', [$start, $end])
+            ->where('status', '!=', 'draft')
+            ->selectRaw('
+                COUNT(*) as total_orders,
+                SUM(grand_total) as total_omset,
+                SUM(CASE WHEN payment_status = "lunas" THEN 1 ELSE 0 END) as lunas_count,
+                SUM(CASE WHEN payment_status = "lunas" THEN grand_total ELSE 0 END) as lunas_amount,
+                SUM(CASE WHEN payment_status = "dp" THEN 1 ELSE 0 END) as dp_count,
+                SUM(CASE WHEN payment_status = "dp" THEN grand_total ELSE 0 END) as dp_amount,
+                SUM(CASE WHEN payment_status IS NULL OR payment_status = "" THEN 1 ELSE 0 END) as belum_bayar_count,
+                SUM(CASE WHEN payment_status IS NULL OR payment_status = "" THEN grand_total ELSE 0 END) as belum_bayar_amount
+            ')
+            ->first();
+    
+        // ✅ NEW: PELUNASAN (Bayar Bertahap)
+        $pelunasanData = Payment::whereBetween('paid_at', [$start, $end])
+            ->where('category', 'pelunasan')
+            ->selectRaw('COUNT(*) as count, SUM(amount) as amount')
+            ->first();
+    
+        // === PRODUK TERLARIS - SIMPLE VERSION ===
+        $bestSellingProducts = \App\Models\SalesOrderItem::selectRaw('
+                product_id,
+                products.name as product_name,
+                products.sku as product_sku,
+                SUM(sales_order_items.qty) as total_terjual
+            ')
+            ->join('sales_orders', 'sales_order_items.sales_order_id', '=', 'sales_orders.id')
+            ->join('products', 'sales_order_items.product_id', '=', 'products.id')
+            ->whereBetween('sales_orders.created_at', [$start, $end])
+            ->where('sales_orders.status', 'selesai')
+            ->groupBy('product_id', 'products.name', 'products.sku')
+            ->orderBy('total_terjual', 'desc')
+            ->limit(5)
+            ->get();
+    
         $omsetGrowth = 0; // Sementara 0 dulu
-
+    
         // 7. KIRIM SEMUA DATA KE VIEW
         return view('finance.dashboard', [
             'omset' => $omset,
@@ -85,7 +111,12 @@ $bestSellingProducts = \App\Models\SalesOrderItem::selectRaw('
             'omsetGrowth' => $omsetGrowth,
             'startDate' => $startDate,
             'bestSellingProducts' => $bestSellingProducts,
-            'endDate' => $endDate
+            'endDate' => $endDate,
+            'start' => $start,
+            'end' => $end,
+            // ✅ NEW DATA:
+            'salesBreakdown' => $salesBreakdown,
+            'pelunasanData' => $pelunasanData
         ]);
     }
 

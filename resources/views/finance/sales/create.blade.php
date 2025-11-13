@@ -90,48 +90,47 @@
                             @enderror
                         </div>
                         <div class="relative">
-    <label for="customer_search" class="block font-medium mb-1">Customer</label>
-    <input type="text" 
-           id="customer_search" 
-           class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
-           placeholder="Ketik nama customer atau pilih dari dropdown..."
-           autocomplete="off">
+    <label for="customer_search" class="block font-medium mb-1">Customer (Opsional)</label>
     
+    <!-- Input untuk search customer dengan autocomplete -->
+    <input type="text" 
+           id="customer_search"
+           class="customer-autocomplete border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
+           placeholder="Ketik minimal 3 huruf nama customer..."
+           autocomplete="off"
+           value="{{ old('customer_name') }}">
+
     <!-- Hidden fields untuk data customer -->
     <input type="hidden" name="customer_id" id="customer_id" value="{{ old('customer_id') }}">
     <input type="hidden" name="customer_name" id="customer_name" value="{{ old('customer_name') }}">
     <input type="hidden" name="customer_phone" id="customer_phone" value="{{ old('customer_phone') }}">
-    
-    <!-- Dropdown untuk existing customers -->
-    <div id="customer_dropdown" class="hidden absolute z-10 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto">
-        <!-- Existing customers akan dimuat di sini -->
-        @foreach($customers as $customer)
-            <div class="p-2 hover:bg-gray-100 cursor-pointer customer-option"
-                 data-id="{{ $customer->id }}"
-                 data-name="{{ $customer->name }}"
-                 data-phone="{{ $customer->phone ?? '' }}">
-                {{ $customer->name }} @if($customer->phone)({{ $customer->phone }})@endif
-            </div>
-        @endforeach
+
+    <!-- Dropdown untuk hasil autocomplete -->
+    <div id="customer_autocomplete_results" 
+         class="hidden absolute z-20 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto">
     </div>
-    
+
     <!-- Info customer yang dipilih -->
-    <div id="selected_customer" class="mt-2 p-2 bg-blue-50 rounded hidden">
-        <span id="customer_display_name" class="font-medium"></span>
-        <span id="customer_display_phone" class="text-sm text-gray-600 ml-2"></span>
+    <div id="selected_customer" class="mt-2 p-2 bg-blue-50 rounded {{ old('customer_id') ? '' : 'hidden' }}">
+        <span id="customer_display_name" class="font-medium">{{ old('customer_name') }}</span>
+        <span id="customer_display_phone" class="text-sm text-gray-600 ml-2">{{ old('customer_phone') ? '(' . old('customer_phone') . ')' : '' }}</span>
         <button type="button" id="clear_customer" class="text-red-600 ml-2">✕</button>
     </div>
 
-    <!-- Fields untuk customer baru - TAMBAH INPUT PHONE DISINI -->
+    <!-- Fields untuk customer baru -->
     <div id="new_customer_fields" class="hidden mt-2">
         <div class="grid md:grid-cols-2 gap-4">
             <div>
                 <label class="block font-medium mb-1">Nama Customer Baru *</label>
-                <input type="text" id="new_customer_name" class="border rounded px-3 py-2 w-full" placeholder="Nama customer baru" required>
+                <input type="text" id="new_customer_name"
+                    class="border rounded px-3 py-2 w-full"
+                    placeholder="Nama customer baru">
             </div>
             <div>
                 <label class="block font-medium mb-1">Nomor Telepon</label>
-                <input type="text" id="new_customer_phone" class="border rounded px-3 py-2 w-full" placeholder="Contoh: 08123456789">
+                <input type="text" id="new_customer_phone"
+                    class="border rounded px-3 py-2 w-full"
+                    placeholder="Contoh: 08123456789">
             </div>
         </div>
         <p class="text-sm text-gray-600 mt-1">* Customer baru akan otomatis dibuat</p>
@@ -555,9 +554,9 @@ document.addEventListener('DOMContentLoaded', function () {
     if (paymentMethod) paymentMethod.dispatchEvent(new Event('change'));
 });
 
-// === SIMPLE CUSTOMER SEARCH FIX ===
+// === AUTOCOMPLETE CUSTOMER SEARCH ===
 const customerSearch = document.getElementById('customer_search');
-const customerDropdown = document.getElementById('customer_dropdown');
+const customerResults = document.getElementById('customer_autocomplete_results');
 const customerIdInput = document.getElementById('customer_id');
 const customerNameInput = document.getElementById('customer_name');
 const customerPhoneInput = document.getElementById('customer_phone');
@@ -566,43 +565,112 @@ const newCustomerFields = document.getElementById('new_customer_fields');
 const newCustomerName = document.getElementById('new_customer_name');
 const newCustomerPhone = document.getElementById('new_customer_phone');
 
-// Show dropdown when clicking search
-customerSearch.addEventListener('click', function() {
-    customerDropdown.classList.remove('hidden');
+let searchTimeout = null;
+
+// Real-time search dengan debounce
+customerSearch.addEventListener('input', function () {
+    const searchTerm = this.value.trim();
+    
+    // Clear previous timeout
+    if (searchTimeout) {
+        clearTimeout(searchTimeout);
+    }
+    
+    // Hide results if search term is too short
+    if (searchTerm.length < 2) {
+        customerResults.classList.add('hidden');
+        checkNewCustomerFields(searchTerm);
+        return;
+    }
+    
+    // Debounce search - wait 300ms after user stops typing
+    searchTimeout = setTimeout(() => {
+        searchCustomers(searchTerm);
+    }, 300);
 });
 
-// Hide dropdown when clicking outside
-document.addEventListener('click', function(e) {
-    if (!e.target.closest('.relative')) {
-        customerDropdown.classList.add('hidden');
-    }
-});
+// Function untuk search customers via AJAX
+function searchCustomers(searchTerm) {
+    fetch(`/finance/customers/search?q=${encodeURIComponent(searchTerm)}`)
+        .then(response => {
+            if (!response.ok) throw new Error('Network error');
+            return response.json();
+        })
+        .then(customers => {
+            customerResults.innerHTML = '';
+            
+            if (customers.length === 0) {
+                // No existing customers found
+                const noResult = document.createElement('div');
+                noResult.className = 'p-2 text-gray-500';
+                noResult.textContent = 'Customer tidak ditemukan. Akan dibuat customer baru.';
+                customerResults.appendChild(noResult);
+                customerResults.classList.remove('hidden');
+                
+                // Show new customer fields
+                checkNewCustomerFields(searchTerm);
+                return;
+            }
+            
+            // Show matching customers
+            customers.forEach(customer => {
+                const div = document.createElement('div');
+                div.className = 'p-2 hover:bg-gray-100 cursor-pointer customer-option border-b';
+                div.innerHTML = `
+                    <div class="font-medium">${customer.name}</div>
+                    <div class="text-sm text-gray-600">${customer.phone ? `(${customer.phone})` : 'No phone'}</div>
+                `;
+                div.setAttribute('data-id', customer.id);
+                div.setAttribute('data-name', customer.name);
+                div.setAttribute('data-phone', customer.phone || '');
+                
+                div.addEventListener('click', function () {
+                    selectCustomer(customer.id, customer.name, customer.phone || '');
+                });
+                
+                customerResults.appendChild(div);
+            });
+            
+            customerResults.classList.remove('hidden');
+            newCustomerFields.classList.add('hidden');
+        })
+        .catch(error => {
+            console.error('Error searching customers:', error);
+            customerResults.innerHTML = '<div class="p-2 text-red-500">Error loading customers</div>';
+            customerResults.classList.remove('hidden');
+        });
+}
 
-// Select existing customer
-customerDropdown.addEventListener('click', function(e) {
-    const customerOption = e.target.closest('.customer-option');
-    if (customerOption) {
-        const id = customerOption.getAttribute('data-id');
-        const name = customerOption.getAttribute('data-name');
-        const phone = customerOption.getAttribute('data-phone');
-        
-        customerIdInput.value = id;
-        customerNameInput.value = name;
-        customerPhoneInput.value = phone || '';
-        
-        // Show selected customer info
-        document.getElementById('customer_display_name').textContent = name;
-        document.getElementById('customer_display_phone').textContent = phone ? `(${phone})` : '';
-        selectedCustomerDiv.classList.remove('hidden');
-        
-        // Hide dropdown and clear search
-        customerDropdown.classList.add('hidden');
-        customerSearch.value = '';
+// Function untuk select customer
+function selectCustomer(id, name, phone) {
+    customerIdInput.value = id;
+    customerNameInput.value = name;
+    customerPhoneInput.value = phone;
+    
+    // Update display
+    document.getElementById('customer_display_name').textContent = name;
+    document.getElementById('customer_display_phone').textContent = phone ? `(${phone})` : '';
+    selectedCustomerDiv.classList.remove('hidden');
+    
+    // Clear search and hide results
+    customerSearch.value = '';
+    customerResults.classList.add('hidden');
+    newCustomerFields.classList.add('hidden');
+}
+
+// Function untuk check if we should show new customer fields
+function checkNewCustomerFields(searchTerm) {
+    if (searchTerm.length >= 3 && !customerIdInput.value) {
+        newCustomerName.value = searchTerm;
+        customerNameInput.value = searchTerm;
+        newCustomerFields.classList.remove('hidden');
+    } else {
+        newCustomerFields.classList.add('hidden');
     }
-});
+}
 
 // Clear customer selection
-document.getElementById('clear_customer').addEventListener('click', function() {
+document.getElementById('clear_customer').addEventListener('click', function () {
     customerIdInput.value = '';
     customerNameInput.value = '';
     customerPhoneInput.value = '';
@@ -611,37 +679,30 @@ document.getElementById('clear_customer').addEventListener('click', function() {
     customerSearch.value = '';
     newCustomerName.value = '';
     newCustomerPhone.value = '';
-});
-
-// Create new customer - show fields when typing
-customerSearch.addEventListener('input', function() {
-    const searchTerm = this.value.trim();
-    
-    if (searchTerm.length > 0) {
-        // Check if customer exists
-        const existingCustomer = Array.from(customerDropdown.querySelectorAll('.customer-option'))
-            .find(opt => opt.getAttribute('data-name').toLowerCase() === searchTerm.toLowerCase());
-        
-        if (!existingCustomer) {
-            // Show new customer fields
-            newCustomerName.value = searchTerm;
-            customerNameInput.value = searchTerm;
-            newCustomerFields.classList.remove('hidden');
-        } else {
-            newCustomerFields.classList.add('hidden');
-        }
-    } else {
-        newCustomerFields.classList.add('hidden');
-    }
+    customerResults.classList.add('hidden');
 });
 
 // Sync new customer fields
-newCustomerName.addEventListener('input', function() {
+newCustomerName.addEventListener('input', function () {
     customerNameInput.value = this.value;
 });
 
-newCustomerPhone.addEventListener('input', function() {
+newCustomerPhone.addEventListener('input', function () {
     customerPhoneInput.value = this.value;
+});
+
+// Hide dropdown when clicking outside
+document.addEventListener('click', function (e) {
+    if (!e.target.closest('.relative')) {
+        customerResults.classList.add('hidden');
+    }
+});
+
+// Show dropdown when focusing on search
+customerSearch.addEventListener('focus', function () {
+    if (this.value.trim().length >= 3) {
+        this.dispatchEvent(new Event('input'));
+    }
 });
 </script>
 </body>
