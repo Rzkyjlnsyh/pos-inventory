@@ -225,18 +225,17 @@ public function printPreview($id)
     public function income(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'income_amount' => ['required', 'numeric', 'min:1000', 'max:10000000'], // BATASI MAX!
+            'income_amount' => ['required', 'numeric', 'min:1', 'gt:0', 'max:10000000'], // FIX: min:1, gt:0
             'income_description' => ['required', 'string', 'max:255'],
         ]);
-
-        // PAKAI DB TRANSACTION UNTUK HINDARI RACE CONDITION
+    
         return DB::transaction(function () use ($validated) {
             $shift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
             
             if (!$shift) {
                 return back()->withErrors(['error' => 'Anda tidak memiliki shift aktif. Mulai shift terlebih dahulu.']);
             }
-
+    
             // CEK DUPLIKAT 5 MENIT TERAKHIR
             $recentIncome = Income::where('shift_id', $shift->id)
                 ->where('description', $validated['income_description'])
@@ -247,18 +246,18 @@ public function printPreview($id)
             if ($recentIncome) {
                 return back()->withErrors(['error' => 'Pemasukan serupa sudah ditambahkan 5 menit yang lalu.']);
             }
-
+    
             Income::create([
                 'shift_id' => $shift->id,
                 'amount' => $validated['income_amount'],
                 'description' => $validated['income_description'],
             ]);
-
+    
             $shift->increment('income_total', $validated['income_amount']);
             $shift->increment('cash_total', $validated['income_amount']);
-
+    
             \Log::info('Pemasukan ditambahkan: ' . $validated['income_description'] . ' - Rp ' . number_format($validated['income_amount'], 0, ',', '.'));
-
+    
             return back()->with('success', 'Pemasukan berhasil ditambahkan.');
         });
     }
@@ -266,18 +265,17 @@ public function printPreview($id)
     public function expense(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'expense_amount' => ['required', 'numeric', 'min:1000', 'max:10000000'], // BATASI MAX!
+            'expense_amount' => ['required', 'numeric', 'min:1', 'gt:0', 'max:10000000'], // FIX: min:1, gt:0
             'expense_description' => ['required', 'string', 'max:255'],
         ]);
-
-        // PAKAI DB TRANSACTION UNTUK HINDARI RACE CONDITION
+    
         return DB::transaction(function () use ($validated) {
             $shift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
             
             if (!$shift) {
                 return back()->withErrors(['error' => 'Anda tidak memiliki shift aktif. Mulai shift terlebih dahulu.']);
             }
-
+    
             // CEK DUPLIKAT 5 MENIT TERAKHIR
             $recentExpense = Expense::where('shift_id', $shift->id)
                 ->where('description', $validated['expense_description'])
@@ -288,18 +286,18 @@ public function printPreview($id)
             if ($recentExpense) {
                 return back()->withErrors(['error' => 'Pengeluaran serupa sudah ditambahkan 5 menit yang lalu.']);
             }
-
+    
             Expense::create([
                 'shift_id' => $shift->id,
                 'amount' => $validated['expense_amount'],
                 'description' => $validated['expense_description'],
                 'created_at' => now(),
             ]);
-
+    
             $shift->increment('expense_total', $validated['expense_amount']);
-
+    
             \Log::info('Pengeluaran ditambahkan: ' . $validated['expense_description'] . ' - Rp ' . number_format($validated['expense_amount'], 0, ',', '.'));
-
+    
             return back()->with('success', 'Pengeluaran berhasil ditambahkan.');
         });
     }
@@ -557,7 +555,7 @@ public function printPreview($id)
 public function cashTransfer(Request $request): RedirectResponse
 {
     $validated = $request->validate([
-        'transfer_amount' => ['required', 'numeric', 'min:1000', 'max:10000000'],
+        'transfer_amount' => ['required', 'numeric', 'min:1', 'gt:0', 'max:10000000'],
         'transfer_description' => ['required', 'string', 'max:255'],
         'transfer_type' => ['required', 'in:setor,tukar,other'],
         'transfer_notes' => ['nullable', 'string', 'max:500'],

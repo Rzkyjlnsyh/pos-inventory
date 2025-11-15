@@ -276,8 +276,9 @@
                         <div class="grid md:grid-cols-3 gap-4 mb-3">
                             <div>
                                 <label for="income_amount" class="block font-medium mb-1">Jumlah Pemasukan *</label>
-                                <input type="number" name="income_amount" id="income_amount" min="0" step="0.01" required 
-                                       class="border rounded px-3 py-2 w-full focus:ring focus:ring-yellow-300">
+                                <input type="number" name="income_amount" id="income_amount" min="1" step="0.01" required 
+       class="border rounded px-3 py-2 w-full focus:ring focus:ring-yellow-300"
+       placeholder="Contoh: 500, 1000, 2500">
                             </div>
                             <div>
                                 <label for="income_description" class="block font-medium mb-1">Keterangan *</label>
@@ -304,8 +305,9 @@
                         <div class="grid md:grid-cols-3 gap-4 mb-3">
                             <div>
                                 <label for="expense_amount" class="block font-medium mb-1">Jumlah Pengeluaran *</label>
-                                <input type="number" name="expense_amount" id="expense_amount" min="0" step="0.01" required 
-                                       class="border rounded px-3 py-2 w-full focus:ring focus:ring-red-300">
+                                <input type="number" name="expense_amount" id="expense_amount" min="1" step="0.01" required 
+                                class="border rounded px-3 py-2 w-full focus:ring focus:ring-red-300"
+                                placeholder="Contoh: 500, 1000, 2500">
                             </div>
                             <div>
                                 <label for="expense_description" class="block font-medium mb-1">Keterangan *</label>
@@ -332,9 +334,9 @@
         <div class="grid md:grid-cols-4 gap-4 mb-3">
             <div>
                 <label for="transfer_amount" class="block font-medium mb-1">Jumlah *</label>
-                <input type="number" name="transfer_amount" id="transfer_amount" min="0" step="0.01" required 
-                       class="border rounded px-3 py-2 w-full focus:ring focus:ring-purple-300"
-                       placeholder="Jumlah yang disetor/ditukar">
+                <input type="number" name="transfer_amount" id="transfer_amount" min="1" step="0.01" required 
+       class="border rounded px-3 py-2 w-full focus:ring focus:ring-purple-300"
+       placeholder="Contoh: 500, 1000, 2500">
             </div>
             <div>
                 <label for="transfer_description" class="block font-medium mb-1">Keterangan *</label>
@@ -389,7 +391,7 @@
                 </div>
                 <div class="bg-white p-3 rounded border">
                     <p class="font-semibold text-green-600">
-                        <strong>Kas Akhir:</strong> Rp {{ number_format($totalDiharapkan, 0, ',', '.') }}
+                        <strong>Kas Akhir:</strong> Rp {{ number_format($totalDiharapkan - $totalCashTransfer , 0, ',', '.') }}
                     </p>
                     <p class="text-xs text-gray-600 mt-1">
                         Sistem otomatis menghitung berdasarkan transaksi
