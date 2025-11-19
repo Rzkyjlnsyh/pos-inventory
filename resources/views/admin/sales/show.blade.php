@@ -114,6 +114,26 @@
                 </div>
             </div>
 
+            <!-- Tambah di bagian atas show view: -->
+@if(session('success'))
+    <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
+        {{ session('success') }}
+    </div>
+@endif
+
+<div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+    <div class="flex items-center">
+        <i class="bi bi-credit-card text-blue-600 text-xl mr-3"></i>
+        <div>
+            <h3 class="font-semibold text-blue-800">Info Pembayaran</h3>
+            <p class="text-sm text-blue-700 mt-1">
+                <strong>Pembayaran hanya bisa ditambah melalui section "Tambah Pembayaran" di bawah.</strong><br>
+                Edit sales order hanya untuk mengubah data order, tidak untuk pembayaran.
+            </p>
+        </div>
+    </div>
+</div>
+
             @if(!$activeShift)
                 <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-6">
                     Shift belum dimulai. Anda tidak bisa menambah pembayaran atau melakukan aksi lain. Silakan mulai shift terlebih dahulu di <a href="{{ route('admin.shift.dashboard') }}" class="underline">Dashboard Shift</a>.
@@ -149,7 +169,7 @@
                 @endif
             @endif
 
-            @if(in_array($salesOrder->status, ['pending', 'request_kain', 'proses_jahit', 'jadi', 'di proses', 'diterima_toko']))
+            <!-- @if(in_array($salesOrder->status, ['pending', 'request_kain', 'proses_jahit', 'jadi', 'di proses', 'diterima_toko']))
                 <div class="bg-gray-100 p-4 rounded-xl mb-6">
                     <h4 class="font-semibold text-gray-700">Debug Status Proses</h4>
                     <p class="text-sm text-gray-600">
@@ -182,7 +202,7 @@
                         @endif
                     </p>
                 </div>
-            @endif
+            @endif -->
 
             @if ($errors->any())
                 <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
@@ -192,12 +212,6 @@
                             <li>{{ $error }}</li>
                         @endforeach
                     </ul>
-                </div>
-            @endif
-
-            @if (session('success'))
-                <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
-                    {{ session('success') }}
                 </div>
             @endif
 
@@ -240,6 +254,8 @@
                         <div class="flex justify-between"><span class="text-gray-600">Status Pembayaran:</span><span class="px-2 py-1 rounded-full text-xs font-medium @if($salesOrder->payment_status === 'lunas') bg-green-100 text-green-600 @else bg-yellow-100 text-yellow-600 @endif">{{ ucfirst($salesOrder->payment_status) }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-600">Subtotal:</span><span>Rp {{ number_format($salesOrder->subtotal, 0, ',', '.') }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-600">Diskon:</span><span>Rp {{ number_format($salesOrder->discount_total, 0, ',', '.') }}</span></div>
+                        <!-- ✅ TAMBAH DISPLAY ONGKIR DI SINI -->
+                        <div class="flex justify-between"><span class="text-gray-600">Ongkir:</span><span>Rp {{ number_format($salesOrder->shipping_cost, 0, ',', '.') }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-600">Grand Total:</span><span class="text-lg font-bold text-blue-600">Rp {{ number_format($salesOrder->grand_total, 0, ',', '.') }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-600">Total Dibayar:</span><span class="text-green-600 font-medium">Rp {{ number_format($salesOrder->paid_total, 0, ',', '.') }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-600">Sisa:</span><span class="@if($salesOrder->remaining_amount > 0) text-red-600 @else text-green-600 @endif font-medium">Rp {{ number_format($salesOrder->remaining_amount, 0, ',', '.') }}</span></div>
@@ -490,19 +506,24 @@
                             @endforeach
                         </tbody>
                         <tfoot class="bg-gray-50">
-                            <tr>
-                                <td colspan="5" class="px-4 py-2 border text-right font-semibold">Subtotal:</td>
-                                <td class="px-4 py-2 border text-right font-semibold">Rp {{ number_format($salesOrder->subtotal, 0, ',', '.') }}</td>
-                            </tr>
-                            <tr>
-                                <td colspan="5" class="px-4 py-2 border text-right font-semibold">Total Diskon:</td>
-                                <td class="px-4 py-2 border text-right font-semibold text-red-600">- Rp {{ number_format($salesOrder->discount_total, 0, ',', '.') }}</td>
-                            </tr>
-                            <tr>
-                                <td colspan="5" class="px-4 py-2 border text-right font-semibold">Grand Total:</td>
-                                <td class="px-4 py-2 border text-right font-semibold text-blue-600">Rp {{ number_format($salesOrder->grand_total, 0, ',', '.') }}</td>
-                            </tr>
-                        </tfoot>
+    <tr>
+        <td colspan="5" class="px-4 py-2 border text-right font-semibold">Subtotal:</td>
+        <td class="px-4 py-2 border text-right font-semibold">Rp {{ number_format($salesOrder->subtotal, 0, ',', '.') }}</td>
+    </tr>
+    <tr>
+        <td colspan="5" class="px-4 py-2 border text-right font-semibold">Total Diskon:</td>
+        <td class="px-4 py-2 border text-right font-semibold text-red-600">- Rp {{ number_format($salesOrder->discount_total, 0, ',', '.') }}</td>
+    </tr>
+    <!-- ✅ TAMBAH ROW ONGKIR DI SINI -->
+    <tr>
+        <td colspan="5" class="px-4 py-2 border text-right font-semibold">Ongkir:</td>
+        <td class="px-4 py-2 border text-right font-semibold text-green-600">+ Rp {{ number_format($salesOrder->shipping_cost, 0, ',', '.') }}</td>
+    </tr>
+    <tr>
+        <td colspan="5" class="px-4 py-2 border text-right font-semibold">Grand Total:</td>
+        <td class="px-4 py-2 border text-right font-semibold text-blue-600">Rp {{ number_format($salesOrder->grand_total, 0, ',', '.') }}</td>
+    </tr>
+</tfoot>
                     </table>
                 </div>
             </div>

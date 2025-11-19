@@ -100,12 +100,6 @@
                 </div>
             </div>
 
-            @if(!$activeShift)
-                <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-6">
-                    Shift belum dimulai. Anda tidak bisa menambah pembayaran atau melakukan aksi lain. Silakan mulai shift terlebih dahulu di <a href="{{ route('finance.shift.dashboard') }}" class="underline">Dashboard Shift</a>.
-                </div>
-            @endif
-
             @if($salesOrder->status === 'pending')
                 @php
                     $insufficientStock = false;
@@ -216,6 +210,8 @@
                         <div class="flex justify-between"><span class="text-gray-600">Status Pembayaran:</span><span class="px-2 py-1 rounded-full text-xs font-medium @if($salesOrder->payment_status === 'lunas') bg-green-100 text-green-600 @else bg-yellow-100 text-yellow-600 @endif">{{ ucfirst($salesOrder->payment_status) }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-600">Subtotal:</span><span>Rp {{ number_format($salesOrder->subtotal, 0, ',', '.') }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-600">Diskon:</span><span>Rp {{ number_format($salesOrder->discount_total, 0, ',', '.') }}</span></div>
+                        <!-- ✅ TAMBAH DISPLAY ONGKIR DI SINI -->
+                        <div class="flex justify-between"><span class="text-gray-600">Ongkir:</span><span>Rp {{ number_format($salesOrder->shipping_cost, 0, ',', '.') }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-600">Grand Total:</span><span class="text-lg font-bold text-blue-600">Rp {{ number_format($salesOrder->grand_total, 0, ',', '.') }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-600">Total Dibayar:</span><span class="text-green-600 font-medium">Rp {{ number_format($salesOrder->paid_total, 0, ',', '.') }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-600">Sisa:</span><span class="@if($salesOrder->remaining_amount > 0) text-red-600 @else text-green-600 @endif font-medium">Rp {{ number_format($salesOrder->remaining_amount, 0, ',', '.') }}</span></div>
@@ -463,19 +459,24 @@
                             @endforeach
                         </tbody>
                         <tfoot class="bg-gray-50">
-                            <tr>
-                                <td colspan="5" class="px-4 py-2 border text-right font-semibold">Subtotal:</td>
-                                <td class="px-4 py-2 border text-right font-semibold">Rp {{ number_format($salesOrder->subtotal, 0, ',', '.') }}</td>
-                            </tr>
-                            <tr>
-                                <td colspan="5" class="px-4 py-2 border text-right font-semibold">Total Diskon:</td>
-                                <td class="px-4 py-2 border text-right font-semibold text-red-600">- Rp {{ number_format($salesOrder->discount_total, 0, ',', '.') }}</td>
-                            </tr>
-                            <tr>
-                                <td colspan="5" class="px-4 py-2 border text-right font-semibold">Grand Total:</td>
-                                <td class="px-4 py-2 border text-right font-semibold text-blue-600">Rp {{ number_format($salesOrder->grand_total, 0, ',', '.') }}</td>
-                            </tr>
-                        </tfoot>
+    <tr>
+        <td colspan="5" class="px-4 py-2 border text-right font-semibold">Subtotal:</td>
+        <td class="px-4 py-2 border text-right font-semibold">Rp {{ number_format($salesOrder->subtotal, 0, ',', '.') }}</td>
+    </tr>
+    <tr>
+        <td colspan="5" class="px-4 py-2 border text-right font-semibold">Total Diskon:</td>
+        <td class="px-4 py-2 border text-right font-semibold text-red-600">- Rp {{ number_format($salesOrder->discount_total, 0, ',', '.') }}</td>
+    </tr>
+    <!-- ✅ TAMBAH ROW ONGKIR DI SINI -->
+    <tr>
+        <td colspan="5" class="px-4 py-2 border text-right font-semibold">Ongkir:</td>
+        <td class="px-4 py-2 border text-right font-semibold text-green-600">+ Rp {{ number_format($salesOrder->shipping_cost, 0, ',', '.') }}</td>
+    </tr>
+    <tr>
+        <td colspan="5" class="px-4 py-2 border text-right font-semibold">Grand Total:</td>
+        <td class="px-4 py-2 border text-right font-semibold text-blue-600">Rp {{ number_format($salesOrder->grand_total, 0, ',', '.') }}</td>
+    </tr>
+</tfoot>
                     </table>
                 </div>
             </div>

@@ -7,6 +7,7 @@ use App\Models\SalesOrder;
 use App\Models\SalesOrderItem;
 use App\Models\SalesOrderLog;
 use App\Models\Product;
+use App\Models\Supplier;
 use App\Models\Customer;
 use App\Models\StockMovement;
 use App\Models\Payment;
@@ -53,27 +54,34 @@ class SalesOrderController extends Controller
         return view('finance.sales.index', compact('salesOrders', 'q', 'status', 'payment_status'));
     }
 
-    public function create(): View|RedirectResponse
+    public function create(): View
     {
-
+        // AMBIL SHIFT AKTIF GLOBAL (tanpa validasi user)
+        $activeShift = Shift::getActiveShift();
+        
         $customers = Customer::orderBy('name')->get();
         $products = Product::where('is_active', true)->where('price', '>', 0)->orderBy('name')->get();
-        return view('finance.sales.create', compact('customers', 'products', 'activeShift'));
+        $suppliers = Supplier::orderBy('name')->get();
+        
+        return view('finance.sales.create', compact('customers', 'products', 'activeShift', 'suppliers'));
     }
 
     public function store(Request $request): RedirectResponse|View
     {
         \Log::info('Store request received', $request->all());
-
-
-
+    
+        // AMBIL SHIFT AKTIF GLOBAL
+        $activeShift = Shift::getActiveShift();
+                // Tentukan status dari input (draft atau pending)
+                $status = $request->input('status', 'pending');
+    
         $validated = $request->validate([
             'order_type' => ['required', 'in:jahit_sendiri,beli_jadi'],
             'order_date' => ['required', 'date'],
-            'deadline' => ['nullable','date'], // TAMBAH INI
+            'deadline' => ['nullable','date'],
             'customer_id' => ['nullable', 'exists:customers,id'],
-            'payment_method' => ['required', 'in:cash,transfer,split'],
-            'payment_status' => ['required', 'in:dp,lunas'],
+            'payment_method' => $status === 'draft' ? ['nullable', 'in:cash,transfer,split'] : ['required', 'in:cash,transfer,split'],
+            'payment_status' => $status === 'draft' ? ['nullable', 'in:dp,lunas'] : ['required', 'in:dp,lunas'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['nullable', 'exists:products,id'],
             'items.*.product_name' => ['required', 'string', 'max:255'],
@@ -81,11 +89,13 @@ class SalesOrderController extends Controller
             'items.*.sale_price' => ['required', 'numeric', 'min:0.01'],
             'items.*.qty' => ['required', 'integer', 'min:1'],
             'items.*.discount' => ['nullable', 'numeric', 'min:0'],
+            'discount_total' => ['nullable', 'numeric', 'min:0'],
             'payment_amount' => ['nullable', 'numeric', 'min:0'],
             'cash_amount' => ['nullable', 'numeric', 'min:0'],
             'transfer_amount' => ['nullable', 'numeric', 'min:0'],
             'paid_at' => ['nullable', 'date'],
             'proof_path' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:2048'],
+            'shipping_cost' => ['nullable', 'numeric', 'min:0'], // ✅ TAMBAH INI
         ]);
 
         \Log::info('Validated data', $validated);
@@ -103,10 +113,9 @@ class SalesOrderController extends Controller
         $subtotal = collect($validated['items'])->reduce(function ($carry, $item) {
             return $carry + ((float)$item['sale_price'] * (int)$item['qty']);
         }, 0);
-        $discountTotal = collect($validated['items'])->sum(function ($item) {
-            return (float)($item['discount'] ?? 0) * (int)$item['qty'];
-        });
-        $grandTotal = $subtotal - $discountTotal;
+        $discountTotal = (float)($validated['discount_total'] ?? 0);
+        $shippingCost = (float)($validated['shipping_cost'] ?? 0); // ✅ TAMBAH INI
+        $grandTotal = $subtotal - $discountTotal + $shippingCost; // ✅ UPDATE INI
 
         $cashAmount = $validated['payment_method'] === 'split' ? ($validated['cash_amount'] ?? 0) : ($validated['payment_method'] === 'cash' ? ($validated['payment_amount'] ?? 0) : 0);
         $transferAmount = $validated['payment_method'] === 'split' ? ($validated['transfer_amount'] ?? 0) : ($validated['payment_method'] === 'transfer' ? ($validated['payment_amount'] ?? 0) : 0);
@@ -130,7 +139,7 @@ class SalesOrderController extends Controller
         $status = 'pending';
 
         try {
-            $salesOrder = DB::transaction(function () use ($validated, $request, $cashAmount, $transferAmount, $paymentAmount, $grandTotal, $status, $subtotal, $discountTotal) {
+            $salesOrder = DB::transaction(function () use ($validated, $request, $cashAmount, $transferAmount, $paymentAmount, $grandTotal, $activeShift, $status, $subtotal, $discountTotal, $shippingCost) {
 // === AUTO CREATE CUSTOMER LOGIC ===
 $customerId = $validated['customer_id'] ?? null;
 if (empty($customerId) && !empty($validated['customer_name'])) {
@@ -158,10 +167,11 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
                     'so_number' => $soNumber,
                     'order_type' => $validated['order_type'],
                     'order_date' => $validated['order_date'],
-                    'deadline' => $validated['deadline'] ?? null, // tambah ini
+                    'deadline' => $validated['deadline'] ?? null,
                     'customer_id' => $customerId ?? null,
                     'subtotal' => $subtotal,
                     'discount_total' => $discountTotal,
+                    'shipping_cost' => $shippingCost, // ✅ TAMBAH INI
                     'grand_total' => $grandTotal,
                     'status' => $status,
                     'payment_method' => $validated['payment_method'],
@@ -187,9 +197,9 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
                     $proofPath = $request->hasFile('proof_path')
                         ? $request->file('proof_path')->store('payment-proofs', 'public')
                         : null;
-
+    
                     $paymentCategory = ($paymentAmount >= $grandTotal) ? 'pelunasan' : 'dp';
-
+    
                     $payment = Payment::create([
                         'sales_order_id' => $salesOrder->id,
                         'method' => $validated['payment_method'],
@@ -202,14 +212,20 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
                         'proof_path' => $proofPath,
                         'created_by' => Auth::id(),
                     ]);
-
+    
                     \Log::info('Payment created', ['payment_id' => $payment->id, 'amount' => $paymentAmount, 'proof_path' => $proofPath ?? 'none']);
-
+    
+                    // ✅ UPDATE SHIFT CASH JIKA ADA CASH AMOUNT
+                    if ($activeShift && $cashAmount > 0) {
+                        $activeShift->increment('cash_total', $cashAmount);
+                        \Log::info('Shift cash updated by Finance', ['shift_id' => $activeShift->id, 'cash_amount' => $cashAmount]);
+                    }
+    
                     $this->logAction($salesOrder, 'payment_added', "Pembayaran ditambahkan: {$paymentCategory}, Jumlah: Rp " . number_format($paymentAmount, 0, ',', '.') . ", Metode: {$validated['payment_method']}" . ($proofPath ? "" : ", tanpa bukti"));
                 }
-
+    
                 $this->logAction($salesOrder, 'created', "Sales order dibuat: {$soNumber}, Tipe: {$validated['order_type']}, Total: Rp " . number_format($grandTotal, 0, ',', '.'));
-
+    
                 return $salesOrder;
             });
 
@@ -274,7 +290,7 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
             'items.*.sku' => ['nullable', 'string', 'max:100'],
             'items.*.sale_price' => ['required', 'numeric', 'min:0.01'],
             'items.*.qty' => ['required', 'integer', 'min:1'],
-            'items.*.discount' => ['nullable', 'numeric', 'min:0'],
+            'shipping_cost' => ['nullable', 'numeric', 'min:0'], // ✅ TAMBAH INI
             'payment_amount' => ['nullable', 'numeric', 'min:0'],
             'cash_amount' => ['nullable', 'numeric', 'min:0'],
             'transfer_amount' => ['nullable', 'numeric', 'min:0'],
@@ -295,10 +311,9 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
         $subtotal = collect($validated['items'])->reduce(function ($carry, $item) {
             return $carry + ((float)$item['sale_price'] * (int)$item['qty']);
         }, 0);
-        $discountTotal = collect($validated['items'])->sum(function ($item) {
-            return (float)($item['discount'] ?? 0) * (int)$item['qty'];
-        });
-        $grandTotal = $subtotal - $discountTotal;
+        $discountTotal = (float)($validated['discount_total'] ?? 0);
+        $shippingCost = (float)($validated['shipping_cost'] ?? 0); // ✅ TAMBAH INI
+        $grandTotal = $subtotal - $discountTotal + $shippingCost; // ✅ UPDATE INI
 
         $cashAmount = $validated['payment_method'] === 'split' ? ($validated['cash_amount'] ?? 0) : ($validated['payment_method'] === 'cash' ? ($validated['payment_amount'] ?? 0) : 0);
         $transferAmount = $validated['payment_method'] === 'split' ? ($validated['transfer_amount'] ?? 0) : ($validated['payment_method'] === 'transfer' ? ($validated['payment_amount'] ?? 0) : 0);
@@ -320,7 +335,7 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
         }
 
         try {
-            DB::transaction(function () use ($salesOrder, $validated, $request, $cashAmount, $transferAmount, $paymentAmount, $grandTotal, $subtotal, $discountTotal) {
+            DB::transaction(function () use ($salesOrder, $validated, $request, $cashAmount, $transferAmount, $paymentAmount, $grandTotal, $subtotal, $discountTotal, $shippingCost) {
                 $salesOrder->update([
                     'order_type' => $validated['order_type'],
                     'order_date' => $validated['order_date'],
@@ -328,6 +343,7 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
                     'customer_id' => $validated['customer_id'] ?? null,
                     'subtotal' => $subtotal,
                     'discount_total' => $discountTotal,
+                    'shipping_cost' => $shippingCost, // ✅ TAMBAH INI
                     'grand_total' => $grandTotal,
                     'payment_method' => $validated['payment_method'],
                     'payment_status' => $validated['payment_status'],
@@ -349,51 +365,6 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
                         'discount' => $item['discount'] ?? 0,
                         'line_total' => $lineTotal,
                     ]);
-                }
-
-                if ($paymentAmount > 0) {
-                    $proofPath = $request->hasFile('proof_path')
-                        ? $request->file('proof_path')->store('payment-proofs', 'public')
-                        : null;
-
-                    $paymentCategory = ($paymentAmount >= $grandTotal) ? 'pelunasan' : 'dp';
-
-                    $latestPayment = Payment::where('sales_order_id', $salesOrder->id)->latest('created_at')->first();
-
-                    if ($latestPayment) {
-                        $latestPayment->update([
-                            'method' => $validated['payment_method'],
-                            'status' => $validated['payment_status'],
-                            'category' => $paymentCategory,
-                            'amount' => $paymentAmount,
-                            'cash_amount' => $cashAmount,
-                            'transfer_amount' => $transferAmount,
-                            'paid_at' => $validated['paid_at'] ?? now(),
-                            'proof_path' => $proofPath ?? $latestPayment->proof_path,
-                            'created_by' => Auth::id(),
-                        ]);
-
-                        \Log::info('Payment updated in update', ['payment_id' => $latestPayment->id, 'amount' => $paymentAmount, 'proof_path' => $proofPath ?? 'none']);
-
-                        $this->logAction($salesOrder, 'payment_updated', "Pembayaran diperbarui: {$paymentCategory}, Jumlah: Rp " . number_format($paymentAmount, 0, ',', '.') . ", Metode: {$validated['payment_method']}" . ($proofPath ? "" : ", tanpa bukti"));
-                    } else {
-                        $payment = Payment::create([
-                            'sales_order_id' => $salesOrder->id,
-                            'method' => $validated['payment_method'],
-                            'status' => $validated['payment_status'],
-                            'category' => $paymentCategory,
-                            'amount' => $paymentAmount,
-                            'cash_amount' => $cashAmount,
-                            'transfer_amount' => $transferAmount,
-                            'paid_at' => $validated['paid_at'] ?? now(),
-                            'proof_path' => $proofPath,
-                            'created_by' => Auth::id(),
-                        ]);
-
-                        \Log::info('Payment created in update', ['payment_id' => $payment->id, 'amount' => $paymentAmount, 'proof_path' => $proofPath ?? 'none']);
-
-                        $this->logAction($salesOrder, 'payment_added', "Pembayaran ditambahkan: {$paymentCategory}, Jumlah: Rp " . number_format($paymentAmount, 0, ',', '.') . ", Metode: {$validated['payment_method']}" . ($proofPath ? "" : ", tanpa bukti"));
-                    }
                 }
 
                 $this->logAction($salesOrder, 'updated', "Sales order diperbarui: Tipe: {$validated['order_type']}, Total: Rp " . number_format($grandTotal, 0, ',', '.'));
@@ -426,7 +397,6 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
 
     public function addPayment(Request $request, SalesOrder $salesOrder): RedirectResponse
     {
-
         $validated = $request->validate([
             'payment_amount' => ['required', 'numeric', 'min:0', function ($attribute, $value, $fail) use ($salesOrder) {
                 if ($salesOrder->paid_total == 0 && $value < $salesOrder->grand_total * 0.5) {
@@ -460,14 +430,14 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
                 $proofPath = $request->hasFile('proof_path')
                     ? $request->file('proof_path')->store('payment-proofs', 'public')
                     : null;
-
+    
                 $cashAmount = $validated['payment_method'] === 'cash' ? $validated['payment_amount'] : ($validated['payment_method'] === 'split' ? ($validated['cash_amount'] ?? 0) : 0);
                 $transferAmount = $validated['payment_method'] == 'transfer' ? $validated['payment_amount'] : ($validated['payment_method'] === 'split' ? ($validated['transfer_amount'] ?? 0) : 0);
-
+    
                 $paidBefore = $salesOrder->payments()->sum('amount');
                 $newPaidTotal = $paidBefore + $validated['payment_amount'];
                 $paymentCategory = ($newPaidTotal >= $salesOrder->grand_total) ? 'pelunasan' : 'dp';
-
+    
                 $payment = Payment::create([
                     'sales_order_id' => $salesOrder->id,
                     'method' => $validated['payment_method'],
@@ -482,12 +452,19 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
                     'note' => $validated['note'] ?? null,
                     'created_by' => Auth::id(),
                 ]);
-
+    
                 $salesOrder->update(['payment_status' => ($newPaidTotal >= $salesOrder->grand_total) ? 'lunas' : 'dp']);
-
+    
+                // ✅ UPDATE SHIFT CASH JIKA ADA CASH AMOUNT
+                $activeShift = Shift::getActiveShift();
+                if ($activeShift && $cashAmount > 0) {
+                    $activeShift->increment('cash_total', $cashAmount);
+                    \Log::info('Shift cash updated by Finance in addPayment', ['shift_id' => $activeShift->id, 'cash_amount' => $cashAmount]);
+                }
+    
                 $this->logAction($salesOrder, 'payment_added', "Pembayaran ditambahkan: {$paymentCategory}, Jumlah: Rp " . number_format($validated['payment_amount'], 0, ',', '.') . ", Metode: {$validated['payment_method']}");
             });
-
+    
             \Log::info('Payment added successfully', ['so_number' => $salesOrder->so_number]);
             return back()->with('success', 'Pembayaran ditambahkan.');
         } catch (\Exception $e) {
@@ -533,5 +510,24 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
         ->get(['id', 'name', 'phone']);
     
     return response()->json($customers);
+}
+// Tambahkan method ini di class Finance SalesOrderController
+public function search(Request $request)
+{
+    $query = $request->get('q');
+    
+    $products = Product::where('is_active', true)
+        ->where('price', '>', 0)
+        ->where(function($q) use ($query) {
+            $q->where('name', 'like', "%{$query}%")
+              ->orWhere('sku', 'like', "%{$query}%")
+              ->orWhere('barcode', 'like', "%{$query}%");
+        })
+        ->select('id', 'name', 'sku', 'barcode', 'price', 'stock_qty')
+        ->orderBy('name')
+        ->limit(10)
+        ->get();
+    
+    return response()->json($products);
 }
 }

@@ -217,6 +217,7 @@ Route::middleware(['auth', 'finance'])->prefix('finance')->name('finance.')->gro
     Route::get('dashboard', [\App\Http\Controllers\Finance\FinanceController::class, 'dashboard'])->name('dashboard');
 
         Route::get('/customers/search', [\App\Http\Controllers\Finance\SalesOrderController::class, 'searchCustomers'])->name('customers.search');
+        Route::get('/products/search', [\App\Http\Controllers\Finance\SalesOrderController::class, 'search'])->name('products.search');
 
     // Contacts (Customer & Supplier)
     Route::get('contacts', [FinanceContactController::class, 'index'])->name('contacts.index');

@@ -18,6 +18,7 @@ class SalesOrder extends Model
         'customer_id',
         'subtotal',
         'discount_total',
+        'shipping_cost', // ✅ TAMBAH INI
         'grand_total',
         'status',
         'payment_method',
@@ -26,22 +27,23 @@ class SalesOrder extends Model
         'approved_by',
         'approved_at',
         'completed_at',
-        'deadline', // tambah ini
-        'add_to_purchase', // ✅ tambahkan ini
+        'deadline',
+        'add_to_purchase',
     ];
 
     protected $casts = [
         'subtotal' => 'decimal:2',
         'discount_total' => 'decimal:2',
+        'shipping_cost' => 'decimal:2', // ✅ TAMBAH INI
         'grand_total' => 'decimal:2',
         'order_date' => 'date',
-        'deadline' => 'date', // TAMBAH INI
+        'deadline' => 'date',
         'approved_at' => 'datetime',
         'completed_at' => 'datetime',
         'add_to_purchase' => 'boolean',
     ];
 
-    // === RELASI ===
+    // === RELASI === 
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class)->orderBy('paid_at');

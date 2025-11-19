@@ -121,4 +121,8 @@ public function getExpectedCash(): float
 {
     return $this->initial_cash + $this->cash_total - $this->expense_total;
 }
+public static function getActiveShift()
+{
+    return static::whereNull('end_time')->orderBy('id', 'desc')->first();
+}
 }

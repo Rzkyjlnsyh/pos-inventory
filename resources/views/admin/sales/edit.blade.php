@@ -155,70 +155,6 @@
                         </div>
                     </div>
 
-                    <!-- Pembayaran -->
-                    <div class="mb-6">
-                        <h2 class="text-lg font-semibold mb-4 text-gray-800">Pembayaran (Opsional)</h2>
-                        <div class="grid md:grid-cols-2 gap-4">
-                            <div>
-                                <label for="payment_amount" class="block font-medium mb-1">Jumlah Pembayaran (Total)</label>
-                                <input type="number" name="payment_amount" id="payment_amount" class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" step="0.01" min="0" value="{{ old('payment_amount', $salesOrder->paid_total) }}">
-                                <p id="dp-info" class="text-sm text-gray-600 mt-1"></p>
-                                @error('payment_amount')
-                                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                                @enderror
-                            </div>
-                            <div id="split-payment-fields" class="hidden md:col-span-2">
-                                <div class="grid md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label for="cash_amount" class="block font-medium mb-1">Jumlah Cash</label>
-                                        <input type="number" name="cash_amount" id="cash_amount" class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" step="0.01" min="0" value="{{ old('cash_amount', $salesOrder->payments->first()->cash_amount ?? 0) }}">
-                                        @error('cash_amount')
-                                            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                                        @enderror
-                                    </div>
-                                    <div>
-                                        <label for="transfer_amount" class="block font-medium mb-1">Jumlah Transfer</label>
-                                        <input type="number" name="transfer_amount" id="transfer_amount" class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" step="0.01" min="0" value="{{ old('transfer_amount', $salesOrder->payments->first()->transfer_amount ?? 0) }}">
-                                        @error('transfer_amount')
-                                            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                                        @enderror
-                                    </div>
-                                </div>
-                            </div>
-                            <div id="proof-and-ref" class="mt-4 hidden md:col-span-2">
-                                <div class="grid md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label for="proof_path" class="block font-medium mb-1">Bukti Transfer (jpg, png, pdf, opsional)</label>
-                                        <input type="file" name="proof_path" id="proof_path" accept=".jpg,.jpeg,.png,.pdf" class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
-                                        <p class="text-sm text-gray-600 mt-1">Upload bukti transfer (opsional)</p>
-                                        @error('proof_path')
-                                            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                                        @enderror
-                                    </div>
-                                    <div>
-                                        <label for="reference_number" class="block font-medium mb-1">No Referensi Transfer (Opsional)</label>
-                                        <input type="text" name="reference_number" id="reference_number" 
-                                               class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
-                                               placeholder="Contoh: TRF123456789" 
-                                               value="{{ old('reference_number', $salesOrder->payments->first()->reference_number ?? '') }}">
-                                        <p class="text-sm text-gray-600 mt-1">No referensi bank atau keterangan</p>
-                                        @error('reference_number')
-                                            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                                        @enderror
-                                    </div>
-                                </div>
-                                <p class="text-sm text-gray-600 mt-2">⚠️ Untuk transfer/split, wajib mengisi salah satu: Bukti Transfer atau No Referensi</p>
-                            </div>
-                            <div>
-                                <label for="paid_at" class="block font-medium mb-1">Tanggal Pembayaran</label>
-                                <input type="datetime-local" name="paid_at" id="paid_at" value="{{ old('paid_at', now()->format('Y-m-d\TH:i')) }}" class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
-                                @error('paid_at')
-                                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                                @enderror
-                            </div>
-                        </div>
-                    </div>
-
                     <div class="mb-6">
                         <h2 class="text-lg font-semibold mb-4 text-gray-800">Item Order</h2>
                         <div id="items-container" class="space-y-4">
@@ -262,8 +198,23 @@
                         </button>
                     </div>
 
+                    @if($salesOrder->payments->count() > 0)
+<div class="bg-blue-50 p-4 rounded-lg mb-6">
+    <h2 class="text-lg font-semibold mb-2 text-blue-800">Info Pembayaran</h2>
+    <p class="text-sm text-blue-700">
+        <i class="bi bi-info-circle"></i> 
+        Sales order ini sudah memiliki {{ $salesOrder->payments->count() }} pembayaran.
+        Untuk menambah/mengubah pembayaran, gunakan tombol <strong>"Tambah Pembayaran"</strong> di halaman detail.
+    </p>
+    <div class="mt-2 text-sm">
+        <strong>Total Dibayar:</strong> Rp {{ number_format($salesOrder->paid_total, 0, ',', '.') }} |
+        <strong>Sisa:</strong> Rp {{ number_format($salesOrder->remaining_amount, 0, ',', '.') }}
+    </div>
+</div>
+@endif
+
                     <!-- TAMBAH BAGIAN INI: Summary dengan Discount Total -->
-<div class="bg-gray-50 p-4 rounded-lg mb-6">
+                    <div class="bg-gray-50 p-4 rounded-lg mb-6">
     <h2 class="text-lg font-semibold mb-4 text-gray-800">Ringkasan Order</h2>
     <div class="grid md:grid-cols-4 gap-4">
         <div>
@@ -277,6 +228,17 @@
                    min="0" step="0.01" value="{{ old('discount_total', $salesOrder->discount_total) }}"
                    placeholder="0">
             @error('discount_total')
+                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+            @enderror
+        </div>
+        <!-- ✅ TAMBAH INPUT ONGKIR DI SINI -->
+        <div>
+            <label for="shipping_cost" class="block font-medium mb-1">Ongkir</label>
+            <input type="number" name="shipping_cost" id="shipping_cost" 
+                   class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
+                   min="0" step="0.01" value="{{ old('shipping_cost', $salesOrder->shipping_cost) }}"
+                   placeholder="0">
+            @error('shipping_cost')
                 <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
             @enderror
         </div>
@@ -410,78 +372,29 @@ document.querySelectorAll('.item-row').forEach((row, index) => {
     const rows = document.querySelectorAll('.item-row');
     let subtotal = 0;
 
-    // Hitung subtotal dari semua items
     rows.forEach(row => {
         const price = parseFloat(row.querySelector('.sale-price').value) || 0;
         const qty = parseInt(row.querySelector('.qty').value) || 0;
         subtotal += price * qty;
     });
 
-    // Ambil discount total dari input
     const discountTotal = parseFloat(document.getElementById('discount_total').value) || 0;
+    const shippingCost = parseFloat(document.getElementById('shipping_cost').value) || 0; // ✅ TAMBAH
     
-    // Hitung grand total
-    grandTotal = Math.max(0, subtotal - discountTotal);
+    grandTotal = Math.max(0, subtotal - discountTotal + shippingCost); // ✅ UPDATE
 
-    // Update display
     document.getElementById('display-subtotal').textContent = 'Rp ' + subtotal.toLocaleString('id-ID');
     document.getElementById('display-grand-total').textContent = 'Rp ' + grandTotal.toLocaleString('id-ID');
     document.getElementById('grand_total').value = grandTotal.toFixed(2);
 
-    // Update payment fields
     updatePaymentAmount();
     updatePaymentStatus();
 }
+// ✅ TAMBAH event listener untuk shipping cost
+document.getElementById('shipping_cost').addEventListener('input', updateGrandTotal);
 
 // Event listener untuk discount total
 document.getElementById('discount_total').addEventListener('input', updateGrandTotal);
-
-    function updatePaymentStatus() {
-        const paymentAmount = parseFloat(document.getElementById('payment_amount').value) || 0;
-        const paymentStatus = document.getElementById('payment_status');
-        const dpInfo = document.getElementById('dp-info');
-
-        if (grandTotal > 0 && paymentAmount >= grandTotal) {
-            paymentStatus.value = 'lunas';
-        } else if (paymentAmount > 0) {
-            paymentStatus.value = 'dp';
-        }
-
-        if (paymentStatus.value === 'dp' && paymentAmount > 0) {
-    dpInfo.textContent = `DP: Rp ${paymentAmount.toLocaleString('id-ID')}`;
-} else {
-    dpInfo.textContent = '';
-}
-
-    }
-
-    function updatePaymentAmount() {
-        const method = document.getElementById('payment_method').value;
-        const cash = parseFloat(document.getElementById('cash_amount')?.value) || 0;
-        const transfer = parseFloat(document.getElementById('transfer_amount')?.value) || 0;
-        const paymentAmount = document.getElementById('payment_amount');
-
-        if (method === 'split') {
-            paymentAmount.value = (cash + transfer).toFixed(2);
-            document.getElementById('split-payment-fields').classList.remove('hidden');
-        } else {
-            if (method === 'cash' || method === 'transfer') {
-                paymentAmount.value = grandTotal.toFixed(2);
-            }
-            document.getElementById('split-payment-fields').classList.add('hidden');
-        }
-        updateProofRequired(method);
-        updatePaymentStatus();
-    }
-
-    function updateProofRequired(method) {
-        const proofField = document.getElementById('proof-and-ref');
-        if (method === 'transfer' || method === 'split') {
-            proofField.classList.remove('hidden');
-        } else {
-            proofField.classList.add('hidden');
-        }
-    }
 
     // === TAMBAH ITEM ===
     document.getElementById('add-item').addEventListener('click', function () {
@@ -722,19 +635,6 @@ customerSearch.addEventListener('focus', function () {
         selectedSupplierDiv.classList.add('hidden');
     });
 
-    // === PAYMENT METHOD & SPLIT ===
-    const paymentMethod = document.getElementById('payment_method');
-    const cashAmount = document.getElementById('cash_amount');
-    const transferAmount = document.getElementById('transfer_amount');
-    const paymentAmount = document.getElementById('payment_amount');
-    const paymentStatus = document.getElementById('payment_status');
-
-    paymentMethod.addEventListener('change', updatePaymentAmount);
-    if (cashAmount) cashAmount.addEventListener('input', updatePaymentAmount);
-    if (transferAmount) transferAmount.addEventListener('input', updatePaymentAmount);
-    paymentAmount.addEventListener('input', updatePaymentStatus);
-    paymentStatus.addEventListener('change', updatePaymentStatus);
-
     // === SUBMIT VALIDATION ===
     soForm.addEventListener('submit', function(e) {
         const prices = document.querySelectorAll('.sale-price');
@@ -744,35 +644,6 @@ customerSearch.addEventListener('focus', function () {
                 alert('Harga produk tidak boleh kosong atau nol.');
                 return;
             }
-        }
-
-        const method = paymentMethod.value;
-        const amount = parseFloat(paymentAmount.value) || 0;
-
-        if ((method === 'transfer' || method === 'split') && amount > 0) {
-            const proof = document.getElementById('proof_path');
-            const reference = document.getElementById('reference_number');
-            const hasProof = proof?.files?.[0];
-            const hasReference = reference?.value.trim();
-
-            if (!hasProof && !hasReference) {
-                e.preventDefault();
-                alert('Untuk transfer/split, wajib upload bukti atau isi no referensi.');
-                return;
-            }
-        }
-
-        if (paymentStatus.value === 'dp' && amount <= 0) {
-    e.preventDefault();
-    alert('Jumlah pembayaran DP harus lebih dari Rp 0');
-    return;
-}
-
-
-        if (amount > grandTotal) {
-            e.preventDefault();
-            alert(`Jumlah pembayaran melebihi total: Rp ${grandTotal.toLocaleString('id-ID')}`);
-            return;
         }
     });
 

@@ -31,9 +31,9 @@ class SalesOrderController extends Controller
 {
     private function checkActiveShift(): bool|RedirectResponse
     {
-        $activeShift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
+        $activeShift = Shift::getActiveShift(); // PAKAI METHOD BARU
         if (!$activeShift) {
-            \Log::warning('No active shift for user: ' . Auth::id());
+            \Log::warning('No active shift found');
             return redirect()->route('admin.shift.dashboard')->with('error', 'Silakan mulai shift terlebih dahulu untuk melakukan aksi ini.');
         }
         return true;
@@ -137,7 +137,7 @@ public function import(Request $request): RedirectResponse
 
     public function create(): View|RedirectResponse
     {
-        $activeShift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
+        $activeShift = Shift::getActiveShift(); // PAKAI METHOD BARU
         if (!$activeShift) {
             return redirect()->route('admin.shift.dashboard')->with('error', 'Silakan mulai shift dan masukkan kas awal terlebih dahulu.');
         }
@@ -183,6 +183,7 @@ public function import(Request $request): RedirectResponse
             'paid_at' => $status === 'draft' ? ['nullable'] : ['nullable', 'date'],
             'proof_path' => $status === 'draft' ? ['nullable'] : ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:2048'],
             'reference_number' => $status === 'draft' ? ['nullable'] : ['nullable', 'string', 'max:100'],
+            'shipping_cost' => ['nullable', 'numeric', 'min:0'], // ✅ TAMBAH INI
         ]);
     
         \Log::info('Validated data', $validated);
@@ -201,7 +202,8 @@ public function import(Request $request): RedirectResponse
             return $carry + ((float)$item['sale_price'] * (int)$item['qty']);
         }, 0);
         $discountTotal = (float)($validated['discount_total'] ?? 0);
-        $grandTotal = $subtotal - $discountTotal;
+        $shippingCost = (float)($validated['shipping_cost'] ?? 0); // ✅ TAMBAH INI
+        $grandTotal = $subtotal - $discountTotal + $shippingCost; // ✅ UPDATE INI
     
         $cashAmount = 0;
         $transferAmount = 0;
@@ -225,7 +227,7 @@ public function import(Request $request): RedirectResponse
         }
     
         try {
-            $salesOrder = DB::transaction(function () use ($validated, $request, $cashAmount, $transferAmount, $paymentAmount, $grandTotal, $activeShift, $status, $subtotal, $discountTotal) {
+            $salesOrder = DB::transaction(function () use ($validated, $request, $cashAmount, $transferAmount, $paymentAmount, $grandTotal, $activeShift, $status, $subtotal, $discountTotal, $shippingCost) {
                 // === AUTO CREATE CUSTOMER LOGIC ===
                 $customerId = $validated['customer_id'] ?? null;
                 if (empty($customerId) && !empty($validated['customer_name'])) {
@@ -256,6 +258,7 @@ public function import(Request $request): RedirectResponse
                     'deadline' => $validated['deadline'] ?? null,
                     'subtotal' => $subtotal,
                     'discount_total' => $discountTotal,
+                    'shipping_cost' => $shippingCost, // ✅ TAMBAH INI
                     'grand_total' => $grandTotal,
                     'status' => $status, // ✅ BISA 'draft' ATAU 'pending'
                     'payment_method' => $validated['payment_method'] ?? null,
@@ -484,12 +487,8 @@ public function import(Request $request): RedirectResponse
             'items.*.sale_price' => ['required', 'numeric', 'min:0.01'],
             'items.*.qty' => ['required', 'integer', 'min:1'],
             'discount_total' => ['nullable', 'numeric', 'min:0'],
-            'payment_amount' => $status === 'draft' ? ['nullable'] : ['nullable', 'numeric', 'min:0'],
-            'cash_amount' => $status === 'draft' ? ['nullable'] : ['nullable', 'numeric', 'min:0'],
-            'transfer_amount' => $status === 'draft' ? ['nullable'] : ['nullable', 'numeric', 'min:0'],
-            'paid_at' => $status === 'draft' ? ['nullable'] : ['nullable', 'date'],
-            'proof_path' => $status === 'draft' ? ['nullable'] : ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:2048'],
-            'reference_number' => $status === 'draft' ? ['nullable'] : ['nullable', 'string', 'max:100'],
+            'shipping_cost' => ['nullable', 'numeric', 'min:0'],
+            // ✅ HAPUS payment fields dari validation karena tidak dipakai di edit
         ]);
     
         $items = $validated['items'] ?? [];
@@ -511,30 +510,12 @@ public function import(Request $request): RedirectResponse
             return $carry + ((float)$item['sale_price'] * (int)$item['qty']);
         }, 0);
         
-        // ✅ GUNAKAN DISCOUNT TOTAL DARI INPUT, BUKAN HITUNG ULANG
         $discountTotal = (float)($validated['discount_total'] ?? 0);
-        
-        $grandTotal = $subtotal - $discountTotal;
-    
-        $cashAmount = 0;
-        $transferAmount = 0;
-        $paymentAmount = 0;
-    
-        if ($status !== 'draft') {
-            $cashAmount = $validated['payment_method'] === 'split' ? ($validated['cash_amount'] ?? 0) : ($validated['payment_method'] === 'cash' ? ($validated['payment_amount'] ?? 0) : 0);
-            $transferAmount = $validated['payment_method'] === 'split' ? ($validated['transfer_amount'] ?? 0) : ($validated['payment_method'] === 'transfer' ? ($validated['payment_amount'] ?? 0) : 0);
-            $paymentAmount = $cashAmount + $transferAmount;
-    
-            if ($paymentAmount > 0) {
-                if ($paymentAmount > $grandTotal) {
-                    \Log::error('Payment amount exceeds grand total', ['payment_amount' => $paymentAmount, 'grand_total' => $grandTotal]);
-                    return back()->withErrors(['payment_amount' => 'Jumlah melebihi grand total: Rp ' . number_format($grandTotal, 0, ',', '.')])->withInput();
-                }
-            }
-        }
+        $shippingCost = (float)($validated['shipping_cost'] ?? 0);
+        $grandTotal = $subtotal - $discountTotal + $shippingCost;
     
         try {
-            DB::transaction(function () use ($salesOrder, $validated, $request, $cashAmount, $transferAmount, $paymentAmount, $grandTotal, $subtotal, $discountTotal, $status, $items) {
+            DB::transaction(function () use ($salesOrder, $validated, $request, $grandTotal, $subtotal, $discountTotal, $shippingCost, $status, $items) {
                 $customerId = $validated['customer_id'] ?? null;
     
                 if (empty($customerId) && !empty($validated['customer_name'])) {
@@ -563,6 +544,7 @@ public function import(Request $request): RedirectResponse
                     'customer_id' => $customerId ?? null,
                     'subtotal' => $subtotal,
                     'discount_total' => $discountTotal,
+                    'shipping_cost' => $shippingCost,
                     'grand_total' => $grandTotal,
                     'payment_method' => $validated['payment_method'] ?? null,
                     'payment_status' => $validated['payment_status'] ?? null,
@@ -582,67 +564,15 @@ public function import(Request $request): RedirectResponse
                         'sku' => $item['sku'] ?? null,
                         'sale_price' => $item['sale_price'],
                         'qty' => $item['qty'],
-                        'discount' => 0, // SET 0 karena diskon sekarang di level order
+                        'discount' => 0,
                         'line_total' => $lineTotal,
                     ]);
                 }
     
-                if ($status !== 'draft' && $paymentAmount > 0) {
-                    $proofPath = $request->hasFile('proof_path')
-                        ? $request->file('proof_path')->store('payment-proofs', 'public')
-                        : null;
-    
-                    // VALIDASI: Untuk transfer/split, wajib bukti ATAU no referensi
-                    if (in_array($validated['payment_method'], ['transfer', 'split'])) {
-                        $hasProof = $request->hasFile('proof_path');
-                        $hasReference = !empty($validated['reference_number']);
-                        
-                        if (!$hasProof && !$hasReference) {
-                            return back()->withErrors([
-                                'proof_path' => 'Untuk metode transfer/split, wajib upload bukti transfer atau isi no referensi.'
-                            ])->withInput();
-                        }
-                    }
-    
-                    $paymentCategory = ($paymentAmount >= $grandTotal) ? 'pelunasan' : 'dp';
-                    $latestPayment = Payment::where('sales_order_id', $salesOrder->id)->latest('created_at')->first();
-    
-                    if ($latestPayment) {
-                        $latestPayment->update([
-                            'method' => $validated['payment_method'],
-                            'status' => $validated['payment_status'],
-                            'category' => $paymentCategory,
-                            'amount' => $paymentAmount,
-                            'cash_amount' => $cashAmount,
-                            'transfer_amount' => $transferAmount,
-                            'paid_at' => $validated['paid_at'] ?? now(),
-                            'proof_path' => $proofPath ?? $latestPayment->proof_path,
-                            'reference_number' => $validated['reference_number'] ?? $latestPayment->reference_number, 
-                            'created_by' => Auth::id(),
-                        ]);
-                        $this->logAction($salesOrder, 'payment_updated', "Pembayaran diperbarui...");
-                    } else {
-                        Payment::create([
-                            'sales_order_id' => $salesOrder->id,
-                            'method' => $validated['payment_method'],
-                            'status' => $validated['payment_status'],
-                            'category' => $paymentCategory,
-                            'amount' => $paymentAmount,
-                            'cash_amount' => $cashAmount,
-                            'transfer_amount' => $transferAmount,
-                            'paid_at' => $validated['paid_at'] ?? now(),
-                            'proof_path' => $proofPath,
-                            'reference_number' => $validated['reference_number'] ?? null,
-                            'created_by' => Auth::id(),
-                        ]);
-                        $this->logAction($salesOrder, 'payment_added', "Pembayaran ditambahkan...");
-                    }
-    
-                    $activeShift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
-                    if ($activeShift && $cashAmount > 0) {
-                        $activeShift->increment('cash_total', $cashAmount);
-                    }
-                }
+                // ✅✅✅ BAGIAN INI DIHAPUS SEMUA - TIDAK ADA OTOMATIS PAYMENT DI EDIT!
+                // ❌ HAPUS SEMUA CODE PEMBAYARAN OTOMATIS DI BAWAH INI:
+                // if ($status !== 'draft' && $paymentAmount > 0) { ... }
+                // ❌ HAPUS SEMUA CODE YANG OTOMATIS BIKIN/UPDATE PAYMENT!
     
                 // === BUAT PO HANYA SAAT DRAFT → PENDING DAN add_to_purchase = true ===
                 $wasDraft = $salesOrder->getOriginal('status') === 'draft';
@@ -740,7 +670,7 @@ public function import(Request $request): RedirectResponse
                     }
                 }
     
-                $this->logAction($salesOrder, 'updated', "Sales order diperbarui...");
+                $this->logAction($salesOrder, 'updated', "Sales order diperbarui: {$salesOrder->so_number}, Status: {$status}, Total: Rp " . number_format($grandTotal, 0, ',', '.'));
             });
     
             return redirect()->route('admin.sales.show', $salesOrder)->with('success', 'Sales order berhasil diperbarui.');

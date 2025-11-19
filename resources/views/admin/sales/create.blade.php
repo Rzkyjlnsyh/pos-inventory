@@ -336,7 +336,7 @@
                         </div>
 
                         <!-- TAMBAH BAGIAN INI: Summary dengan Discount Total -->
-<div class="bg-gray-50 p-4 rounded-lg mb-6">
+                        <div class="bg-gray-50 p-4 rounded-lg mb-6">
     <h2 class="text-lg font-semibold mb-4 text-gray-800">Ringkasan Order</h2>
     <div class="grid md:grid-cols-4 gap-4">
         <div>
@@ -350,6 +350,17 @@
                    min="0" step="0.01" value="{{ old('discount_total', 0) }}"
                    placeholder="0">
             @error('discount_total')
+                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+            @enderror
+        </div>
+        <!-- ✅ TAMBAH INPUT ONGKIR DI SINI -->
+        <div>
+            <label for="shipping_cost" class="block font-medium mb-1">Ongkir</label>
+            <input type="number" name="shipping_cost" id="shipping_cost" 
+                   class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300"
+                   min="0" step="0.01" value="{{ old('shipping_cost', 0) }}"
+                   placeholder="0">
+            @error('shipping_cost')
                 <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
             @enderror
         </div>
@@ -418,9 +429,11 @@
 
     // Ambil discount total dari input
     const discountTotal = parseFloat(document.getElementById('discount_total').value) || 0;
+    // ✅ TAMBAH: Ambil shipping cost dari input
+    const shippingCost = parseFloat(document.getElementById('shipping_cost').value) || 0;
     
-    // Hitung grand total
-    grandTotal = Math.max(0, subtotal - discountTotal);
+    // ✅ UPDATE: Hitung grand total dengan ongkir
+    grandTotal = Math.max(0, subtotal - discountTotal + shippingCost);
 
     // Update display
     document.getElementById('display-subtotal').textContent = 'Rp ' + subtotal.toLocaleString('id-ID');
@@ -431,6 +444,8 @@
     updatePaymentAmount();
     updatePaymentStatus();
 }
+// ✅ TAMBAH event listener untuk shipping cost
+document.getElementById('shipping_cost').addEventListener('input', updateGrandTotal);
 // Event listener untuk discount total
 document.getElementById('discount_total').addEventListener('input', updateGrandTotal);
 
