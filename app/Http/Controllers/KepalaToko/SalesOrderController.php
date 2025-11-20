@@ -646,19 +646,24 @@ if (in_array($validated['payment_method'], ['transfer', 'split'])) {
             return back()->withErrors(['payment' => 'Harus ada pembayaran untuk mulai proses.']);
         }
     
-        // ✅ PERBAIKAN: Untuk transfer/split, boleh proof_path ATAU reference_number
-        if (in_array($salesOrder->payment_method, ['transfer', 'split'])) {
-            $paymentsWithoutProof = $salesOrder->payments()
-                ->where(function($q) {
-                    $q->whereNull('proof_path')->whereNull('reference_number');
-                })
-                ->count();
-            
-            if ($paymentsWithoutProof > 0) {
-                \Log::warning('Missing proof AND reference for transfer/split payments in SO: ' . $salesOrder->so_number);
-                return back()->withErrors(['payment' => 'Semua pembayaran transfer/split harus memiliki bukti pembayaran ATAU no referensi.']);
-            }
-        }
+// ✅ FIX: Validasi yang benar - cek payment yang TIDAK punya bukti DAN TIDAK punya reference_number
+if (in_array($salesOrder->payment_method, ['transfer', 'split'])) {
+    $invalidPayments = $salesOrder->payments()
+        ->where(function($q) {
+            $q->whereNull('proof_path')
+              ->where(function($q2) {
+                  $q2->whereNull('reference_number')
+                     ->orWhere('reference_number', '')
+                     ->orWhere('reference_number', ' ');
+              });
+        })
+        ->count();
+    
+    if ($invalidPayments > 0) {
+        \Log::warning('Missing proof AND reference for transfer/split payments in SO: ' . $salesOrder->so_number);
+        return back()->withErrors(['payment' => 'Semua pembayaran transfer/split harus memiliki bukti pembayaran ATAU no referensi.']);
+    }
+}
     
         try {
             DB::transaction(function () use ($salesOrder) {

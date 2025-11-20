@@ -83,16 +83,21 @@
         && $salesOrder->approved_by !== null 
         && $salesOrder->paid_total > 0; // ✅ UBAH: > 0 saja, tidak perlu 50%
     
-    if ($canStartProcess && in_array($salesOrder->payment_method, ['transfer', 'split'])) {
-        // Cek apakah semua payment punya bukti ATAU no referensi
-        $invalidPayments = $salesOrder->payments()
-            ->where(function($q) {
-                $q->whereNull('proof_path')->whereNull('reference_number');
-            })
-            ->count();
-        
-        $canStartProcess = $invalidPayments == 0;
-    }
+        if ($canStartProcess && in_array($salesOrder->payment_method, ['transfer', 'split'])) {
+    // ✅ FIX: Cek payment transfer/split yang TIDAK punya bukti DAN TIDAK punya reference_number
+    $invalidPayments = $salesOrder->payments()
+        ->where(function($q) {
+            $q->whereNull('proof_path')
+              ->where(function($q2) {
+                  $q2->whereNull('reference_number')
+                     ->orWhere('reference_number', '')
+                     ->orWhere('reference_number', ' ');
+              });
+        })
+        ->count();
+    
+    $canStartProcess = $invalidPayments == 0;
+}
 @endphp
 
 @if($salesOrder->status === 'pending' && $salesOrder->approved_by !== null && $salesOrder->paid_total > 0 && Auth::user()->hasRole('kepala_toko'))
@@ -193,20 +198,30 @@
                         Minimal 50% Grand Total: Rp {{ number_format($salesOrder->grand_total * 0.5, 0, ',', '.') }}<br>
                         @if(in_array($salesOrder->payment_method, ['transfer', 'split']))
     @php
-        $paymentsWithoutProof = $salesOrder->payments()
+        $invalidPayments = $salesOrder->payments()
             ->where(function($q) {
-                $q->whereNull('proof_path')->whereNull('reference_number');
+                $q->whereNull('proof_path')
+                  ->where(function($q2) {
+                      $q2->whereNull('reference_number')
+                         ->orWhere('reference_number', '')
+                         ->orWhere('reference_number', ' ');
+                  });
             })
             ->count();
     @endphp
-    Bukti Pembayaran: {{ $paymentsWithoutProof == 0 ? 'Semua pembayaran valid (bukti/referensi)' : 'Ada pembayaran tanpa bukti DAN tanpa no referensi' }}<br>
+    Bukti Pembayaran: {{ $invalidPayments == 0 ? 'Semua pembayaran valid (bukti/referensi)' : 'Ada pembayaran tanpa bukti DAN tanpa no referensi' }}<br>
 @endif
 @php
     $paymentsValid = true;
     if (in_array($salesOrder->payment_method, ['transfer', 'split'])) {
         $paymentsValid = $salesOrder->payments()
             ->where(function($q) {
-                $q->whereNull('proof_path')->whereNull('reference_number');
+                $q->whereNull('proof_path')
+                  ->where(function($q2) {
+                      $q2->whereNull('reference_number')
+                         ->orWhere('reference_number', '')
+                         ->orWhere('reference_number', ' ');
+                  });
             })
             ->count() == 0;
     }
