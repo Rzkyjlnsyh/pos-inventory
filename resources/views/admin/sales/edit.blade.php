@@ -158,8 +158,9 @@
                     <div class="mb-6">
                         <h2 class="text-lg font-semibold mb-4 text-gray-800">Item Order</h2>
                         <div id="items-container" class="space-y-4">
+                        <div id="items-container" class="space-y-4">
     @foreach($salesOrder->items as $index => $item)
-    <div class="item-row grid md:grid-cols-5 gap-4">
+    <div class="item-row grid md:grid-cols-5 gap-4 items-end"> <!-- ✅ KEMBALI KE 5 KOLOM -->
         <div class="relative md:col-span-2">
             <label class="block font-medium mb-1">Produk</label>
             <input type="text"
@@ -189,6 +190,11 @@
             @error('items.'.$index.'.qty')
                 <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
             @enderror
+        </div>
+        <div class="flex items-end"> <!-- ✅ TOMBOL HAPUS UNTUK SEMUA ITEM -->
+            <button type="button" class="remove-item bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded text-sm w-full">
+                <i class="bi bi-trash"></i> Hapus
+            </button>
         </div>
     </div>
     @endforeach
@@ -399,44 +405,38 @@ document.getElementById('discount_total').addEventListener('input', updateGrandT
     // === TAMBAH ITEM ===
     // === TAMBAH ITEM BARU DENGAN TOMBOL HAPUS ===
     document.getElementById('add-item').addEventListener('click', function () {
-        const newRow = document.createElement('div');
-        newRow.className = 'item-row grid md:grid-cols-6 gap-4 items-end mt-4'; // ✅ 6 KOLOM
-        newRow.innerHTML = `
-            <div class="relative md:col-span-2">
-                <label class="block font-medium mb-1">Produk</label>
-                <input type="text" 
-                       class="product-search border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
-                       placeholder="Ketik nama produk..."
-                       autocomplete="off">
-                <input type="hidden" name="items[${itemIndex}][product_id]" class="product-id">
-                <input type="hidden" name="items[${itemIndex}][product_name]" class="product-name">
-                <input type="hidden" name="items[${itemIndex}][sku]" class="sku">
-                <div class="product-results hidden absolute z-20 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto"></div>
-            </div>
-            <div>
-                <label class="block font-medium mb-1">Harga</label>
-                <input type="number" name="items[${itemIndex}][sale_price]" 
-                       class="sale-price border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
-                       step="0.01" required>
-            </div>
-            <div>
-                <label class="block font-medium mb-1">Qty</label>
-                <input type="number" name="items[${itemIndex}][qty]" 
-                       class="qty border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
-                       min="1" value="1" required>
-            </div>
-            <div>
-                <label class="block font-medium mb-1">Diskon</label>
-                <input type="number" name="items[${itemIndex}][discount]" 
-                       class="discount border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
-                       min="0" step="0.01" value="0">
-            </div>
-            <div class="flex items-end"> <!-- ✅ TOMBOL HAPUS -->
-                <button type="button" class="remove-item bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded text-sm w-full">
-                    <i class="bi bi-trash"></i> Hapus
-                </button>
-            </div>
-        `;
+const newRow = document.createElement('div');
+newRow.className = 'item-row grid md:grid-cols-5 gap-4 items-end mt-4'; // ✅ 5 KOLOM TANPA DISKON
+newRow.innerHTML = `
+    <div class="relative md:col-span-2">
+        <label class="block font-medium mb-1">Produk</label>
+        <input type="text" 
+               class="product-search border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
+               placeholder="Ketik nama produk..."
+               autocomplete="off">
+        <input type="hidden" name="items[${itemIndex}][product_id]" class="product-id">
+        <input type="hidden" name="items[${itemIndex}][product_name]" class="product-name">
+        <input type="hidden" name="items[${itemIndex}][sku]" class="sku">
+        <div class="product-results hidden absolute z-20 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto"></div>
+    </div>
+    <div>
+        <label class="block font-medium mb-1">Harga</label>
+        <input type="number" name="items[${itemIndex}][sale_price]" 
+               class="sale-price border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
+               step="0.01" required>
+    </div>
+    <div>
+        <label class="block font-medium mb-1">Qty</label>
+        <input type="number" name="items[${itemIndex}][qty]" 
+               class="qty border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
+               min="1" value="1" required>
+    </div>
+    <div class="flex items-end"> <!-- ✅ TOMBOL HAPUS -->
+        <button type="button" class="remove-item bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded text-sm w-full">
+            <i class="bi bi-trash"></i> Hapus
+        </button>
+    </div>
+`;
         itemsContainer.appendChild(newRow);
         setTimeout(() => {
             initializeProductSearchForEdit(newRow, itemIndex);
