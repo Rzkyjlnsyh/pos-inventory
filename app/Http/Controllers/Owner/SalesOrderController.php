@@ -869,4 +869,99 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
         $seq = DB::table('sales_orders')->whereDate('created_at', Carbon::today())->count() + 1;
         return 'SAL' . $date . str_pad((string)$seq, 4, '0', STR_PAD_LEFT);
     }
+    public function destroy(SalesOrder $salesOrder): RedirectResponse
+{
+    // Validasi: hanya owner yang bisa hapus
+    if (!Auth::user()->hasRole('owner')) {
+        \Log::warning('Non-owner attempt to delete SO: ' . $salesOrder->so_number, ['user_id' => Auth::id()]);
+        return back()->withErrors(['error' => 'Hanya owner yang dapat menghapus sales order.']);
+    }
+
+    // Validasi: hanya bisa hapus SO dengan status tertentu
+    $allowedStatuses = ['draft', 'pending', 'di proses', 'request_kain', 'proses_jahit'];
+    if (!in_array($salesOrder->status, $allowedStatuses)) {
+        \Log::warning('Attempt to delete non-deletable SO: ' . $salesOrder->so_number, ['status' => $salesOrder->status]);
+        return back()->withErrors(['error' => 'Sales order dengan status ' . $salesOrder->status . ' tidak dapat dihapus.']);
+    }
+
+    try {
+        DB::transaction(function () use ($salesOrder) {
+            $soNumber = $salesOrder->so_number;
+            $totalCashToDeduct = 0;
+
+            // 1. Hitung total cash yang perlu dikurangi dari shift
+            foreach ($salesOrder->payments as $payment) {
+                if ($payment->method === 'cash') {
+                    $totalCashToDeduct += $payment->amount;
+                } elseif ($payment->method === 'split') {
+                    $totalCashToDeduct += $payment->cash_amount;
+                }
+            }
+
+            // 2. Update shift cash_total jika ada cash payment
+            if ($totalCashToDeduct > 0) {
+                $activeShift = Shift::getActiveShift();
+                if ($activeShift) {
+                    $activeShift->decrement('cash_total', $totalCashToDeduct);
+                    \Log::info('Shift cash_total updated after SO deletion', [
+                        'shift_id' => $activeShift->id,
+                        'cash_deducted' => $totalCashToDeduct,
+                        'so_number' => $soNumber
+                    ]);
+                }
+            }
+
+            // 3. Kembalikan stok jika sudah diproses
+            if (in_array($salesOrder->status, ['di proses', 'request_kain', 'proses_jahit', 'jadi', 'diterima_toko'])) {
+                foreach ($salesOrder->items as $item) {
+                    if ($item->product_id) {
+                        $product = $item->product;
+                        if ($product) {
+                            $product->increment('stock_qty', $item->qty);
+                            
+                            // Catat stock movement untuk pembatalan
+                            StockMovement::create([
+                                'product_id' => $product->id,
+                                'type' => 'POS_CANCEL',
+                                'ref_code' => $soNumber,
+                                'initial_qty' => $product->stock_qty - $item->qty,
+                                'qty_in' => $item->qty,
+                                'qty_out' => 0,
+                                'final_qty' => $product->stock_qty,
+                                'user_id' => Auth::id(),
+                                'notes' => 'Pembatalan SO: ' . $soNumber,
+                                'moved_at' => now(),
+                            ]);
+                        }
+                    }
+                }
+            }
+
+            // 4. Hapus semua related data
+            $salesOrder->payments()->delete();
+            $salesOrder->items()->delete();
+            $salesOrder->logs()->delete();
+
+            // 5. Hapus sales order utama
+            $salesOrder->delete();
+
+            \Log::info('Sales order deleted successfully', [
+                'so_number' => $soNumber,
+                'deleted_by' => Auth::id(),
+                'cash_deducted' => $totalCashToDeduct
+            ]);
+        });
+
+        return redirect()->route('owner.sales.index')
+            ->with('success', 'Sales order berhasil dihapus dan semua data terkait telah dibersihkan.');
+
+    } catch (\Exception $e) {
+        \Log::error('Error deleting sales order: ' . $e->getMessage(), [
+            'so_number' => $salesOrder->so_number,
+            'user_id' => Auth::id()
+        ]);
+        
+        return back()->withErrors(['error' => 'Terjadi kesalahan saat menghapus sales order: ' . $e->getMessage()]);
+    }
+}
 }

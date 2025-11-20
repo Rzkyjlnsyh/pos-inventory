@@ -8,6 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css" />
     <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600&display=swap" rel="stylesheet">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
         body {
             font-family: 'Raleway', sans-serif;
@@ -93,63 +94,78 @@
                 <div class="bg-white p-6 rounded-xl shadow-lg">
                     <div class="overflow-x-auto">
                         <table class="w-full table-auto border-collapse">
-                            <thead>
-                                <tr class="bg-gray-50 text-left text-sm font-semibold text-gray-600 border-b">
-                                    <th class="px-4 py-2">SO Number</th>
-                                    <th class="px-4 py-2">Tanggal Order</th>
-                                    <th class="px-4 py-2">Customer</th>
-                                    <th class="px-4 py-2">Status</th>
-                                    <th class="px-4 py-2 text-right">Total</th>
-                                    <th class="px-4 py-2 text-right">Total Dibayar</th>
-                                    <th class="px-4 py-2 text-right">Sisa</th>
-                                    <th class="px-4 py-2 text-right">Status Pembayaran</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse ($salesOrders as $so)
-                                    <tr class="border-b hover:bg-gray-50 cursor-pointer"
-                                        onclick="window.location='{{ route('owner.sales.show', $so) }}'"
-                                        data-id="{{ $so->id }}">
-                                        <td class="px-4 py-2">{{ $so->so_number }}</td>
-                                        <td class="px-4 py-2">
-                                            {{ \Carbon\Carbon::parse($so->order_date)->format('d/m/Y') }}
-                                        </td>
-                                        <td class="px-4 py-2">{{ $so->customer ? $so->customer->name : 'Umum' }}</td>
-                                        <td class="px-4 py-2">
-                                            <span class="inline-block px-2 py-1 text-xs font-medium rounded-full
-                                                @if($so->status === 'selesai') bg-green-100 text-green-600
-                                                @elseif($so->status === 'di proses') bg-yellow-100 text-yellow-600
-                                                @elseif($so->status === 'pending') bg-blue-100 text-blue-600
-                                                @else bg-gray-100 text-gray-600 @endif">
-                                                {{ ucfirst(str_replace('_', ' ', $so->status)) }}
-                                            </span>
-                                        </td>
-                                        <td class="px-4 py-2 text-right">Rp
-                                            {{ number_format($so->grand_total, 0, ',', '.') }}</td>
-                                        <td class="px-4 py-2 text-right">
-                                            <span class="text-green-600 font-medium">
-                                                Rp {{ number_format($so->paid_total, 0, ',', '.') }}
-                                            </span>
-                                        </td>
-                                        <td class="px-4 py-2 text-right">
-                                            <span class="@if($so->remaining_amount > 0) text-red-600 @else text-green-600 @endif font-medium">
-                                                Rp {{ number_format($so->remaining_amount, 0, ',', '.') }}
-                                            </span>
-                                        </td>
-                                        <td class="px-4 py-2 text-right">
-                                            <span class="inline-block px-2 py-1 text-xs font-medium rounded-full
-                                                @if($so->payment_status === 'lunas') bg-green-100 text-green-600
-                                                @else bg-yellow-100 text-yellow-600 @endif">
-                                                {{ ucfirst($so->payment_status) }}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="8" class="text-center text-gray-500 px-4 py-4">Tidak ada data</td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
+                        <thead>
+    <tr class="bg-gray-50 text-left text-sm font-semibold text-gray-600 border-b">
+        <th class="px-4 py-2">SO Number</th>
+        <th class="px-4 py-2">Tanggal Order</th>
+        <th class="px-4 py-2">Customer</th>
+        <th class="px-4 py-2">Status</th>
+        <th class="px-4 py-2 text-right">Total</th>
+        <th class="px-4 py-2 text-right">Total Dibayar</th>
+        <th class="px-4 py-2 text-right">Sisa</th>
+        <th class="px-4 py-2 text-right">Status Pembayaran</th>
+        <th class="px-4 py-2 text-center">Aksi</th> <!-- ✅ TAMBAH KOLOM AKSI -->
+    </tr>
+</thead>
+<tbody>
+    @forelse ($salesOrders as $so)
+        <tr class="border-b hover:bg-gray-50" data-id="{{ $so->id }}">
+            <td class="px-4 py-2 cursor-pointer" onclick="window.location='{{ route('owner.sales.show', $so) }}'">
+                {{ $so->so_number }}
+            </td>
+            <td class="px-4 py-2 cursor-pointer" onclick="window.location='{{ route('owner.sales.show', $so) }}'">
+                {{ \Carbon\Carbon::parse($so->order_date)->format('d/m/Y') }}
+            </td>
+            <td class="px-4 py-2 cursor-pointer" onclick="window.location='{{ route('owner.sales.show', $so) }}'">
+                {{ $so->customer ? $so->customer->name : 'Umum' }}
+            </td>
+            <td class="px-4 py-2 cursor-pointer" onclick="window.location='{{ route('owner.sales.show', $so) }}'">
+                <span class="inline-block px-2 py-1 text-xs font-medium rounded-full
+                    @if($so->status === 'selesai') bg-green-100 text-green-600
+                    @elseif($so->status === 'di proses') bg-yellow-100 text-yellow-600
+                    @elseif($so->status === 'pending') bg-blue-100 text-blue-600
+                    @else bg-gray-100 text-gray-600 @endif">
+                    {{ ucfirst(str_replace('_', ' ', $so->status)) }}
+                </span>
+            </td>
+            <td class="px-4 py-2 text-right cursor-pointer" onclick="window.location='{{ route('owner.sales.show', $so) }}'">
+                Rp {{ number_format($so->grand_total, 0, ',', '.') }}
+            </td>
+            <td class="px-4 py-2 text-right cursor-pointer" onclick="window.location='{{ route('owner.sales.show', $so) }}'">
+                <span class="text-green-600 font-medium">
+                    Rp {{ number_format($so->paid_total, 0, ',', '.') }}
+                </span>
+            </td>
+            <td class="px-4 py-2 text-right cursor-pointer" onclick="window.location='{{ route('owner.sales.show', $so) }}'">
+                <span class="@if($so->remaining_amount > 0) text-red-600 @else text-green-600 @endif font-medium">
+                    Rp {{ number_format($so->remaining_amount, 0, ',', '.') }}
+                </span>
+            </td>
+            <td class="px-4 py-2 text-right cursor-pointer" onclick="window.location='{{ route('owner.sales.show', $so) }}'">
+                <span class="inline-block px-2 py-1 text-xs font-medium rounded-full
+                    @if($so->payment_status === 'lunas') bg-green-100 text-green-600
+                    @else bg-yellow-100 text-yellow-600 @endif">
+                    {{ ucfirst($so->payment_status) }}
+                </span>
+            </td>
+            <td class="px-4 py-2 text-center">
+                <!-- ✅ TOMBOL HAPUS -->
+                @if(in_array($so->status, ['draft', 'pending', 'di proses', 'request_kain', 'proses_jahit']))
+                    <button onclick="confirmDelete('{{ $so->id }}', '{{ $so->so_number }}')" 
+                            class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">
+                        <i class="bi bi-trash"></i> Hapus
+                    </button>
+                @else
+                    <span class="text-gray-400 text-sm">Tidak dapat dihapus</span>
+                @endif
+            </td>
+        </tr>
+    @empty
+        <tr>
+            <td colspan="9" class="text-center text-gray-500 px-4 py-4">Tidak ada data</td>
+        </tr>
+    @endforelse
+</tbody>
                         </table>
                     </div>
 
@@ -186,6 +202,46 @@
                 });
             });
         });
+        // Fungsi konfirmasi hapus
+        function confirmDelete(salesOrderId, soNumber) {
+    if (confirm(`Apakah Anda yakin ingin menghapus Sales Order ${soNumber}?\n\nTindakan ini akan:\n• Menghapus semua data terkait\n• Mengurangi cash_total di shift aktif\n• Mengembalikan stok produk (jika ada)\n\nTindakan ini tidak dapat dibatalkan!`)) {
+        // Buat form secara manual dengan cara yang lebih reliable
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/owner/sales/${salesOrderId}`;
+        form.style.display = 'none';
+        
+        // CSRF Token - cara manual
+        const csrfToken = document.createElement('input');
+        csrfToken.type = 'hidden';
+        csrfToken.name = '_token';
+        csrfToken.value = '{{ csrf_token() }}'; // Langsung dari Laravel
+        
+        // Method spoofing
+        const methodField = document.createElement('input');
+        methodField.type = 'hidden';
+        methodField.name = '_method';
+        methodField.value = 'DELETE';
+        
+        form.appendChild(csrfToken);
+        form.appendChild(methodField);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// Update row click handler untuk exclude tombol hapus
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('tr[data-id]').forEach(row => {
+        row.addEventListener('click', function (e) {
+            // Prevent click on interactive elements (e.g., links, buttons) from triggering row redirect
+            if (e.target.tagName !== 'A' && e.target.tagName !== 'BUTTON' && !e.target.closest('a, button')) {
+                const salesOrderId = this.getAttribute('data-id');
+                window.location = `/owner/sales/${salesOrderId}`;
+            }
+        });
+    });
+});
     </script>
 </body>
 
