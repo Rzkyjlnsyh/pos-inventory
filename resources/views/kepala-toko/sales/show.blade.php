@@ -30,23 +30,58 @@
                            class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded shadow">
                             <i class="bi bi-arrow-left"></i> Kembali
                         </a>
-                            <a href="{{ route('kepala-toko.sales.edit', $salesOrder) }}"
-                               class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded shadow">
-                                <i class="bi bi-pencil"></i> Edit
-                            </a>
-                        @if($salesOrder->status === 'pending' && $salesOrder->approved_by === null)
-                            <form action="{{ route('kepala-toko.sales.approve', $salesOrder) }}" method="POST">
-                                @csrf
-                                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow">
-                                    <i class="bi bi-check-circle"></i> Approve
-                                </button>
-                            </form>
-                        @endif
+                        @if($salesOrder->status === 'draft' && $activeShift && Auth::user()->hasRole('kepala_toko'))
+    <!-- Tombol Edit Draft -->
+    <a href="{{ route('kepala-toko.sales.edit', $salesOrder) }}"
+       class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded shadow">
+        <i class="bi bi-pencil"></i> Edit Draft
+    </a>
+
+    <!-- Tombol Proses Draft -->
+    <form action="{{ route('kepala-toko.sales.update', $salesOrder) }}" method="POST" style="display:inline;">
+        @csrf
+        @method('PUT')
+        <input type="hidden" name="status" value="pending">
+        <input type="hidden" name="add_to_purchase" value="{{ $salesOrder->add_to_purchase ? '1' : '0' }}">
+        <input type="hidden" name="order_type" value="{{ $salesOrder->order_type }}">
+        <input type="hidden" name="order_date" value="{{ $salesOrder->order_date->format('Y-m-d\TH:i') }}">
+        <input type="hidden" name="deadline" value="{{ $salesOrder->deadline?->format('Y-m-d') }}">
+        <input type="hidden" name="customer_id" value="{{ $salesOrder->customer_id }}">
+        <input type="hidden" name="payment_method" value="{{ $salesOrder->payment_method ?? 'cash' }}">
+        <input type="hidden" name="payment_status" value="{{ $salesOrder->payment_status ?? 'dp' }}">
+        @foreach($salesOrder->items as $index => $item)
+            <input type="hidden" name="items[{{ $index }}][product_id]" value="{{ $item->product_id }}">
+            <input type="hidden" name="items[{{ $index }}][product_name]" value="{{ $item->product_name }}">
+            <input type="hidden" name="items[{{ $index }}][sku]" value="{{ $item->sku }}">
+            <input type="hidden" name="items[{{ $index }}][sale_price]" value="{{ $item->sale_price }}">
+            <input type="hidden" name="items[{{ $index }}][qty]" value="{{ $item->qty }}">
+            <input type="hidden" name="items[{{ $index }}][discount]" value="{{ $item->discount }}">
+        @endforeach
+        <button type="submit"
+                class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow"
+                onclick="return confirm('Yakin ingin memproses draft ini? Ini akan mengubah status menjadi \"Pending\".')">
+            <i class="bi bi-play-circle"></i> Proses Draft
+        </button>
+    </form>
+@elseif($salesOrder->isEditable() && $activeShift && Auth::user()->hasRole('kepala_toko'))
+    <a href="{{ route('kepala-toko.sales.edit', $salesOrder) }}"
+       class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded shadow">
+        <i class="bi bi-pencil"></i> Edit
+    </a>
+@endif
+@if($salesOrder->status === 'pending' && $salesOrder->approved_by === null && Auth::user()->hasRole('kepala_toko'))
+    <form action="{{ route('kepala-toko.sales.approve', $salesOrder) }}" method="POST">
+        @csrf
+        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow">
+            <i class="bi bi-check-circle"></i> Approve
+        </button>
+    </form>
+@endif
 @php
-    // Validasi payment: untuk transfer/split, boleh ada proof_path ATAU reference_number
+    // ✅ UPDATE: Bisa proses dengan pembayaran berapapun asal > 0 (seperti Admin)
     $canStartProcess = $salesOrder->status === 'pending' 
         && $salesOrder->approved_by !== null 
-        && $salesOrder->paid_total >= $salesOrder->grand_total * 0.5;
+        && $salesOrder->paid_total > 0; // ✅ UBAH: > 0 saja, tidak perlu 50%
     
     if ($canStartProcess && in_array($salesOrder->payment_method, ['transfer', 'split'])) {
         // Cek apakah semua payment punya bukti ATAU no referensi
@@ -60,7 +95,7 @@
     }
 @endphp
 
-@if($canStartProcess)
+@if($salesOrder->status === 'pending' && $salesOrder->approved_by !== null && $salesOrder->paid_total > 0 && Auth::user()->hasRole('kepala_toko'))
     <form action="{{ route('kepala-toko.sales.startProcess', $salesOrder) }}" method="POST">
         @csrf
         <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow">
@@ -68,7 +103,7 @@
         </button>
     </form>
 @endif
-                        @if($salesOrder->order_type === 'jahit_sendiri' && $salesOrder->status === 'request_kain')
+@if($salesOrder->order_type === 'jahit_sendiri' && $salesOrder->status === 'request_kain' && Auth::user()->hasRole('kepala_toko'))
                             <form action="{{ route('kepala-toko.sales.processJahit', $salesOrder) }}" method="POST">
                                 @csrf
                                 <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow">
@@ -76,7 +111,7 @@
                                 </button>
                             </form>
                         @endif
-                        @if($salesOrder->order_type === 'jahit_sendiri' && $salesOrder->status === 'proses_jahit')
+                        @if($salesOrder->order_type === 'jahit_sendiri' && $salesOrder->status === 'proses_jahit' && Auth::user()->hasRole('kepala_toko'))
                             <form action="{{ route('kepala-toko.sales.markAsJadi', $salesOrder) }}" method="POST">
                                 @csrf
                                 <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow">
@@ -84,7 +119,7 @@
                                 </button>
                             </form>
                         @endif
-                        @if(($salesOrder->order_type === 'jahit_sendiri' && $salesOrder->status === 'jadi') || ($salesOrder->order_type === 'beli_jadi' && $salesOrder->status === 'di proses'))
+                        @if(($salesOrder->order_type === 'jahit_sendiri' && $salesOrder->status === 'jadi') || ($salesOrder->order_type === 'beli_jadi' && $salesOrder->status === 'di proses') && Auth::user()->hasRole('kepala_toko'))
                             <form action="{{ route('kepala-toko.sales.markAsDiterimaToko', $salesOrder) }}" method="POST">
                                 @csrf
                                 <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow">
@@ -92,7 +127,7 @@
                                 </button>
                             </form>
                         @endif
-                        @if($salesOrder->status === 'diterima_toko' && $salesOrder->remaining_amount == 0)
+                        @if($salesOrder->status === 'diterima_toko' && $salesOrder->remaining_amount == 0 && Auth::user()->hasRole('kepala_toko'))
                             <form action="{{ route('kepala-toko.sales.complete', $salesOrder) }}" method="POST">
                                 @csrf
                                 <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow">
@@ -103,6 +138,22 @@
                     </div>
                 </div>
             </div>
+
+            <!-- ✅ NEW: Payment Info Box -->
+@if($salesOrder->payments->count() > 0)
+<div class="bg-blue-50 p-4 rounded-lg mb-6">
+    <h2 class="text-lg font-semibold mb-2 text-blue-800">Info Pembayaran</h2>
+    <p class="text-sm text-blue-700">
+        <i class="bi bi-info-circle"></i> 
+        Sales order ini sudah memiliki {{ $salesOrder->payments->count() }} pembayaran.
+        Untuk menambah/mengubah pembayaran, gunakan tombol <strong>"Tambah Pembayaran"</strong> di halaman detail.
+    </p>
+    <div class="mt-2 text-sm">
+        <strong>Total Dibayar:</strong> Rp {{ number_format($salesOrder->paid_total, 0, ',', '.') }} |
+        <strong>Sisa:</strong> Rp {{ number_format($salesOrder->remaining_amount, 0, ',', '.') }}
+    </div>
+</div>
+@endif
 
             @if($salesOrder->status === 'pending')
                 @php
@@ -161,16 +212,17 @@
     }
 @endphp
 
-@if($salesOrder->status === 'pending' && $salesOrder->approved_by && $salesOrder->paid_total >= $salesOrder->grand_total * 0.5 && ($salesOrder->payment_method === 'cash' || $paymentsValid))
+@if($salesOrder->status === 'pending' && $salesOrder->approved_by && $salesOrder->paid_total > 0 && ($salesOrder->payment_method === 'cash' || $paymentsValid))
     <span class="text-green-600">Tombol Mulai Proses harusnya muncul.</span>
 @elseif($salesOrder->status === 'pending')
     <span class="text-red-600">Tombol Mulai Proses tidak muncul karena: 
         {{ !$salesOrder->approved_by ? 'Belum di-approve. ' : '' }}
-        {{ $salesOrder->paid_total < $salesOrder->grand_total * 0.5 ? 'Pembayaran kurang dari 50%. ' : '' }}
+        {{ $salesOrder->paid_total <= 0 ? 'Belum ada pembayaran. ' : '' }}
         @if(in_array($salesOrder->payment_method, ['transfer', 'split']) && !$paymentsValid)
             Ada pembayaran tanpa bukti DAN tanpa no referensi.
         @endif
     </span>
+
                         @elseif($salesOrder->order_type === 'jahit_sendiri' && $salesOrder->status === 'request_kain')
                             <span class="text-green-600">Tombol Proses Jahit harusnya muncul.</span>
                         @elseif($salesOrder->order_type === 'jahit_sendiri' && $salesOrder->status === 'proses_jahit')
@@ -186,22 +238,23 @@
                 </div>
             @endif
 
-            @if ($errors->any())
-                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-                    <h4 class="font-bold">Terjadi kesalahan:</h4>
-                    <ul class="list-disc list-inside">
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
+<!-- ✅ NEW: Success Message -->
+@if(session('success'))
+    <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
+        {{ session('success') }}
+    </div>
+@endif
 
-            @if (session('success'))
-                <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
-                    {{ session('success') }}
-                </div>
-            @endif
+@if ($errors->any())
+    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+        <h4 class="font-bold">Terjadi kesalahan:</h4>
+        <ul class="list-disc list-inside">
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <div class="bg-white p-6 rounded-xl shadow-lg">
@@ -211,7 +264,15 @@
                         <div class="flex justify-between"><span class="text-gray-600">Tipe Order:</span><span class="capitalize">{{ str_replace('_', ' ', $salesOrder->order_type) }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-600">Tanggal Order:</span><span>{{ \Carbon\Carbon::parse($salesOrder->order_date)->format('d/m/Y') }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-600">Tanggal Deadline:</span><span>{{ \Carbon\Carbon::parse($salesOrder->deadline)->format('d/m/Y') }}</span></div>
-                        <div class="flex justify-between"><span class="text-gray-600">Customer:</span><span>{{ $salesOrder->customer ? $salesOrder->customer->name : 'Umum' }}</span></div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Customer:</span>
+                            <span>
+                                {{ $salesOrder->customer ? $salesOrder->customer->name : 'Umum' }}
+                                @if($salesOrder->customer && $salesOrder->customer->phone)
+                                    <br><small class="text-gray-500">({{ $salesOrder->customer->phone }})</small>
+                                @endif
+                            </span>
+                        </div>
                         <div class="flex justify-between"><span class="text-gray-600">Dibuat Oleh:</span><span>{{ $salesOrder->creator->name ?? 'System' }}</span></div>
                         @if($salesOrder->approved_by)
                             <div class="flex justify-between"><span class="text-gray-600">Disetujui Oleh:</span><span>{{ $salesOrder->approver->name ?? 'System' }}</span></div>
@@ -232,6 +293,8 @@
                         <div class="flex justify-between"><span class="text-gray-600">Status Pembayaran:</span><span class="px-2 py-1 rounded-full text-xs font-medium @if($salesOrder->payment_status === 'lunas') bg-green-100 text-green-600 @else bg-yellow-100 text-yellow-600 @endif">{{ ucfirst($salesOrder->payment_status) }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-600">Subtotal:</span><span>Rp {{ number_format($salesOrder->subtotal, 0, ',', '.') }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-600">Diskon:</span><span>Rp {{ number_format($salesOrder->discount_total, 0, ',', '.') }}</span></div>
+                        <!-- ✅ NEW: Shipping Cost Display -->
+                        <div class="flex justify-between"><span class="text-gray-600">Ongkir:</span><span>Rp {{ number_format($salesOrder->shipping_cost, 0, ',', '.') }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-600">Grand Total:</span><span class="text-lg font-bold text-blue-600">Rp {{ number_format($salesOrder->grand_total, 0, ',', '.') }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-600">Total Dibayar:</span><span class="text-green-600 font-medium">Rp {{ number_format($salesOrder->paid_total, 0, ',', '.') }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-600">Sisa:</span><span class="@if($salesOrder->remaining_amount > 0) text-red-600 @else text-green-600 @endif font-medium">Rp {{ number_format($salesOrder->remaining_amount, 0, ',', '.') }}</span></div>
@@ -239,9 +302,9 @@
                 </div>
             </div>
 
-            @if($salesOrder->status !== 'selesai')
-                <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
-                    <h2 class="text-lg font-semibold mb-4 text-gray-800">Tambah Pembayaran</h2>
+            @if($salesOrder->status !== 'selesai' && $activeShift && Auth::user()->hasRole('kepala_toko'))
+    <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
+        <h2 class="text-lg font-semibold mb-4 text-gray-800">Tambah Pembayaran</h2>
                     <form action="{{ route('kepala-toko.sales.addPayment', $salesOrder) }}" method="POST" enctype="multipart/form-data" id="paymentForm">
                         @csrf
                         <div class="grid md:grid-cols-2 gap-4 mb-4">
@@ -296,16 +359,15 @@
                             </div>
                             
                             <div>
-        <label for="reference_number" class="block font-medium mb-1">No Referensi Transfer (Opsional)</label>
-        <input type="text" name="reference_number" id="reference_number" 
-               class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
-               placeholder="Contoh: TRF123456789" value="{{ old('reference_number') }}">
-        <p class="text-sm text-gray-600 mt-1">No referensi bank atau keterangan</p>
-        @error('reference_number')
-            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-        @enderror
-    </div>
-                            <div>
+    <label for="reference_number" class="block font-medium mb-1">No Referensi Transfer (Opsional)</label>
+    <input type="text" name="reference_number" id="reference_number" 
+           class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
+           placeholder="Contoh: TRF123456789" value="{{ old('reference_number') }}">
+    <p class="text-sm text-gray-600 mt-1">No referensi bank atau keterangan</p>
+    @error('reference_number')
+        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+    @enderror
+</div>               <div>
                                 <label for="proof_path" class="block font-medium mb-1">Bukti Pembayaran (opsional)</label>
                                 <input type="file" name="proof_path" id="proof_path" accept=".jpg,.jpeg,.png,.pdf"
                                        class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
@@ -487,19 +549,24 @@
                             @endforeach
                         </tbody>
                         <tfoot class="bg-gray-50">
-                            <tr>
-                                <td colspan="5" class="px-4 py-2 border text-right font-semibold">Subtotal:</td>
-                                <td class="px-4 py-2 border text-right font-semibold">Rp {{ number_format($salesOrder->subtotal, 0, ',', '.') }}</td>
-                            </tr>
-                            <tr>
-                                <td colspan="5" class="px-4 py-2 border text-right font-semibold">Total Diskon:</td>
-                                <td class="px-4 py-2 border text-right font-semibold text-red-600">- Rp {{ number_format($salesOrder->discount_total, 0, ',', '.') }}</td>
-                            </tr>
-                            <tr>
-                                <td colspan="5" class="px-4 py-2 border text-right font-semibold">Grand Total:</td>
-                                <td class="px-4 py-2 border text-right font-semibold text-blue-600">Rp {{ number_format($salesOrder->grand_total, 0, ',', '.') }}</td>
-                            </tr>
-                        </tfoot>
+    <tr>
+        <td colspan="5" class="px-4 py-2 border text-right font-semibold">Subtotal:</td>
+        <td class="px-4 py-2 border text-right font-semibold">Rp {{ number_format($salesOrder->subtotal, 0, ',', '.') }}</td>
+    </tr>
+    <tr>
+        <td colspan="5" class="px-4 py-2 border text-right font-semibold">Total Diskon:</td>
+        <td class="px-4 py-2 border text-right font-semibold text-red-600">- Rp {{ number_format($salesOrder->discount_total, 0, ',', '.') }}</td>
+    </tr>
+    <!-- ✅ NEW: Shipping Cost Row -->
+    <tr>
+        <td colspan="5" class="px-4 py-2 border text-right font-semibold">Ongkir:</td>
+        <td class="px-4 py-2 border text-right font-semibold text-green-600">+ Rp {{ number_format($salesOrder->shipping_cost, 0, ',', '.') }}</td>
+    </tr>
+    <tr>
+        <td colspan="5" class="px-4 py-2 border text-right font-semibold">Grand Total:</td>
+        <td class="px-4 py-2 border text-right font-semibold text-blue-600">Rp {{ number_format($salesOrder->grand_total, 0, ',', '.') }}</td>
+    </tr>
+</tfoot>
                     </table>
                 </div>
             </div>
@@ -549,6 +616,26 @@
                         </table>
                     </div>
                 </div>
+                <!-- ✅ NEW: Purchase Order Link Info -->
+@if($salesOrder->logs->contains('action', 'linked_to_purchase'))
+    <div class="mt-6 p-4 bg-blue-50 rounded-lg">
+        <h3 class="font-semibold text-blue-800">Purchase Order Terkait</h3>
+        @php
+            $linkedLog = $salesOrder->logs->firstWhere('action', 'linked_to_purchase');
+            $poNumber = $linkedLog ? explode(': ', $linkedLog->description)[1] ?? null : null;
+            $purchaseOrder = $poNumber ? \App\Models\PurchaseOrder::where('po_number', $poNumber)->first() : null;
+        @endphp
+        @if($purchaseOrder)
+            <p class="text-sm">
+                PO: <a href="{{ route('kepala-toko.purchases.show', $purchaseOrder) }}" class="text-blue-600 underline">{{ $purchaseOrder->po_number }}</a><br>
+                Supplier: {{ $purchaseOrder->supplier->name ?? '-' }}<br>
+                Status: <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">{{ $purchaseOrder->status }}</span>
+            </p>
+        @else
+            <p class="text-sm text-gray-600">PO: {{ $poNumber ?? '-' }}</p>
+        @endif
+    </div>
+@endif
             </div>
         </div>
     </div>

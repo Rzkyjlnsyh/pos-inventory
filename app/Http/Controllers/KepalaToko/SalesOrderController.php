@@ -269,7 +269,8 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
     {
         $salesOrder->load(['customer', 'items', 'creator', 'approver', 'payments.creator', 'logs.user']);
         $payment = $salesOrder->payments->first() ?? new Payment();
-        return view('kepala-toko.sales.show', compact('salesOrder', 'payment'));
+        $activeShift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
+        return view('kepala-toko.sales.show', compact('salesOrder', 'payment', 'activeShift'));
     }
 
     public function edit(SalesOrder $salesOrder): View|RedirectResponse
@@ -545,14 +546,12 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
         }
 
         $validated = $request->validate([
-            'payment_amount' => ['required', 'numeric', 'min:0', function ($attribute, $value, $fail) use ($salesOrder) {
-                if ($salesOrder->paid_total == 0 && $value < $salesOrder->grand_total * 0.5) {
-                    $fail('DP minimal 50% dari grand total: Rp ' . number_format($salesOrder->grand_total * 0.5, 0, ',', '.'));
-                }
-                if ($value > $salesOrder->remaining_amount) {
-                    $fail('Jumlah tidak boleh melebihi sisa: Rp ' . number_format($salesOrder->remaining_amount, 0, ',', '.'));
-                }
-            }],
+'payment_amount' => ['required', 'numeric', 'min:1', function ($attribute, $value, $fail) use ($salesOrder) {
+    // ✅ UPDATE: Hapus syarat minimal 50% DP
+    if ($value > $salesOrder->remaining_amount) {
+        $fail('Jumlah tidak boleh melebihi sisa: Rp ' . number_format($salesOrder->remaining_amount, 0, ',', '.'));
+    }
+}],
             'payment_method' => ['required', 'in:cash,transfer,split'],
             'cash_amount' => ['nullable', 'required_if:payment_method,split', 'numeric', 'min:0'],
             'transfer_amount' => ['nullable', 'required_if:payment_method,split', 'numeric', 'min:0'],
@@ -567,11 +566,22 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
             return back()->withErrors(['payment_amount' => 'Jumlah total harus sama dengan jumlah cash + transfer.'])->withInput();
         }
 
-        if (($validated['payment_method'] === 'transfer' || ($validated['payment_method'] === 'split' && ($validated['transfer_amount'] ?? 0) > 0)) && !$request->hasFile('proof_path')) {
-            \Log::error('Missing proof of payment for transfer/split', ['payment_method' => $validated['payment_method'], 'transfer_amount' => $validated['transfer_amount']]);
-            return back()->withErrors(['proof_path' => 'Bukti wajib untuk metode transfer atau split dengan jumlah transfer.'])->withInput();
-        }
-
+// === PERBAIKAN: Validasi yang benar - bukti ATAU no referensi ===
+if (in_array($validated['payment_method'], ['transfer', 'split'])) {
+    $hasProof = $request->hasFile('proof_path');
+    $hasReference = !empty($validated['reference']);
+    
+    if (!$hasProof && !$hasReference) {
+        \Log::error('Missing proof OR reference for transfer/split payment', [
+            'payment_method' => $validated['payment_method'], 
+            'has_proof' => $hasProof,
+            'has_reference' => $hasReference
+        ]);
+        return back()->withErrors([
+            'proof_path' => 'Untuk metode transfer/split, wajib upload bukti transfer ATAU isi no referensi.'
+        ])->withInput();
+    }
+}
         try {
             DB::transaction(function () use ($salesOrder, $validated, $request) {
                 $proofPath = $request->hasFile('proof_path')
@@ -594,7 +604,7 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
                     'cash_amount' => $cashAmount,
                     'transfer_amount' => $transferAmount,
                     'paid_at' => $validated['paid_at'],
-                    'reference' => $validated['reference'] ?? null,
+                    'reference_number' => $validated['reference'] ?? null, // PASTIKAN INI
                     'proof_path' => $proofPath,
                     'note' => $validated['note'] ?? null,
                     'created_by' => Auth::id(),
@@ -631,9 +641,9 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
             return back()->withErrors(['status' => 'Sales order harus di-approve terlebih dahulu.']);
         }
     
-        if ($salesOrder->paid_total < $salesOrder->grand_total * 0.5) {
-            \Log::warning('Insufficient payment for SO: ' . $salesOrder->so_number, ['paid_total' => $salesOrder->paid_total, 'grand_total' => $salesOrder->grand_total]);
-            return back()->withErrors(['payment' => 'Pembayaran minimal 50% untuk mulai proses.']);
+        if ($salesOrder->paid_total <= 0) {
+            \Log::warning('No payment for SO: ' . $salesOrder->so_number, ['paid_total' => $salesOrder->paid_total]);
+            return back()->withErrors(['payment' => 'Harus ada pembayaran untuk mulai proses.']);
         }
     
         // ✅ PERBAIKAN: Untuk transfer/split, boleh proof_path ATAU reference_number
