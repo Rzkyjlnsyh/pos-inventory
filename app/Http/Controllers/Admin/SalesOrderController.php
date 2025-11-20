@@ -568,6 +568,8 @@ public function import(Request $request): RedirectResponse
                         'line_total' => $lineTotal,
                     ]);
                 }
+
+                $this->syncPurchaseOrder($salesOrder);
     
                 // ✅✅✅ BAGIAN INI DIHAPUS SEMUA - TIDAK ADA OTOMATIS PAYMENT DI EDIT!
                 // ❌ HAPUS SEMUA CODE PEMBAYARAN OTOMATIS DI BAWAH INI:
@@ -847,5 +849,92 @@ public function searchCustomers(Request $request)
         ->get(['id', 'name', 'phone']);
     
     return response()->json($customers);
+}
+
+public function complete(SalesOrder $salesOrder): RedirectResponse
+{
+    if ($salesOrder->status !== 'diterima_toko') {
+        \Log::warning('Attempt to complete non-diterima_toko SO: ' . $salesOrder->so_number);
+        return back()->withErrors(['status' => 'Hanya SO yang sudah diterima toko yang bisa diselesaikan.']);
+    }
+
+    if ($salesOrder->remaining_amount > 0) {
+        \Log::warning('Incomplete payment for completing SO: ' . $salesOrder->so_number, ['remaining_amount' => $salesOrder->remaining_amount]);
+        return back()->withErrors(['payment' => 'Pembayaran harus lunas untuk menyelesaikan.']);
+    }
+
+    try {
+        $salesOrder->update(['status' => 'selesai', 'completed_at' => Carbon::now()]);
+        $this->logAction($salesOrder, 'completed', 'Sales order selesai: Status berubah ke selesai');
+        \Log::info('Sales order completed: ' . $salesOrder->so_number);
+        return back()->with('success', 'Sales order selesai.');
+    } catch (\Exception $e) {
+        \Log::error('Error completing sales order: ' . $e->getMessage(), ['so_number' => $salesOrder->so_number]);
+        return back()->withErrors(['error' => 'Terjadi kesalahan saat menyelesaikan: ' . $e->getMessage()]);
+    }
+}
+
+// ✅ TAMBAH METHOD BARU UNTUK SYNC PURCHASE ORDER
+private function syncPurchaseOrder(SalesOrder $salesOrder): void
+{
+    // Cari PO terkait
+    $purchaseOrder = PurchaseOrder::where('sales_order_id', $salesOrder->id)->first();
+    
+    if (!$purchaseOrder) {
+        return; // Tidak ada PO terkait
+    }
+
+    try {
+        DB::transaction(function () use ($salesOrder, $purchaseOrder) {
+            // Hapus items PO lama
+            $purchaseOrder->items()->delete();
+            
+            // Buat items PO baru berdasarkan SO items
+            foreach ($salesOrder->items as $soItem) {
+                $costPrice = 0; // Default cost price
+                
+                // Jika ada product_id, coba dapatkan cost price dari product
+                if ($soItem->product_id) {
+                    $product = Product::find($soItem->product_id);
+                    if ($product) {
+                        $costPrice = $product->cost_price ?? 0;
+                    }
+                }
+                
+                PurchaseOrderItem::create([
+                    'purchase_order_id' => $purchaseOrder->id,
+                    'product_id' => $soItem->product_id,
+                    'product_name' => $soItem->product_name,
+                    'sku' => $soItem->sku,
+                    'cost_price' => $costPrice,
+                    'qty' => $soItem->qty,
+                    'discount' => 0,
+                    'line_total' => $costPrice * $soItem->qty,
+                ]);
+            }
+            
+            // Update totals PO
+            $subtotalPo = $purchaseOrder->items()->sum('line_total');
+            $purchaseOrder->update([
+                'subtotal' => $subtotalPo,
+                'grand_total' => $subtotalPo,
+            ]);
+            
+            // Log action
+            \App\Models\PurchaseOrderLog::create([
+                'purchase_order_id' => $purchaseOrder->id,
+                'user_id' => Auth::id(),
+                'action' => 'updated',
+                'description' => "Purchase order di-update dari Sales Order: {$salesOrder->so_number}",
+                'created_at' => now(),
+            ]);
+            
+            $this->logAction($salesOrder, 'purchase_order_updated', "Purchase Order terkait di-update: {$purchaseOrder->po_number}");
+        });
+        
+        \Log::info('Purchase order synced successfully for SO: ' . $salesOrder->so_number);
+    } catch (\Exception $e) {
+        \Log::error('Error syncing purchase order for SO ' . $salesOrder->so_number . ': ' . $e->getMessage());
+    }
 }
 }

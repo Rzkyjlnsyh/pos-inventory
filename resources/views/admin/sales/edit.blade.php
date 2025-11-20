@@ -397,30 +397,46 @@ document.getElementById('shipping_cost').addEventListener('input', updateGrandTo
 document.getElementById('discount_total').addEventListener('input', updateGrandTotal);
 
     // === TAMBAH ITEM ===
+    // === TAMBAH ITEM BARU DENGAN TOMBOL HAPUS ===
     document.getElementById('add-item').addEventListener('click', function () {
         const newRow = document.createElement('div');
-        newRow.className = 'item-row grid md:grid-cols-5 gap-4 mt-4';
+        newRow.className = 'item-row grid md:grid-cols-6 gap-4 items-end mt-4'; // ✅ 6 KOLOM
         newRow.innerHTML = `
-    <div class="relative md:col-span-2">
-        <label class="block font-medium mb-1">Produk</label>
-        <input type="text" 
-               class="product-search border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
-               placeholder="Ketik nama produk..."
-               autocomplete="off">
-        <input type="hidden" name="items[${itemIndex}][product_id]" class="product-id">
-        <input type="hidden" name="items[${itemIndex}][product_name]" class="product-name">
-        <input type="hidden" name="items[${itemIndex}][sku]" class="sku"> <!-- SKU jadi hidden -->
-        <div class="product-results hidden absolute z-20 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto"></div>
-    </div>
-    <div><label class="block font-medium mb-1">Harga</label>
-        <input type="number" name="items[${itemIndex}][sale_price]" class="sale-price border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" step="0.01" required></div>
-    <div><label class="block font-medium mb-1">Qty</label>
-        <input type="number" name="items[${itemIndex}][qty]" class="qty border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" min="1" value="1" required></div>
-    <div><label class="block font-medium mb-1">Diskon</label>
-        <input type="number" name="items[${itemIndex}][discount]" class="discount border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" min="0" step="0.01" value="0">
-        <button type="button" class="remove-item text-red-600 hover:text-red-800 mt-2"><i class="bi bi-trash"></i></button>
-    </div>
-`;
+            <div class="relative md:col-span-2">
+                <label class="block font-medium mb-1">Produk</label>
+                <input type="text" 
+                       class="product-search border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
+                       placeholder="Ketik nama produk..."
+                       autocomplete="off">
+                <input type="hidden" name="items[${itemIndex}][product_id]" class="product-id">
+                <input type="hidden" name="items[${itemIndex}][product_name]" class="product-name">
+                <input type="hidden" name="items[${itemIndex}][sku]" class="sku">
+                <div class="product-results hidden absolute z-20 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto"></div>
+            </div>
+            <div>
+                <label class="block font-medium mb-1">Harga</label>
+                <input type="number" name="items[${itemIndex}][sale_price]" 
+                       class="sale-price border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
+                       step="0.01" required>
+            </div>
+            <div>
+                <label class="block font-medium mb-1">Qty</label>
+                <input type="number" name="items[${itemIndex}][qty]" 
+                       class="qty border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
+                       min="1" value="1" required>
+            </div>
+            <div>
+                <label class="block font-medium mb-1">Diskon</label>
+                <input type="number" name="items[${itemIndex}][discount]" 
+                       class="discount border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
+                       min="0" step="0.01" value="0">
+            </div>
+            <div class="flex items-end"> <!-- ✅ TOMBOL HAPUS -->
+                <button type="button" class="remove-item bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded text-sm w-full">
+                    <i class="bi bi-trash"></i> Hapus
+                </button>
+            </div>
+        `;
         itemsContainer.appendChild(newRow);
         setTimeout(() => {
             initializeProductSearchForEdit(newRow, itemIndex);
@@ -429,7 +445,7 @@ document.getElementById('discount_total').addEventListener('input', updateGrandT
         updateGrandTotal();
     });
 
-    // Hapus item
+    // === FUNGSI HAPUS ITEM ===
     itemsContainer.addEventListener('click', function (e) {
         const btn = e.target.closest('.remove-item');
         if (btn) {
@@ -437,11 +453,30 @@ document.getElementById('discount_total').addEventListener('input', updateGrandT
             if (rows.length > 1) {
                 btn.closest('.item-row').remove();
                 updateGrandTotal();
+                // ✅ UPDATE INDEX NAMA UNTUK SEMUA ITEM
+                reindexItems();
             } else {
                 alert('Minimal satu item harus ada.');
             }
         }
     });
+
+    // === FUNGSI REINDEX ITEMS SETELAH HAPUS ===
+    function reindexItems() {
+        const rows = document.querySelectorAll('.item-row');
+        rows.forEach((row, index) => {
+            // Update semua input names
+            const inputs = row.querySelectorAll('input');
+            inputs.forEach(input => {
+                const name = input.getAttribute('name');
+                if (name && name.includes('items[')) {
+                    const newName = name.replace(/items\[\d+\]/, `items[${index}]`);
+                    input.setAttribute('name', newName);
+                }
+            });
+        });
+        itemIndex = rows.length;
+    }
 
     // Event input harga/qty/diskon
     itemsContainer.addEventListener('input', function (e) {
