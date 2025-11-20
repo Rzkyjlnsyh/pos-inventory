@@ -649,19 +649,19 @@ if (in_array($validated['payment_method'], ['transfer', 'split'])) {
 // ✅ FIX: Validasi yang benar - cek payment yang TIDAK punya bukti DAN TIDAK punya reference_number
 if (in_array($salesOrder->payment_method, ['transfer', 'split'])) {
     $invalidPayments = $salesOrder->payments()
+        ->whereNull('proof_path')
         ->where(function($q) {
-            $q->whereNull('proof_path')
-              ->where(function($q2) {
-                  $q2->whereNull('reference_number')
-                     ->orWhere('reference_number', '')
-                     ->orWhere('reference_number', ' ');
-              });
+            $q->whereNull('reference_number')
+              ->orWhere('reference_number', '')
+              ->orWhere('reference_number', ' ')
+              ->orWhere('reference_number', 'null')
+              ->orWhere('reference_number', 'NULL');
         })
         ->count();
     
     if ($invalidPayments > 0) {
-        \Log::warning('Missing proof AND reference for transfer/split payments in SO: ' . $salesOrder->so_number);
-        return back()->withErrors(['payment' => 'Semua pembayaran transfer/split harus memiliki bukti pembayaran ATAU no referensi.']);
+        \Log::warning('Missing proof AND valid reference for transfer/split payments in SO: ' . $salesOrder->so_number);
+        return back()->withErrors(['payment' => 'Semua pembayaran transfer/split harus memiliki bukti pembayaran ATAU no referensi yang valid.']);
     }
 }
     

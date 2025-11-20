@@ -84,15 +84,15 @@
         && $salesOrder->paid_total > 0; // ✅ UBAH: > 0 saja, tidak perlu 50%
     
         if ($canStartProcess && in_array($salesOrder->payment_method, ['transfer', 'split'])) {
-    // ✅ FIX: Cek payment transfer/split yang TIDAK punya bukti DAN TIDAK punya reference_number
+    // ✅ FIX: Cek payment yang benar-benar TIDAK ADA bukti DAN TIDAK ADA referensi yang valid
     $invalidPayments = $salesOrder->payments()
+        ->whereNull('proof_path')
         ->where(function($q) {
-            $q->whereNull('proof_path')
-              ->where(function($q2) {
-                  $q2->whereNull('reference_number')
-                     ->orWhere('reference_number', '')
-                     ->orWhere('reference_number', ' ');
-              });
+            $q->whereNull('reference_number')
+              ->orWhere('reference_number', '')
+              ->orWhere('reference_number', ' ')
+              ->orWhere('reference_number', 'null')
+              ->orWhere('reference_number', 'NULL');
         })
         ->count();
     
@@ -199,13 +199,13 @@
                         @if(in_array($salesOrder->payment_method, ['transfer', 'split']))
     @php
         $invalidPayments = $salesOrder->payments()
+            ->whereNull('proof_path')
             ->where(function($q) {
-                $q->whereNull('proof_path')
-                  ->where(function($q2) {
-                      $q2->whereNull('reference_number')
-                         ->orWhere('reference_number', '')
-                         ->orWhere('reference_number', ' ');
-                  });
+                $q->whereNull('reference_number')
+                  ->orWhere('reference_number', '')
+                  ->orWhere('reference_number', ' ')
+                  ->orWhere('reference_number', 'null')
+                  ->orWhere('reference_number', 'NULL');
             })
             ->count();
     @endphp
@@ -215,13 +215,13 @@
     $paymentsValid = true;
     if (in_array($salesOrder->payment_method, ['transfer', 'split'])) {
         $paymentsValid = $salesOrder->payments()
+            ->whereNull('proof_path')
             ->where(function($q) {
-                $q->whereNull('proof_path')
-                  ->where(function($q2) {
-                      $q2->whereNull('reference_number')
-                         ->orWhere('reference_number', '')
-                         ->orWhere('reference_number', ' ');
-                  });
+                $q->whereNull('reference_number')
+                  ->orWhere('reference_number', '')
+                  ->orWhere('reference_number', ' ')
+                  ->orWhere('reference_number', 'null')
+                  ->orWhere('reference_number', 'NULL');
             })
             ->count() == 0;
     }
