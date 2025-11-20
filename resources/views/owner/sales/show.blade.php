@@ -418,15 +418,20 @@
 @endif
     </td>
     <td class="px-4 py-2 border text-center">
-        <div class="flex justify-center gap-2">
-            <button onclick="printPaymentNota({{ $payment->id }})" class="text-green-600 hover:underline" title="Print Langsung">
-                <i class="bi bi-printer"></i>
-            </button>
-            <a href="{{ route('owner.sales.printNota', $payment) }}" class="text-blue-600 hover:underline" title="Download PDF">
-                <i class="bi bi-download"></i>
-            </a>
-        </div>
-    </td>
+    <div class="flex justify-center gap-2">
+        <button onclick="printPaymentNota({{ $payment->id }})" class="text-green-600 hover:underline" title="Print Langsung">
+            <i class="bi bi-printer"></i>
+        </button>
+        <a href="{{ route('owner.sales.printNota', $payment) }}" class="text-blue-600 hover:underline" title="Download PDF">
+            <i class="bi bi-download"></i>
+        </a>
+        <!-- TAMBAH TOMBOL INI -->
+        <button onclick="openEditPaymentMethodModal({{ $payment->id }}, '{{ $payment->method }}', {{ $payment->cash_amount }}, {{ $payment->transfer_amount }}, '{{ $payment->reference_number }}')" 
+                class="text-yellow-600 hover:underline" title="Ubah Metode">
+            <i class="bi bi-pencil"></i>
+        </button>
+    </div>
+</td>
 </tr>
                 @empty
                     <tr>
@@ -551,6 +556,63 @@
                 </div>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Modal Ubah Metode Pembayaran -->
+<div id="editPaymentMethodModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-lg p-6 w-96 mx-4">
+        <h3 class="text-lg font-semibold mb-4">Ubah Metode Pembayaran</h3>
+        
+        <form id="editPaymentMethodForm" method="POST">
+            @csrf
+            @method('PUT')
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block font-medium mb-1">Metode Pembayaran</label>
+                    <select name="method" id="edit_payment_method" required 
+                            class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300">
+                        <option value="cash">Cash</option>
+                        <option value="transfer">Transfer</option>
+                        <option value="split">Split</option>
+                    </select>
+                </div>
+
+                <div id="edit_split_fields" class="hidden space-y-2">
+                    <div>
+                        <label class="block font-medium mb-1">Jumlah Cash</label>
+                        <input type="number" name="cash_amount" id="edit_cash_amount" 
+                               class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
+                               step="0.01" min="0" value="0">
+                    </div>
+                    <div>
+                        <label class="block font-medium mb-1">Jumlah Transfer</label>
+                        <input type="number" name="transfer_amount" id="edit_transfer_amount" 
+                               class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
+                               step="0.01" min="0" value="0">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-medium mb-1">No Referensi Transfer (Opsional)</label>
+                    <input type="text" name="reference_number" id="edit_reference_number" 
+                           class="border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" 
+                           placeholder="Contoh: TRF123456789">
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end space-x-3">
+                <button type="button" onclick="closeEditPaymentMethodModal()" 
+                        class="px-4 py-2 text-gray-600 hover:text-gray-800">
+                    Batal
+                </button>
+                <button type="submit" 
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
+                    Simpan Perubahan
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -792,6 +854,92 @@ function getPaymentById(id) {
     })) !!};
     return payments.find(p => p.id === id);
 }
+// Variabel global
+let currentEditingPaymentId = null;
+
+// Buka modal edit metode pembayaran
+function openEditPaymentMethodModal(paymentId, currentMethod, cashAmount, transferAmount, referenceNumber) {
+    currentEditingPaymentId = paymentId;
+    
+    // Set form values
+    document.getElementById('edit_payment_method').value = currentMethod;
+    document.getElementById('edit_cash_amount').value = cashAmount || 0;
+    document.getElementById('edit_transfer_amount').value = transferAmount || 0;
+    document.getElementById('edit_reference_number').value = referenceNumber || '';
+    
+    // Toggle split fields
+    toggleEditSplitFields(currentMethod);
+    
+    // Set form action
+    const form = document.getElementById('editPaymentMethodForm');
+    form.action = `/owner/sales/{{ $salesOrder->id }}/payments/${paymentId}/update-method`;
+    
+    // Show modal
+    document.getElementById('editPaymentMethodModal').classList.remove('hidden');
+}
+
+// Tutup modal
+function closeEditPaymentMethodModal() {
+    document.getElementById('editPaymentMethodModal').classList.add('hidden');
+    currentEditingPaymentId = null;
+}
+
+// Toggle split fields di modal edit
+function toggleEditSplitFields(method) {
+    const splitFields = document.getElementById('edit_split_fields');
+    if (method === 'split') {
+        splitFields.classList.remove('hidden');
+    } else {
+        splitFields.classList.add('hidden');
+    }
+}
+
+// Event listener untuk select method di modal edit
+document.getElementById('edit_payment_method').addEventListener('change', function() {
+    toggleEditSplitFields(this.value);
+    
+    // Auto-set amounts based on method
+    const payment = getPaymentById(currentEditingPaymentId);
+    if (payment) {
+        if (this.value === 'cash') {
+            document.getElementById('edit_cash_amount').value = payment.amount;
+            document.getElementById('edit_transfer_amount').value = 0;
+        } else if (this.value === 'transfer') {
+            document.getElementById('edit_cash_amount').value = 0;
+            document.getElementById('edit_transfer_amount').value = payment.amount;
+        }
+    }
+});
+
+// Validasi form sebelum submit
+document.getElementById('editPaymentMethodForm').addEventListener('submit', function(e) {
+    const method = document.getElementById('edit_payment_method').value;
+    const cashAmount = parseFloat(document.getElementById('edit_cash_amount').value) || 0;
+    const transferAmount = parseFloat(document.getElementById('edit_transfer_amount').value) || 0;
+    const payment = getPaymentById(currentEditingPaymentId);
+    
+    if (method === 'split') {
+        if (cashAmount + transferAmount !== payment.amount) {
+            e.preventDefault();
+            alert('Jumlah cash + transfer harus sama dengan total pembayaran: Rp ' + formatNumber(payment.amount));
+            return;
+        }
+    }
+});
+
+// Close modal when clicking outside
+document.getElementById('editPaymentMethodModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeEditPaymentMethodModal();
+    }
+});
+
+// Escape key to close modal
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && !document.getElementById('editPaymentMethodModal').classList.contains('hidden')) {
+        closeEditPaymentMethodModal();
+    }
+});
 </script>
 </body>
 </html>
