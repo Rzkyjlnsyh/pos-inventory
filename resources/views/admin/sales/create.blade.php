@@ -281,7 +281,7 @@
             @enderror
         </div>
     </div>
-    <p class="text-sm text-gray-600 mt-2">⚠️ Untuk transfer/split, wajib mengisi salah satu: Bukti Transfer atau No Referensi</p>
+    <p class="text-sm text-gray-600 mt-2">⚠️ Untuk transfer/split <strong>dengan pembayaran</strong>, wajib mengisi salah satu: Bukti Transfer atau No Referensi</p>
 </div>
                                 <div>
                                     <label for="paid_at" class="block font-medium mb-1">Tanggal Pembayaran</label>
@@ -674,11 +674,12 @@ document.getElementById('discount_total').addEventListener('input', updateGrandT
                     }
 
                     // validasi payment split/proof/dp checks
-// validasi payment split/proof/dp checks
+// ✅ FIX: validasi payment - hanya butuh bukti jika ada pembayaran
 const method = paymentMethod.value;
 const amount = parseFloat(paymentAmount.value) || 0;
 
-if (method === 'split' || method === 'transfer') {
+// Hanya validasi bukti/referensi jika ada pembayaran dan metode transfer/split
+if (amount > 0 && (method === 'split' || method === 'transfer')) {
     const proof = document.getElementById('proof_path');
     const reference = document.getElementById('reference_number');
     
@@ -687,11 +688,12 @@ if (method === 'split' || method === 'transfer') {
     
     if (!hasProof && !hasReference) {
         e.preventDefault();
-        alert('Untuk metode transfer/split, wajib upload bukti transfer atau isi no referensi.');
+        alert('Untuk metode transfer/split dengan pembayaran, wajib upload bukti transfer ATAU isi no referensi.');
         return;
     }
 }
 
+// Validasi jumlah pembayaran
 if (amount > 0) {
     if (paymentStatus.value === 'dp' && amount <= 0) {
         e.preventDefault();

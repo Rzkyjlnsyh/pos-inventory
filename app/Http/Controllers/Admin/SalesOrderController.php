@@ -93,11 +93,12 @@ public function importForm(): View
 public function import(Request $request): RedirectResponse
 {
     $request->validate([
-        'file' => 'required|file|mimes:xlsx,xls|max:2048'
+        'file' => 'required|file|mimes:xlsx,xls|max:2048',
+        'import_type' => 'required|in:current,historical'
     ]);
 
     try {
-        $import = new SalesOrderImport();
+        $import = new SalesOrderImport($request->import_type);
         Excel::import($import, $request->file('file'));
 
         if (!empty($import->errors)) {
