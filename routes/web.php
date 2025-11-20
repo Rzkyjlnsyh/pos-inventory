@@ -127,6 +127,8 @@ Route::middleware(['auth', 'owner'])->prefix('owner')->name('owner.')->group(fun
         Route::get('/payments/{payment}/nota', [SalesOrderController::class, 'printNota'])->name('sales.printNota');
         Route::get('/payments/{payment}/nota-direct', [SalesOrderController::class, 'printNotaDirect'])->name('sales.printNotaDirect');
         Route::post('/sales/{salesOrder}/payment/{payment}/upload-proof', [SalesOrderController::class, 'uploadProof'])->name('sales.uploadProof');
+        Route::put('/sales/{salesOrder}/payments/{payment}/update-method', [SalesOrderController::class, 'updatePaymentMethod'])
+    ->name('sales.payments.update-method');
         // Tambahkan ini di DALAM group owner (sekitar line yang ada route sales)
         Route::get('/sales/payment-proof/{payment}', function (\App\Models\Payment $payment) {
             // Cek apakah user punya akses

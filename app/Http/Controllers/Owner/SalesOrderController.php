@@ -964,4 +964,93 @@ if (empty($customerId) && !empty($validated['customer_name'])) {
         return back()->withErrors(['error' => 'Terjadi kesalahan saat menghapus sales order: ' . $e->getMessage()]);
     }
 }
+public function updatePaymentMethod(Request $request, SalesOrder $salesOrder, Payment $payment): RedirectResponse
+{
+    // Validasi hanya owner yang bisa akses
+    if (!Auth::user()->hasRole('owner')) {
+        \Log::warning('Non-owner attempt to update payment method', [
+            'user_id' => Auth::id(), 
+            'payment_id' => $payment->id
+        ]);
+        return back()->withErrors(['error' => 'Hanya owner yang dapat mengubah metode pembayaran.']);
+    }
+
+    // Validasi payment milik sales order
+    if ($payment->sales_order_id !== $salesOrder->id) {
+        \Log::warning('Invalid payment for SO in update method', [
+            'so_number' => $salesOrder->so_number, 
+            'payment_id' => $payment->id
+        ]);
+        return back()->withErrors(['error' => 'Pembayaran tidak valid untuk sales order ini.']);
+    }
+
+    $validated = $request->validate([
+        'method' => ['required', 'in:cash,transfer,split'],
+        'cash_amount' => ['nullable', 'required_if:method,split', 'numeric', 'min:0'],
+        'transfer_amount' => ['nullable', 'required_if:method,split', 'numeric', 'min:0'],
+        'reference_number' => ['nullable', 'string', 'max:100'],
+    ]);
+
+    try {
+        DB::transaction(function () use ($salesOrder, $payment, $validated) {
+            $oldMethod = $payment->method;
+            $oldCashAmount = $payment->cash_amount;
+            $oldTransferAmount = $payment->transfer_amount;
+
+            // Update payment data
+            $updateData = [
+                'method' => $validated['method'],
+                'reference_number' => $validated['reference_number'] ?? $payment->reference_number,
+            ];
+
+            // Handle amount distribution based on method
+            if ($validated['method'] === 'cash') {
+                $updateData['cash_amount'] = $payment->amount;
+                $updateData['transfer_amount'] = 0;
+            } elseif ($validated['method'] === 'transfer') {
+                $updateData['cash_amount'] = 0;
+                $updateData['transfer_amount'] = $payment->amount;
+            } elseif ($validated['method'] === 'split') {
+                $updateData['cash_amount'] = $validated['cash_amount'];
+                $updateData['transfer_amount'] = $validated['transfer_amount'];
+                
+                // Validate split amounts
+                if (($updateData['cash_amount'] + $updateData['transfer_amount']) != $payment->amount) {
+                    throw new \Exception('Jumlah cash + transfer harus sama dengan total pembayaran.');
+                }
+            }
+
+            $payment->update($updateData);
+
+            // Update sales order payment method if this is the only/latest payment
+            $latestPayment = $salesOrder->payments()->latest('created_at')->first();
+            if ($latestPayment && $latestPayment->id === $payment->id) {
+                $salesOrder->update(['payment_method' => $validated['method']]);
+            }
+
+            // Log the action
+            $this->logAction($salesOrder, 'payment_method_updated', 
+            "Metode pembayaran diubah: {$oldMethod} → {$validated['method']}, " .
+            "Cash: Rp " . number_format($oldCashAmount ?? 0, 0, ',', '.') . " → Rp " . number_format($payment->cash_amount ?? 0, 0, ',', '.') . ", " .
+            "Transfer: Rp " . number_format($oldTransferAmount ?? 0, 0, ',', '.') . " → Rp " . number_format($payment->transfer_amount ?? 0, 0, ',', '.')
+        );
+
+            \Log::info('Payment method updated successfully', [
+                'payment_id' => $payment->id,
+                'old_method' => $oldMethod,
+                'new_method' => $validated['method'],
+                'so_number' => $salesOrder->so_number
+            ]);
+        });
+
+        return back()->with('success', 'Metode pembayaran berhasil diubah.');
+
+    } catch (\Exception $e) {
+        \Log::error('Error updating payment method: ' . $e->getMessage(), [
+            'payment_id' => $payment->id,
+            'so_number' => $salesOrder->so_number
+        ]);
+        return back()->withErrors(['error' => 'Terjadi kesalahan saat mengubah metode pembayaran: ' . $e->getMessage()]);
+    }
+}
 }
