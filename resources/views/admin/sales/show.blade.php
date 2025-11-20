@@ -169,40 +169,6 @@
                 @endif
             @endif
 
-            <!-- @if(in_array($salesOrder->status, ['pending', 'request_kain', 'proses_jahit', 'jadi', 'di proses', 'diterima_toko']))
-                <div class="bg-gray-100 p-4 rounded-xl mb-6">
-                    <h4 class="font-semibold text-gray-700">Debug Status Proses</h4>
-                    <p class="text-sm text-gray-600">
-                        Approved: {{ $salesOrder->approved_by ? 'Ya (User ID: ' . $salesOrder->approved_by . ')' : 'Belum' }}<br>
-                        Total Dibayar: Rp {{ number_format($salesOrder->paid_total, 0, ',', '.') }}<br>
-                        Minimal 50% Grand Total: Rp {{ number_format($salesOrder->grand_total * 0.5, 0, ',', '.') }}<br>
-                        @if(in_array($salesOrder->payment_method, ['transfer', 'split']))
-                            Bukti Pembayaran: {{ $salesOrder->payments()->whereNull('proof_path')->count() == 0 ? 'Semua pembayaran memiliki bukti' : 'Ada pembayaran tanpa bukti' }}<br>
-                        @endif
-                        @if($salesOrder->status === 'pending' && $salesOrder->approved_by && $salesOrder->paid_total >= $salesOrder->grand_total * 0.5 && ($salesOrder->payment_method === 'cash' || $salesOrder->payments()->whereNull('proof_path')->count() == 0))
-                            <span class="text-green-600">Tombol Mulai Proses harusnya muncul.</span>
-                        @elseif($salesOrder->status === 'pending')
-                            <span class="text-red-600">Tombol Mulai Proses tidak muncul karena: 
-                                {{ !$salesOrder->approved_by ? 'Belum di-approve. ' : '' }}
-                                {{ $salesOrder->paid_total < $salesOrder->grand_total * 0.5 ? 'Pembayaran kurang dari 50%. ' : '' }}
-                                @if(in_array($salesOrder->payment_method, ['transfer', 'split']) && $salesOrder->payments()->whereNull('proof_path')->count() > 0)
-                                    Ada pembayaran tanpa bukti.
-                                @endif
-                            </span>
-                        @elseif($salesOrder->order_type === 'jahit_sendiri' && $salesOrder->status === 'request_kain')
-                            <span class="text-green-600">Tombol Proses Jahit harusnya muncul.</span>
-                        @elseif($salesOrder->order_type === 'jahit_sendiri' && $salesOrder->status === 'proses_jahit')
-                            <span class="text-green-600">Tombol Tandai Jadi harusnya muncul.</span>
-                        @elseif(($salesOrder->order_type === 'jahit_sendiri' && $salesOrder->status === 'jadi') || ($salesOrder->order_type === 'beli_jadi' && $salesOrder->status === 'di proses'))
-                            <span class="text-green-600">Tombol Diterima Toko harusnya muncul.</span>
-                        @elseif($salesOrder->status === 'diterima_toko' && $salesOrder->remaining_amount == 0)
-                            <span class="text-green-600">Tombol Selesaikan harusnya muncul.</span>
-                        @elseif($salesOrder->status === 'diterima_toko')
-                            <span class="text-red-600">Tombol Selesaikan tidak muncul karena pembayaran belum lunas.</span>
-                        @endif
-                    </p>
-                </div>
-            @endif -->
 
             @if ($errors->any())
                 <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
