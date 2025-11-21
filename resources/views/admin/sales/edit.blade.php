@@ -158,7 +158,6 @@
                     <div class="mb-6">
                         <h2 class="text-lg font-semibold mb-4 text-gray-800">Item Order</h2>
                         <div id="items-container" class="space-y-4">
-                        <div id="items-container" class="space-y-4">
     @foreach($salesOrder->items as $index => $item)
     <div class="item-row grid md:grid-cols-5 gap-4 items-end"> <!-- ✅ KEMBALI KE 5 KOLOM -->
         <div class="relative md:col-span-2">
@@ -363,13 +362,16 @@ document.querySelectorAll('.item-row').forEach((row, index) => {
     // Trigger update grand total untuk existing items
     const priceInput = row.querySelector('.sale-price');
     const qtyInput = row.querySelector('.qty');
-    const discountInput = row.querySelector('.discount');
     
-    if (priceInput && qtyInput && discountInput) {
-        // Simulasikan input event untuk kalkulasi awal
+    if (priceInput && qtyInput) {
+        // Add event listeners untuk real-time update
+        priceInput.addEventListener('input', updateGrandTotal);
+        qtyInput.addEventListener('input', updateGrandTotal);
+        
+        // Trigger initial calculation
         setTimeout(() => {
             updateGrandTotal();
-        }, 100);
+        }, 500); // Delay sedikit lebih lama
     }
 });
 
@@ -396,9 +398,11 @@ document.querySelectorAll('.item-row').forEach((row, index) => {
     updatePaymentAmount();
     updatePaymentStatus();
 }
-// ✅ TAMBAH event listener untuk shipping cost
-document.getElementById('shipping_cost').addEventListener('input', updateGrandTotal);
-
+// ✅ TAMBAH event listener untuk shipping cost dengan error handling
+const shippingCostInput = document.getElementById('shipping_cost');
+if (shippingCostInput) {
+    shippingCostInput.addEventListener('input', updateGrandTotal);
+}
 // Event listener untuk discount total
 document.getElementById('discount_total').addEventListener('input', updateGrandTotal);
 
@@ -672,25 +676,81 @@ customerSearch.addEventListener('focus', function () {
 
     // === SUBMIT VALIDATION ===
     soForm.addEventListener('submit', function(e) {
+        // Validasi harga
         const prices = document.querySelectorAll('.sale-price');
+        let hasPriceError = false;
         for (let p of prices) {
             if (!p.value || parseFloat(p.value) <= 0) {
                 e.preventDefault();
                 alert('Harga produk tidak boleh kosong atau nol.');
+                p.focus();
+                hasPriceError = true;
                 return;
             }
         }
+        if (hasPriceError) return;
+
+        // Validasi quantity
+        const quantities = document.querySelectorAll('.qty');
+        let hasQtyError = false;
+        for (let q of quantities) {
+            if (!q.value || parseInt(q.value) <= 0) {
+                e.preventDefault();
+                alert('Quantity produk tidak boleh kosong atau nol.');
+                q.focus();
+                hasQtyError = true;
+                return;
+            }
+        }
+        if (hasQtyError) return;
+
+        // Validasi minimal satu item
+        const itemRows = document.querySelectorAll('.item-row');
+        if (itemRows.length === 0) {
+            e.preventDefault();
+            alert('Minimal satu item harus ditambahkan.');
+            return;
+        }
+
+        // Validasi grand total
+        const grandTotal = parseFloat(document.getElementById('grand_total').value) || 0;
+        if (grandTotal <= 0) {
+            e.preventDefault();
+            alert('Grand total harus lebih dari 0.');
+            return;
+        }
+
+        // Jika semua valid, show loading atau confirmation
+        console.log('Form validation passed, submitting sales order update...');
+        
+        // Optional: Show loading state
+        const submitBtn = soForm.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Menyimpan...';
+        }
     });
+
+    // === TAMBAHKAN FUNCTION YANG MISSING ===
+    function updatePaymentAmount() {
+        // Function untuk update payment amount (jika ada field payment)
+        console.log('updatePaymentAmount called - no payment fields in edit mode');
+    }
+
+    function updatePaymentStatus() {
+        // Function untuk update payment status
+        console.log('updatePaymentStatus called - no payment status update in edit mode');
+    }
 
     // === INISIALISASI AWAL ===
     updateGrandTotal();
-    if (paymentMethod) paymentMethod.dispatchEvent(new Event('change'));
-// Initialize supplier section based on add_to_purchase value
-if ({{ $salesOrder->add_to_purchase ? 'true' : 'false' }}) {
-    supplierSection.classList.remove('hidden');
-    document.getElementById('supplier_display_name').textContent = 'Pre-order Customer';
-    selectedSupplierDiv.classList.remove('hidden');
-}
+    
+    // Initialize supplier section based on add_to_purchase value
+    if ({{ $salesOrder->add_to_purchase ? 'true' : 'false' }}) {
+        supplierSection.classList.remove('hidden');
+        document.getElementById('supplier_display_name').textContent = 'Pre-order Customer';
+        selectedSupplierDiv.classList.remove('hidden');
+    }
 });
 </script>
 </body>
