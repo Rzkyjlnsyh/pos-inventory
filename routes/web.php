@@ -76,7 +76,7 @@ Route::middleware(['auth', 'owner'])->prefix('owner')->name('owner.')->group(fun
             'destroy' => 'category.destroy',
         ])->except(['show']);
     Route::get('category/import', [CategoryController::class, 'importForm'])->name('category.import');
-    Route::post('category/import', [CategoryController::class, 'import'])->name('category.import');
+    Route::post('category/import', [CategoryController::class, 'import'])->name('category.import.post');
     Route::get('category/download-template', [CategoryController::class, 'downloadTemplate'])->name('category.download-template');
 
     // User management
@@ -246,7 +246,7 @@ Route::middleware(['auth', 'finance'])->prefix('finance')->name('finance.')->gro
             'destroy' => 'category.destroy',
         ])->except(['show']);
     Route::get('category/import', [App\Http\Controllers\Finance\CategoryFinanceController::class, 'importForm'])->name('category.import');
-    Route::post('category/import', [App\Http\Controllers\Finance\CategoryFinanceController::class, 'import'])->name('category.import');
+    Route::post('category/import', [App\Http\Controllers\Finance\CategoryFinanceController::class, 'import'])->name('category.import.post');
     Route::get('category/download-template', [App\Http\Controllers\Finance\CategoryFinanceController::class, 'downloadTemplate'])->name('category.download-template');
 
     // Inventory Finance routes
@@ -336,7 +336,7 @@ Route::middleware(['auth', 'kepala_toko'])->prefix('kepala-toko')->name('kepala-
             'destroy' => 'category.destroy',
         ])->except(['show']);
     Route::get('category/import', [App\Http\Controllers\KepalaToko\CategoryKeptokController::class, 'importForm'])->name('category.import');
-    Route::post('category/import', [App\Http\Controllers\KepalaToko\CategoryKeptokController::class, 'import'])->name('category.import');
+    Route::post('category/import', [App\Http\Controllers\KepalaToko\CategoryKeptokController::class, 'import'])->name('category.import.post');
     Route::get('category/download-template', [App\Http\Controllers\KepalaToko\CategoryKeptokController::class, 'downloadTemplate'])->name('category.download-template');
 
     // Inventory Kepala Toko routes
@@ -347,7 +347,6 @@ Route::middleware(['auth', 'kepala_toko'])->prefix('kepala-toko')->name('kepala-
         Route::prefix('stock-opnames')->name('stock-opnames.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Owner\StockOpnameController::class, 'index'])->name('index');
             Route::get('{id}', [\App\Http\Controllers\Owner\StockOpnameController::class, 'show'])->name('show');
-            Route::post('{id}/approve', [\App\Http\Controllers\Owner\StockOpnameController::class, 'approve'])->name('approve');
             Route::get('template', [\App\Http\Controllers\Owner\StockOpnameController::class, 'downloadTemplate'])->name('template');
             Route::get('create', [\App\Http\Controllers\Owner\StockOpnameController::class, 'create'])->name('create');
             Route::post('import', [\App\Http\Controllers\Owner\StockOpnameController::class, 'import'])->name('import');
@@ -457,7 +456,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
             'destroy' => 'category.destroy',
         ])->except(['show']);
     Route::get('category/import', [CategoryAdminController::class, 'importForm'])->name('category.import');
-    Route::post('category/import', [CategoryAdminController::class, 'import'])->name('category.import');
+    Route::post('category/import', [CategoryAdminController::class, 'import'])->name('category.import.post');
     Route::get('category/download-template', [CategoryAdminController::class, 'downloadTemplate'])->name('category.download-template');
 
     // Contacts (Customer & Supplier)
@@ -583,7 +582,7 @@ Route::middleware(['auth', 'editor'])->prefix('editor')->name('editor.')->group(
             'destroy' => 'category.destroy',
         ])->except(['show']);
     Route::get('category/import', [CategoryController::class, 'importForm'])->name('category.import');
-    Route::post('category/import', [CategoryController::class, 'import'])->name('category.import');
+    Route::post('category/import', [CategoryController::class, 'import'])->name('category.import.post');
     Route::get('category/download-template', [CategoryController::class, 'downloadTemplate'])->name('category.download-template');
 
     Route::resource('product', \App\Http\Controllers\Editor\ProductEditorController::class);

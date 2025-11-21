@@ -459,18 +459,27 @@ public function import(Request $request): RedirectResponse
 
     public function update(Request $request, SalesOrder $salesOrder): RedirectResponse
     {
+        \Log::info('=== SALES ORDER UPDATE START ===', [
+            'so_number' => $salesOrder->so_number,
+            'user_id' => Auth::id(),
+            'request_data' => $request->all()
+        ]);
+    
         $shiftCheck = $this->checkActiveShift();
         if ($shiftCheck !== true) {
+            \Log::warning('Shift check failed for SO update: ' . $salesOrder->so_number);
             return $shiftCheck;
         }
-    
+        
         if (!$salesOrder->isEditable()) {
             \Log::warning('Attempt to update non-editable SO: ' . $salesOrder->so_number);
             return back()->withErrors(['error' => 'Sales order yang selesai tidak bisa diedit.']);
         }
-    
+        
+        \Log::info('Validation starting for SO: ' . $salesOrder->so_number);
+        
         $status = $request->input('status', $salesOrder->status);
-    
+        
         $validated = $request->validate([
             'order_type' => ['required', 'in:jahit_sendiri,beli_jadi'],
             'order_date' => ['required', 'date'],
@@ -489,8 +498,9 @@ public function import(Request $request): RedirectResponse
             'items.*.qty' => ['required', 'integer', 'min:1'],
             'discount_total' => ['nullable', 'numeric', 'min:0'],
             'shipping_cost' => ['nullable', 'numeric', 'min:0'],
-            // ✅ HAPUS payment fields dari validation karena tidak dipakai di edit
         ]);
+    
+        \Log::info('Validation passed', ['validated_data' => $validated]);
     
         $items = $validated['items'] ?? [];
         if (!is_array($items)) {
@@ -517,6 +527,8 @@ public function import(Request $request): RedirectResponse
     
         try {
             DB::transaction(function () use ($salesOrder, $validated, $request, $grandTotal, $subtotal, $discountTotal, $shippingCost, $status, $items) {
+                \Log::info('Transaction started for SO update: ' . $salesOrder->so_number);
+                
                 $customerId = $validated['customer_id'] ?? null;
     
                 if (empty($customerId) && !empty($validated['customer_name'])) {
@@ -537,6 +549,12 @@ public function import(Request $request): RedirectResponse
                         \Log::info('Auto-created customer in update', ['customer_id' => $customerId, 'name' => $customer->name, 'phone' => $customer->phone]);
                     }
                 }
+
+                \Log::info('Updating sales order main data', [
+                    'so_id' => $salesOrder->id,
+                    'customer_id' => $customerId,
+                    'grand_total' => $grandTotal
+                ]);
     
                 $salesOrder->update([
                     'order_type' => $validated['order_type'],
@@ -554,9 +572,11 @@ public function import(Request $request): RedirectResponse
                     'approved_by' => $status === 'draft' ? null : $salesOrder->approved_by,
                     'approved_at' => $status === 'draft' ? null : $salesOrder->approved_at,
                 ]);
+        
+                \Log::info('Sales order updated, now processing items', ['item_count' => count($validated['items'])]);
     
                 $salesOrder->items()->delete();
-                foreach ($validated['items'] as $item) {
+                foreach ($validated['items'] as $index => $item) {
                     $lineTotal = (float)$item['sale_price'] * (int)$item['qty'];
                     SalesOrderItem::create([
                         'sales_order_id' => $salesOrder->id,
@@ -568,6 +588,7 @@ public function import(Request $request): RedirectResponse
                         'discount' => 0,
                         'line_total' => $lineTotal,
                     ]);
+                    \Log::info("Item {$index} created", ['product_name' => $item['product_name'], 'qty' => $item['qty']]);
                 }
 
                 $this->syncPurchaseOrder($salesOrder);
@@ -674,11 +695,18 @@ public function import(Request $request): RedirectResponse
                 }
     
                 $this->logAction($salesOrder, 'updated', "Sales order diperbarui: {$salesOrder->so_number}, Status: {$status}, Total: Rp " . number_format($grandTotal, 0, ',', '.'));
+                \Log::info('Sales order update completed successfully: ' . $salesOrder->so_number);
             });
     
+            \Log::info('=== SALES ORDER UPDATE SUCCESS ===', ['so_number' => $salesOrder->so_number]);
             return redirect()->route('admin.sales.show', $salesOrder)->with('success', 'Sales order berhasil diperbarui.');
+            
         } catch (\Exception $e) {
-            \Log::error('Error updating sales order: ' . $e->getMessage(), ['so_number' => $salesOrder->so_number]);
+            \Log::error('=== SALES ORDER UPDATE FAILED ===', [
+                'so_number' => $salesOrder->so_number,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return back()->withErrors(['error' => 'Terjadi kesalahan: ' . $e->getMessage()])->withInput();
         }
     }
