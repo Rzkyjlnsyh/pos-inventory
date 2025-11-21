@@ -780,8 +780,31 @@ public function import(Request $request): RedirectResponse
     private function generateSoNumber(): string
     {
         $date = Carbon::now()->format('ymd');
-        $seq = DB::table('sales_orders')->whereDate('created_at', Carbon::today())->count() + 1;
-        return 'SAL' . $date . str_pad((string)$seq, 4, '0', STR_PAD_LEFT);
+        
+        // Cari nomor sequence tertinggi berdasarkan pattern SAL + tanggal + 4 digit
+        $lastSO = SalesOrder::where('so_number', 'like', 'SAL' . $date . '%')
+            ->orderBy('so_number', 'desc')
+            ->first();
+        
+        if ($lastSO) {
+            // Ambil 4 digit terakhir dari nomor SO
+            $lastSeq = (int) substr($lastSO->so_number, -4);
+            $seq = $lastSeq + 1;
+        } else {
+            $seq = 1;
+        }
+        
+        $sequence = str_pad((string)$seq, 4, '0', STR_PAD_LEFT);
+        $soNumber = 'SAL' . $date . $sequence;
+        
+        \Log::info('Generated SO Number', [
+            'date' => $date,
+            'last_so' => $lastSO ? $lastSO->so_number : 'none',
+            'sequence' => $sequence,
+            'so_number' => $soNumber
+        ]);
+        
+        return $soNumber;
     }
     public function printNotaDirect(Payment $payment): View
     {
