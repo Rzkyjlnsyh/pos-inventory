@@ -529,6 +529,9 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::middleware(['auth', 'admin', 'check.shift'])->group(function () {
         Route::resource('sales', \App\Http\Controllers\Admin\SalesOrderController::class)
             ->parameters(['sales' => 'salesOrder']);
+        Route::post('sales/{salesOrder}/link-to-po', [\App\Http\Controllers\Admin\SalesOrderController::class, 'linkToPurchaseOrder'])->name('sales.link-to-po');
+        Route::post('sales/{salesOrder}/unlink-from-po', [\App\Http\Controllers\Admin\SalesOrderController::class, 'unlinkFromPurchaseOrder'])->name('sales.unlink-from-po');
+        Route::get('sales/{salesOrder}/related-po', [\App\Http\Controllers\Admin\SalesOrderController::class, 'getRelatedPurchaseOrder'])->name('sales.related-po');
         Route::post('/sales/{salesOrder}/approve', [\App\Http\Controllers\Admin\SalesOrderController::class, 'approve'])->name('sales.approve');
         Route::post('/sales/{salesOrder}/addPayment', [\App\Http\Controllers\Admin\SalesOrderController::class, 'addPayment'])->name('sales.addPayment');
         Route::post('/sales/{salesOrder}/startProcess', [\App\Http\Controllers\Admin\SalesOrderController::class, 'startProcess'])->name('sales.startProcess');

@@ -455,10 +455,27 @@ if (!empty($allChanges)) {
 
         return parent::receive($purchase);
     }
-    private function generatePoNumber(): string
+    public function generatePoNumber(): string
     {
-        $date = Carbon::now()->format('ymd');
-        $seq = str_pad((string) (PurchaseOrder::whereDate('created_at', Carbon::today())->count() + 1), 4, '0', STR_PAD_LEFT);
-        return 'PO'.$date.$seq;
+        return DB::transaction(function () {
+            $today = now()->format('ymd');
+    
+            // Ambil PO terakhir HARI INI dengan lock untuk mencegah bentrok
+            $lastPo = DB::table('purchase_orders')
+                ->whereDate('created_at', today())
+                ->lockForUpdate()
+                ->orderBy('po_number', 'desc')
+                ->first();
+    
+            if ($lastPo) {
+                $lastSeq = (int) substr($lastPo->po_number, -4);
+                $newSeq = $lastSeq + 1;
+            } else {
+                $newSeq = 1;
+            }
+    
+            return 'PO' . $today . str_pad($newSeq, 4, '0', STR_PAD_LEFT);
+        });
     }
+    
 }

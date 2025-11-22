@@ -496,6 +496,21 @@
 
             <div class="bg-white p-6 rounded-xl shadow-lg mt-6">
                 <h2 class="text-lg font-semibold mb-4 text-gray-800">Informasi Sistem</h2>
+                    {{-- ✅ TAMBAH SECTION PURCHASE ORDER TERKAIT --}}
+    <div class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+        <h3 class="font-semibold text-blue-800 mb-3 flex items-center">
+            <i class="bi bi-link-45deg mr-2"></i>
+            Purchase Order Terkait
+        </h3>
+        
+        <div id="po-related-section">
+            {{-- Content akan di-load via AJAX --}}
+            <div class="text-center py-4">
+                <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+                <p class="text-sm text-gray-600 mt-2">Memuat informasi PO...</p>
+            </div>
+        </div>
+    </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div><span class="text-gray-600">Dibuat pada:</span><span>{{ $salesOrder->created_at->format('d/m/Y H:i:s') }}</span></div>
                     <div><span class="text-gray-600">Terakhir diupdate:</span><span>{{ $salesOrder->updated_at->format('d/m/Y H:i:s') }}</span></div>
@@ -510,25 +525,6 @@
                         <div><span class="text-gray-600">Diselesaikan pada:</span><span>{{ \Carbon\Carbon::parse($salesOrder->completed_at)->format('d/m/Y H:i') }}</span></div>
                     @endif
                 </div>
-                @if($salesOrder->logs->contains('action', 'linked_to_purchase'))
-    <div class="mt-6 p-4 bg-blue-50 rounded-lg">
-        <h3 class="font-semibold text-blue-800">Purchase Order Terkait</h3>
-        @php
-            $linkedLog = $salesOrder->logs->firstWhere('action', 'linked_to_purchase');
-            $poNumber = $linkedLog ? explode(': ', $linkedLog->description)[1] ?? null : null;
-            $purchaseOrder = $poNumber ? \App\Models\PurchaseOrder::where('po_number', $poNumber)->first() : null;
-        @endphp
-        @if($purchaseOrder)
-            <p class="text-sm">
-                PO: <a href="{{ route('admin.purchases.show', $purchaseOrder) }}" class="text-blue-600 underline">{{ $purchaseOrder->po_number }}</a><br>
-                Supplier: {{ $purchaseOrder->supplier->name ?? '-' }}<br>
-                Status: <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">{{ $purchaseOrder->getStatusLabel() }}</span>
-            </p>
-        @else
-            <p class="text-sm text-gray-600">PO: {{ $poNumber ?? '-' }}</p>
-        @endif
-    </div>
-@endif
                 <div class="mt-6">
                     <h2 class="text-lg font-semibold mb-4 text-gray-800">Riwayat Aktivitas</h2>
                     <div class="overflow-x-auto">
@@ -558,23 +554,6 @@
                         </table>
                     </div>
                 </div>
-                @if($salesOrder->logs->contains('action', 'linked_to_purchase'))
-                    <div class="mt-6 p-4 bg-blue-50 rounded-lg">
-                        <h3 class="font-semibold text-blue-800">Purchase Order Terkait</h3>
-                        @php
-                            $linkedLog = $salesOrder->logs->firstWhere('action', 'linked_to_purchase');
-                            $poNumber = $linkedLog ? explode(': ', $linkedLog->description)[1] ?? null : null;
-                            $purchaseOrder = $poNumber ? \App\Models\PurchaseOrder::where('po_number', $poNumber)->first() : null;
-                        @endphp
-                        @if($purchaseOrder)
-                            <p class="text-sm">PO: <a href="{{ route('admin.purchases.show', $purchaseOrder) }}" class="text-blue-600 underline">{{ $purchaseOrder->po_number }}</a></p>
-                            <p class="text-sm">Supplier: {{ $purchaseOrder->supplier->name ?? '-' }}</p>
-                            <p class="text-sm">Tipe: {{ $purchaseOrder->getTypeLabel() }}</p>
-                        @else
-                            <p class="text-sm text-gray-600">PO: {{ $poNumber ?? '-' }}</p>
-                        @endif
-                    </div>
-                @endif
             </div>
         </div>
     </div>
@@ -1314,6 +1293,219 @@ document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         closePrintModal();
     }
+});
+// ✅ FUNGSI UNTUK MANAGE PURCHASE ORDER TERKAIT - PERBAIKI URL
+function loadRelatedPO() {
+    const salesOrderId = {{ $salesOrder->id }};
+    
+    // ✅ PERBAIKI URL - PAKAI ROUTE NAME YANG BENAR (tanpa prefix admin.)
+    fetch(`/admin/sales/${salesOrderId}/related-po`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok: ' + response.status);
+            }
+            return response.json();
+        })
+        .then(data => {
+            const poSection = document.getElementById('po-related-section');
+            
+            if (data.exists) {
+                // Tampilkan info PO terkait
+                poSection.innerHTML = `
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-green-800 mb-2">Purchase Order Terkait</h4>
+                                <div class="space-y-1 text-sm">
+                                    <div class="flex">
+                                        <span class="text-gray-600 w-24">PO Number:</span>
+                                        <span class="font-medium">
+                                            <a href="${data.show_url}" target="_blank" class="text-blue-600 hover:underline">
+                                                ${data.po_number}
+                                            </a>
+                                        </span>
+                                    </div>
+                                    <div class="flex">
+                                        <span class="text-gray-600 w-24">Supplier:</span>
+                                        <span>${data.supplier_name}</span>
+                                    </div>
+                                    <div class="flex">
+                                        <span class="text-gray-600 w-24">Status:</span>
+                                        <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                            ${data.status}
+                                        </span>
+                                    </div>
+                                    <div class="flex">
+                                        <span class="text-gray-600 w-24">Tipe:</span>
+                                        <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                            ${data.purchase_type}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex space-x-2">
+                                <a href="${data.show_url}" target="_blank" 
+                                   class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm flex items-center">
+                                    <i class="bi bi-eye mr-1"></i> Lihat
+                                </a>
+                                @if($activeShift && Auth::user()->hasRole('admin'))
+<button onclick="unlinkFromPO()" 
+        class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm flex items-center">
+    <i class="bi bi-trash mr-1"></i> Hapus PO
+</button>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Tampilkan form untuk link ke PO
+                poSection.innerHTML = `
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                        <h4 class="font-semibold text-yellow-800 mb-3">Belum ada Purchase Order Terkait</h4>
+                        
+                        @if($activeShift && Auth::user()->hasRole('admin'))
+                        <form id="linkPoForm" onsubmit="linkToPO(event)" class="space-y-3">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Supplier</label>
+                                    <select name="supplier_id" class="w-full border rounded px-3 py-2 text-sm focus:ring focus:ring-blue-300">
+                                        <option value="">-- Pilih Supplier --</option>
+                                        @foreach(\App\Models\Supplier::where('is_active', true)->orderBy('name')->get() as $supplier)
+                                            <option value="{{ $supplier->id }}">{{ $supplier->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Atau Nama Supplier Baru</label>
+                                    <input type="text" name="supplier_name" 
+                                           class="w-full border rounded px-3 py-2 text-sm focus:ring focus:ring-blue-300" 
+                                           placeholder="Ketik nama supplier baru">
+                                </div>
+                            </div>
+                            <div class="text-xs text-gray-600">
+                                <i class="bi bi-info-circle"></i> 
+                                Purchase Order baru akan dibuat secara otomatis berdasarkan items sales order ini.
+                            </div>
+                            <button type="submit" 
+                                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm flex items-center">
+                                <i class="bi bi-link mr-1"></i> Buat & Link Purchase Order
+                            </button>
+                        </form>
+                        @else
+                        <p class="text-sm text-gray-600">Shift belum aktif untuk membuat Purchase Order.</p>
+                        @endif
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading related PO:', error);
+            document.getElementById('po-related-section').innerHTML = `
+                <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <p class="text-red-700">Error memuat informasi PO terkait: ${error.message}</p>
+                    <p class="text-sm text-red-600 mt-1">Route: /admin/sales/{{ $salesOrder->id }}/related-po</p>
+                </div>
+            `;
+        });
+}
+
+// ✅ FUNGSI UNLINK DARI PO + DELETE - PERBAIKI HANDLE RESPONSE
+function unlinkFromPO() {
+    if (!confirm('Yakin ingin menghapus Purchase Order terkait? Tindakan ini tidak dapat dibatalkan dan PO akan dihapus permanen dari sistem.')) {
+        return;
+    }
+    
+    const salesOrderId = {{ $salesOrder->id }};
+    
+    showLoading('Menghapus Purchase Order...');
+    
+    fetch(`/admin/sales/${salesOrderId}/unlink-from-po`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => {
+        // ✅ PERBAIKI: Handle response yang bukan JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Server returned non-JSON response');
+        }
+        return response.json();
+    })
+    .then(data => {
+        hideLoading();
+        if (data.success) {
+            showToast(data.message || 'Berhasil menghapus Purchase Order!', 'success');
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            showToast('Error: ' + (data.error || 'Gagal menghapus PO'), 'error');
+        }
+    })
+    .catch(error => {
+        hideLoading();
+        console.error('Error unlinking from PO:', error);
+        showToast('Terjadi kesalahan saat menghapus PO: ' + error.message, 'error');
+    });
+}
+
+// ✅ FUNGSI LINK KE PO - PERBAIKI HANDLE RESPONSE
+function linkToPO(event) {
+    event.preventDefault();
+    
+    if (!confirm('Yakin ingin membuat Purchase Order untuk sales order ini?')) {
+        return;
+    }
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    const salesOrderId = {{ $salesOrder->id }};
+    
+    showLoading('Membuat Purchase Order...');
+    
+    fetch(`/admin/sales/${salesOrderId}/link-to-po`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            supplier_id: formData.get('supplier_id'),
+            supplier_name: formData.get('supplier_name')
+        })
+    })
+    .then(response => {
+        // ✅ PERBAIKI: Handle response yang bukan JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Server returned non-JSON response');
+        }
+        return response.json();
+    })
+    .then(data => {
+        hideLoading();
+        if (data.success) {
+            showToast(data.message || 'Berhasil membuat Purchase Order terkait!', 'success');
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            showToast('Error: ' + (data.error || 'Gagal membuat PO'), 'error');
+        }
+    })
+    .catch(error => {
+        hideLoading();
+        console.error('Error linking to PO:', error);
+        showToast('Terjadi kesalahan saat membuat PO: ' + error.message, 'error');
+    });
+}
+// ✅ LOAD RELATED PO SAAT PAGE LOAD
+document.addEventListener('DOMContentLoaded', function() {
+    loadRelatedPO();
 });
 </script>
 </body>

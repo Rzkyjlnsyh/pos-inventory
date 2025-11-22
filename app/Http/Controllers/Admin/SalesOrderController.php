@@ -376,7 +376,8 @@ public function import(Request $request): RedirectResponse
                                 );
                             }
     
-                            $poNumber = 'PO' . now()->format('ymd') . str_pad((string) (PurchaseOrder::whereDate('created_at', now()->toDateString())->count() + 1), 4, '0', STR_PAD_LEFT);
+                            $poNumber = app(\App\Http\Controllers\Admin\PurchaseOrderController::class)->generatePoNumber();
+
                             $subtotalPo = collect($itemsToPurchase)->sum(fn($i) => $i['cost_price'] * $i['qty']);
                             $discountTotalPo = collect($itemsToPurchase)->sum(fn($i) => $i['discount']);
                             $grandTotalPo = $subtotalPo - $discountTotalPo;
@@ -646,7 +647,8 @@ public function import(Request $request): RedirectResponse
                                     );
                                 }
     
-                                $poNumber = 'PO' . now()->format('ymd') . str_pad((string) (PurchaseOrder::whereDate('created_at', now()->toDateString())->count() + 1), 4, '0', STR_PAD_LEFT);
+                                $poNumber = app(\App\Http\Controllers\Admin\PurchaseOrderController::class)->generatePoNumber();
+
                                 $subtotalPo = collect($itemsToPurchase)->sum(fn($i) => $i['cost_price'] * $i['qty']);
                                 $discountTotalPo = collect($itemsToPurchase)->sum(fn($i) => $i['discount']);
                                 $grandTotalPo = $subtotalPo - $discountTotalPo;
@@ -989,4 +991,195 @@ private function syncPurchaseOrder(SalesOrder $salesOrder): void
         \Log::error('Error syncing purchase order for SO ' . $salesOrder->so_number . ': ' . $e->getMessage());
     }
 }
+// ... kode existing ...
+
+    // ✅ TAMBAH METHOD BARU UNTUK LINK/UNLINK PO MANUAL
+    public function linkToPurchaseOrder(SalesOrder $salesOrder, Request $request): \Illuminate\Http\JsonResponse
+    {
+        $shiftCheck = $this->checkActiveShift();
+        if ($shiftCheck !== true) {
+            return response()->json(['error' => 'Shift check failed'], 403);
+        }
+    
+        \Log::info('Manual linking SO to PO', [
+            'so_number' => $salesOrder->so_number,
+            'user_id' => Auth::id()
+        ]);
+    
+        try {
+            DB::transaction(function () use ($salesOrder, $request) {
+                // Cek apakah sudah ada PO terkait
+                $existingPO = PurchaseOrder::where('sales_order_id', $salesOrder->id)->first();
+                if ($existingPO) {
+                    throw new \Exception('Sales order ini sudah terkait dengan PO: ' . $existingPO->po_number);
+                }
+    
+                // Buat PO baru berdasarkan SO
+                $supplierId = $request->input('supplier_id');
+                $supplierName = $request->input('supplier_name');
+                
+                if ($supplierId) {
+                    $supplier = Supplier::findOrFail($supplierId);
+                } elseif ($supplierName) {
+                    $supplier = Supplier::firstOrCreate(
+                        ['name' => $supplierName],
+                        ['is_active' => true]
+                    );
+                } else {
+                    $supplier = Supplier::firstOrCreate(
+                        ['name' => 'Pre-order Customer'],
+                        ['is_active' => true]
+                    );
+                }
+    
+                $poNumber = app(\App\Http\Controllers\Admin\PurchaseOrderController::class)->generatePoNumber();
+
+                
+                $purchaseOrder = PurchaseOrder::create([
+                    'po_number' => $poNumber,
+                    'order_date' => now(),
+                    'supplier_id' => $supplier->id,
+                    'purchase_type' => $salesOrder->order_type === 'jahit_sendiri' ? 'kain' : 'produk_jadi',
+                    'deadline' => $salesOrder->deadline,
+                    'subtotal' => 0,
+                    'discount_total' => 0,
+                    'grand_total' => 0,
+                    'status' => PurchaseOrder::STATUS_DRAFT,
+                    'is_paid' => false,
+                    'created_by' => Auth::id(),
+                    'sales_order_id' => $salesOrder->id,
+                ]);
+    
+                // Buat items PO berdasarkan items SO
+                foreach ($salesOrder->items as $soItem) {
+                    $costPrice = 0;
+                    if ($soItem->product_id) {
+                        $product = Product::find($soItem->product_id);
+                        if ($product) {
+                            $costPrice = $product->cost_price ?? 0;
+                        }
+                    }
+                    
+                    $lineTotal = $costPrice * $soItem->qty;
+                    
+                    PurchaseOrderItem::create([
+                        'purchase_order_id' => $purchaseOrder->id,
+                        'product_id' => $soItem->product_id,
+                        'product_name' => $soItem->product_name,
+                        'sku' => $soItem->sku,
+                        'cost_price' => $costPrice,
+                        'qty' => $soItem->qty,
+                        'discount' => 0,
+                        'line_total' => $lineTotal,
+                    ]);
+                }
+    
+                // Update totals PO
+                $subtotalPo = $purchaseOrder->items()->sum('line_total');
+                $purchaseOrder->update([
+                    'subtotal' => $subtotalPo,
+                    'grand_total' => $subtotalPo,
+                ]);
+    
+                // Buat log PO
+                \App\Models\PurchaseOrderLog::create([
+                    'purchase_order_id' => $purchaseOrder->id,
+                    'user_id' => Auth::id(),
+                    'action' => 'created',
+                    'description' => "Purchase order dibuat manual dari Sales Order: {$salesOrder->so_number}",
+                    'created_at' => now(),
+                ]);
+    
+                // Update SO flag dan buat log
+                $salesOrder->update(['add_to_purchase' => true]);
+                $this->logAction($salesOrder, 'linked_to_purchase', "Manual linked to Purchase Order: {$poNumber}");
+    
+                \Log::info('Manual PO creation successful', [
+                    'so_number' => $salesOrder->so_number,
+                    'po_number' => $poNumber
+                ]);
+            });
+    
+            return response()->json(['success' => true, 'message' => 'Berhasil membuat Purchase Order terkait.']);
+    
+        } catch (\Exception $e) {
+            \Log::error('Error manual linking SO to PO: ' . $e->getMessage(), [
+                'so_number' => $salesOrder->so_number
+            ]);
+            return response()->json(['error' => 'Gagal membuat Purchase Order: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function unlinkFromPurchaseOrder(SalesOrder $salesOrder): \Illuminate\Http\JsonResponse
+    {
+        $shiftCheck = $this->checkActiveShift();
+        if ($shiftCheck !== true) {
+            return response()->json(['error' => 'Shift check failed'], 403);
+        }
+    
+        \Log::info('Manual unlinking SO from PO', [
+            'so_number' => $salesOrder->so_number,
+            'user_id' => Auth::id()
+        ]);
+    
+        try {
+            DB::transaction(function () use ($salesOrder) {
+                // Cari PO terkait
+                $purchaseOrder = PurchaseOrder::where('sales_order_id', $salesOrder->id)->first();
+                
+                if (!$purchaseOrder) {
+                    throw new \Exception('Tidak ada Purchase Order terkait untuk SO ini.');
+                }
+    
+                $poNumber = $purchaseOrder->po_number;
+                
+                // ✅ HAPUS PO (BUKAN HANYA UNLINK)
+                // Hapus items PO terlebih dahulu
+                $purchaseOrder->items()->delete();
+                
+                // Hapus logs PO
+                $purchaseOrder->logs()->delete();
+                
+                // Hapus PO itu sendiri
+                $purchaseOrder->delete();
+    
+                // Update SO flag dan buat log
+                $salesOrder->update(['add_to_purchase' => false]);
+                $this->logAction($salesOrder, 'unlinked_from_purchase', "Unlinked and DELETED Purchase Order: {$poNumber}");
+    
+                \Log::info('Manual PO deletion successful', [
+                    'so_number' => $salesOrder->so_number,
+                    'po_number' => $poNumber
+                ]);
+            });
+    
+            return response()->json(['success' => true, 'message' => 'Berhasil memutus hubungan dan menghapus Purchase Order.']);
+    
+        } catch (\Exception $e) {
+            \Log::error('Error manual unlinking SO from PO: ' . $e->getMessage(), [
+                'so_number' => $salesOrder->so_number
+            ]);
+            return response()->json(['error' => 'Gagal memutus hubungan: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // ✅ METHOD UNTUK CEK PO TERKAIT
+    public function getRelatedPurchaseOrder(SalesOrder $salesOrder)
+    {
+        $purchaseOrder = PurchaseOrder::where('sales_order_id', $salesOrder->id)->first();
+        
+        if (!$purchaseOrder) {
+            return response()->json(['exists' => false]);
+        }
+
+        return response()->json([
+            'exists' => true,
+            'po_number' => $purchaseOrder->po_number,
+            'status' => $purchaseOrder->getStatusLabel(),
+            'supplier_name' => $purchaseOrder->supplier->name ?? '-',
+            'purchase_type' => $purchaseOrder->purchase_type, // ⬅️ Tambahkan ini
+            'edit_url' => route('admin.purchases.edit', $purchaseOrder),
+            'show_url' => route('admin.purchases.show', $purchaseOrder)
+        ]);
+    }
 }

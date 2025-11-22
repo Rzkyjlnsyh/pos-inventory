@@ -427,12 +427,9 @@
         subtotal += price * qty;
     });
 
-    // Ambil discount total dari input
     const discountTotal = parseFloat(document.getElementById('discount_total').value) || 0;
-    // ✅ TAMBAH: Ambil shipping cost dari input
     const shippingCost = parseFloat(document.getElementById('shipping_cost').value) || 0;
     
-    // ✅ UPDATE: Hitung grand total dengan ongkir
     grandTotal = Math.max(0, subtotal - discountTotal + shippingCost);
 
     // Update display
@@ -440,9 +437,8 @@
     document.getElementById('display-grand-total').textContent = 'Rp ' + grandTotal.toLocaleString('id-ID');
     document.getElementById('grand_total').value = grandTotal.toFixed(2);
 
-    // Update payment fields
-    updatePaymentAmount();
-    updatePaymentStatus();
+    // ✅ FIX: Gunakan function baru yang TIDAK otomatis isi payment amount
+    updatePaymentAmountOnTotalChange();
 }
 // ✅ TAMBAH event listener untuk shipping cost
 document.getElementById('shipping_cost').addEventListener('input', updateGrandTotal);
@@ -577,7 +573,7 @@ document.getElementById('discount_total').addEventListener('input', updateGrandT
     </div>
     <div>
         <label class="block font-medium mb-1">Qty</label>
-        <input type="number" name="items[${itemIndex}][qty]" class="qty border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" min="1" value="1" required>
+        <input type="number" name="items[${itemIndex}][qty]" class="qty border rounded px-3 py-2 w-full focus:ring focus:ring-blue-300" min="1" value="" required>
         <button type="button" class="remove-item text-red-600 hover:text-red-800 mt-2"><i class="bi bi-trash"></i></button>
     </div>
 `;
@@ -604,27 +600,34 @@ document.getElementById('discount_total').addEventListener('input', updateGrandT
                 }
             });
 
-            // --- Payment / split handling ---
             function updatePaymentAmount() {
-                const method = paymentMethod.value;
-                const cash = parseFloat(cashAmount?.value) || 0;
-                const transfer = parseFloat(transferAmount?.value) || 0;
+    const method = paymentMethod.value;
+    const cash = parseFloat(cashAmount?.value) || 0;
+    const transfer = parseFloat(transferAmount?.value) || 0;
 
-                if (method === 'split') {
-                    // set payment_amount sebagai jumlah cash+transfer
-                    paymentAmount.value = (cash + transfer).toFixed(2);
-                    if (splitFields) splitFields.classList.remove('hidden');
-                } else {
-                    // untuk cash/transfer default isi grandTotal (kasir biasanya otomatis)
-                    if (method === 'cash' || method === 'transfer') {
-                        paymentAmount.value = grandTotal.toFixed(2);
-                    }
-                    if (splitFields) splitFields.classList.add('hidden');
-                }
+    if (method === 'split') {
+        // Untuk split, jumlah otomatis dari cash+transfer
+        paymentAmount.value = (cash + transfer).toFixed(2);
+        if (splitFields) splitFields.classList.remove('hidden');
+    } else {
+        // ✅ FIX: Untuk cash/transfer, BIARKAN KOSONG - user input manual
+        // Hapus line ini: paymentAmount.value = grandTotal.toFixed(2);
+        if (splitFields) splitFields.classList.add('hidden');
+    }
 
-                updateProofRequired(method);
-                updatePaymentStatus();
-            }
+    updateProofRequired(method);
+    updatePaymentStatus();
+}
+
+function updatePaymentAmountOnTotalChange() {
+    const method = paymentMethod.value;
+    
+    // ✅ JANGAN otomatis isi payment amount ketika grand total berubah
+    // Biarkan user input manual
+    
+    updateProofRequired(method);
+    updatePaymentStatus();
+}
 
             function updateProofRequired(method) {
     const proofInput = document.getElementById('proof_path');
