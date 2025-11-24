@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Owner\PurchaseReturnController;
+use App\Http\Controllers\Admin\DashboardController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Owner\UserOwnerController;
@@ -429,15 +430,11 @@ Route::middleware(['auth', 'kepala_toko'])->prefix('kepala-toko')->name('kepala-
 
 // Admin routes
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/', function () {
-        return view('admin.dashboard');
-    })->name('dashboard.index');
-
-    Route::get('dashboard', function () {
-        return view('admin.dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/', [DashboardController::class, 'index'])->name('index');
 
     Route::get('/customers/search', [\App\Http\Controllers\Admin\SalesOrderController::class, 'searchCustomers'])->name('customers.search');
+    Route::get('/suppliers/search', [\App\Http\Controllers\Admin\SalesOrderController::class, 'searchSuppliers'])->name('suppliers.search');
 
     Route::resource('product', \App\Http\Controllers\Admin\ProductAdminController::class);
     Route::get('catalog/products/search', [\App\Http\Controllers\Admin\ProductAdminController::class, 'search'])->name('catalog.products.search');

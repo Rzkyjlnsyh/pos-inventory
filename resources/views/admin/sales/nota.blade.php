@@ -28,7 +28,7 @@
 
 <div class="header">
     <h2>PARECUSTOM</h2>
-    <p class="small">Jl. Contoh No.123 | 0812-3456-7890</p>
+    <p class="small">Jl. Pb. Sudirman No.37, Perdana, Pare, Kec. Pare, Kabupaten Kediri, Jawa Timur 64211</p>
 </div>
 
 <div class="divider"></div>

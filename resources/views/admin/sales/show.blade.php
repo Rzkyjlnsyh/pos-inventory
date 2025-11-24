@@ -618,7 +618,7 @@
         
         <div class="receipt-body">
             <div class="receipt-line">
-                <span class="label">SO Number</span>
+                <span class="label">No. Transaksi</span>
                 <span class="value" id="rcpt-so-number"></span>
             </div>
             <div class="receipt-line">
@@ -1080,7 +1080,7 @@ function printESCPOS() {
 PARECUSTOM
 NOTA PEMBAYARAN
 ========================
-SO Number  : ${salesOrder.so_number}
+No. Transaksi  : ${salesOrder.so_number}
 Customer   : ${salesOrder.customer ? salesOrder.customer.name : 'Umum'}
 Tanggal    : ${new Date().toLocaleDateString('id-ID')}
 ========================

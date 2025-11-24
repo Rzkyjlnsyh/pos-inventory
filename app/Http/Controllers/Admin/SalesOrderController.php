@@ -117,24 +117,30 @@ public function import(Request $request): RedirectResponse
     }
 }
 
-    public function index(Request $request): View
-    {
-        $q = $request->get('q');
-        $status = $request->get('status');
-        $payment_status = $request->get('payment_status');
+public function index(Request $request): View
+{
+    $q = $request->get('q');
+    $status = $request->get('status');
+    $payment_status = $request->get('payment_status');
+    $start_date = $request->get('start_date');
+    $end_date = $request->get('end_date');
 
-        $salesOrders = SalesOrder::with(['customer', 'creator', 'approver'])
-            ->when($q, fn($query) =>
-                $query->where('so_number', 'like', "%$q%")
-                    ->orWhereHas('customer', fn($qq) => $qq->where('name', 'like', "%$q%"))
-            )
-            ->when($status, fn($query) => $query->where('status', $status))
-            ->when($payment_status && $payment_status !== 'all', fn($query) => $query->where('payment_status', $payment_status))
-            ->orderByDesc('id')
-            ->paginate(15);
+    $salesOrders = SalesOrder::with(['customer', 'creator', 'approver'])
+        ->when($q, fn($query) =>
+            $query->where('so_number', 'like', "%$q%")
+                ->orWhereHas('customer', fn($qq) => $qq->where('name', 'like', "%$q%"))
+        )
+        ->when($status, fn($query) => $query->where('status', $status))
+        ->when($payment_status && $payment_status !== 'all', fn($query) => $query->where('payment_status', $payment_status))
+        // ✅ FILTER TANGGAL ORDER (ORDER_DATE BUKAN CREATED_AT)
+        ->when($start_date, fn($query) => $query->whereDate('order_date', '>=', $start_date))
+        ->when($end_date, fn($query) => $query->whereDate('order_date', '<=', $end_date))
+        // ✅ UBAH SORTING: order_date DESC bukan id
+        ->orderByDesc('order_date')
+        ->paginate(15);
 
-        return view('admin.sales.index', compact('salesOrders', 'q', 'status', 'payment_status'));
-    }
+    return view('admin.sales.index', compact('salesOrders', 'q', 'status', 'payment_status', 'start_date', 'end_date'));
+}
 
     public function create(): View|RedirectResponse
     {
@@ -447,15 +453,37 @@ public function import(Request $request): RedirectResponse
         if ($shiftCheck !== true) {
             return $shiftCheck;
         }
-
+    
         if (!$salesOrder->isEditable()) {
             \Log::warning('Attempt to edit non-editable SO: ' . $salesOrder->so_number);
             return back()->withErrors(['error' => 'Sales order yang selesai tidak bisa diedit.']);
         }
+        
         $customers = Customer::orderBy('name')->get();
         $products = Product::where('is_active', true)->where('price', '>', 0)->orderBy('name')->get();
         $activeShift = Shift::where('user_id', Auth::id())->whereNull('end_time')->first();
-        return view('admin.sales.edit', compact('salesOrder', 'customers', 'products', 'activeShift'));
+        
+        // ✅ TAMBAH INI: Cari PO terkait dan ambil supplier data
+        $relatedPurchaseOrder = PurchaseOrder::where('sales_order_id', $salesOrder->id)->first();
+        $selectedSupplier = null;
+        $supplierName = 'Pre-order Customer';
+        
+        if ($relatedPurchaseOrder && $relatedPurchaseOrder->supplier) {
+            $selectedSupplier = $relatedPurchaseOrder->supplier;
+            $supplierName = $selectedSupplier->name;
+        }
+        
+        $suppliers = Supplier::orderBy('name')->get();
+    
+        return view('admin.sales.edit', compact(
+            'salesOrder', 
+            'customers', 
+            'products', 
+            'activeShift', 
+            'suppliers',
+            'selectedSupplier', // ✅ KIRIM DATA SUPPLIER YANG DIPILIH
+            'supplierName'      // ✅ KIRIM NAMA SUPPLIER
+        ));
     }
 
     public function update(Request $request, SalesOrder $salesOrder): RedirectResponse
@@ -903,6 +931,24 @@ public function searchCustomers(Request $request)
         ->get(['id', 'name', 'phone']);
     
     return response()->json($customers);
+}
+
+public function searchSuppliers(Request $request)
+{
+    $query = $request->get('q');
+    
+    if (strlen($query) < 2) {
+        return response()->json([]);
+    }
+    
+    $suppliers = Supplier::where('name', 'like', "%{$query}%")
+        ->orWhere('contact_name', 'like', "%{$query}%")
+        ->orWhere('phone', 'like', "%{$query}%")
+        ->where('is_active', true)
+        ->limit(10)
+        ->get(['id', 'name', 'contact_name', 'phone']);
+    
+    return response()->json($suppliers);
 }
 
 public function complete(SalesOrder $salesOrder): RedirectResponse

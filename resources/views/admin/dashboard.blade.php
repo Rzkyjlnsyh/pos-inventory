@@ -31,17 +31,18 @@
       .hover-link:hover .nav-text::after {
         width: 100%;
       }
+      .pulse-alert {
+        animation: pulse 2s infinite;
+      }
+      @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+        70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+      }
     </style>
   </head>
   <body class="bg-gray-100">
     <div class="flex">
-      <!-- Toggle Button for Sidebar -->
-      <button
-        class="fixed text-white text-3xl top-5 left-4 p-2 rounded-md bg-gray-700 lg:hidden focus:outline-none z-50"
-        onclick="toggleSidebar()"
-      >
-        <i class="bi bi-list"></i>
-      </button>
 
       <!-- Sidebar -->
       <x-navbar-admin></x-navbar-admin>
@@ -82,71 +83,340 @@
             </div>
           </div>
 
-          <!-- Admin Features Grid -->
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-            <div class="bg-white p-6 rounded-xl shadow-lg">
-              <div class="flex items-center gap-4">
-                <div class="flex items-center justify-center w-12 h-12 bg-purple-100 rounded-lg">
-                  <i class="bi bi-gear-fill text-2xl text-purple-600"></i>
-                </div>
-                <div>
-                  <h3 class="font-semibold text-gray-700">System Config</h3>
-                  <p class="text-sm text-gray-500">Konfigurasi sistem</p>
-                </div>
-              </div>
-            </div>
-
-            <div class="bg-white p-6 rounded-xl shadow-lg">
-              <div class="flex items-center gap-4">
-                <div class="flex items-center justify-center w-12 h-12 bg-red-100 rounded-lg">
-                  <i class="bi bi-people-fill text-2xl text-red-600"></i>
-                </div>
-                <div>
-                  <h3 class="font-semibold text-gray-700">User Management</h3>
-                  <p class="text-sm text-gray-500">Kelola pengguna</p>
+          <!-- === REAL-TIME DASHBOARD WIDGETS === -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            
+            <!-- 🔴 SHIFT STATUS CARD -->
+            <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-blue-500">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="font-semibold text-gray-700 flex items-center gap-2">
+                  <i class="bi bi-clock-history text-blue-500"></i>
+                  Status Shift
+                </h3>
+                <div id="shift-status-badge" class="px-3 py-1 rounded-full text-sm font-medium
+                  {{ isset($activeShift) && $activeShift ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                  {{ isset($activeShift) && $activeShift ? 'AKTIF' : 'TUTUP' }}
                 </div>
               </div>
+              
+              @if(isset($activeShift) && $activeShift)
+                <div class="space-y-3">
+                  <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Kas Awal:</span>
+                    <span class="font-semibold">Rp {{ number_format($activeShift->initial_cash, 0, ',', '.') }}</span>
+                  </div>
+                  <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Kas Akhir:</span>
+                    <span class="font-semibold">Rp {{ number_format($tunaiDiLaci, 0, ',', '.') }}</span>
+                  </div>
+                  <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Durasi:</span>
+                    <span class="font-semibold">{{ $shiftDuration }}</span>
+                  </div>
+                </div>
+                <div class="mt-4 pt-4 border-t">
+                  <a href="{{ route('admin.shift.dashboard') }}" class="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1">
+                    <i class="bi bi-arrow-right"></i>
+                    Kelola Shift
+                  </a>
+                </div>
+              @else
+                <p class="text-gray-500 text-sm py-2">Tidak ada shift aktif</p>
+                <a href="{{ route('admin.shift.dashboard') }}" class="inline-block mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+                  Mulai Shift
+                </a>
+              @endif
             </div>
 
-            <div class="bg-white p-6 rounded-xl shadow-lg">
-              <div class="flex items-center gap-4">
-                <div class="flex items-center justify-center w-12 h-12 bg-indigo-100 rounded-lg">
-                  <i class="bi bi-database-fill text-2xl text-indigo-600"></i>
+            <!-- 📊 TODAY'S PERFORMANCE -->
+            <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-green-500">
+              <h3 class="font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                <i class="bi bi-graph-up text-green-500"></i>
+                Performa Hari Ini
+              </h3>
+              
+              <div class="grid grid-cols-2 gap-4">
+                <div class="text-center p-3 bg-green-50 rounded-lg">
+                  <div class="text-2xl font-bold text-green-700">{{ $todayStats['transactions'] }}</div>
+                  <div class="text-xs text-green-600">Transaksi</div>
                 </div>
-                <div>
-                  <h3 class="font-semibold text-gray-700">Data Master</h3>
-                  <p class="text-sm text-gray-500">Administrasi data</p>
+                <div class="text-center p-3 bg-blue-50 rounded-lg">
+                  <div class="text-2xl font-bold text-blue-700">Rp {{ number_format($todayStats['revenue'], 0, ',', '.') }}</div>
+                  <div class="text-xs text-blue-600">Pendapatan</div>
                 </div>
-              </div>
-            </div>
-
-            <div class="bg-white p-6 rounded-xl shadow-lg">
-              <div class="flex items-center gap-4">
-                <div class="flex items-center justify-center w-12 h-12 bg-cyan-100 rounded-lg">
-                  <i class="bi bi-speedometer2 text-2xl text-cyan-600"></i>
+                <div class="text-center p-3 bg-purple-50 rounded-lg">
+                  <div class="text-2xl font-bold text-purple-700">{{ $todayStats['customers'] }}</div>
+                  <div class="text-xs text-purple-600">Customer</div>
                 </div>
-                <div>
-                  <h3 class="font-semibold text-gray-700">Monitor System</h3>
-                  <p class="text-sm text-gray-500">System performance</p>
+                <div class="text-center p-3 bg-orange-50 rounded-lg">
+                  <div class="text-2xl font-bold text-orange-700">Rp {{ number_format($todayStats['avg_transaction'], 0, ',', '.') }}</div>
+                  <div class="text-xs text-orange-600">Rata-rata</div>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Development Notice -->
-          <div class="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 p-6 rounded-xl shadow-lg">
-            <div class="flex items-center gap-3">
-              <div class="flex items-center justify-center w-10 h-10 bg-purple-100 rounded-full">
-                <i class="bi bi-info-circle text-purple-600"></i>
-              </div>
-              <div>
-                <h3 class="font-semibold text-purple-800">Dashboard dalam Pengembangan</h3>
-                <p class="text-sm text-purple-700 mt-1">
-                  Fitur Admin sedang dalam tahap pengembangan. Sistem role berhasil diimplementasi!
-                </p>
-              </div>
+          <!-- === FILTER TANGGAL === -->
+          <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <h3 class="font-semibold text-gray-700 flex items-center gap-2">
+                    <i class="bi bi-calendar-range text-blue-500"></i>
+                    Filter Laporan Penjualan
+                </h3>
+                <form method="GET" action="{{ route('admin.dashboard') }}" class="flex flex-col sm:flex-row gap-3">
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm text-gray-600">Dari:</label>
+                        <input type="date" name="start_date" value="{{ $startDate }}" 
+                              class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm text-gray-600">Sampai:</label>
+                        <input type="date" name="end_date" value="{{ $endDate }}" 
+                              class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                    </div>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+                        Terapkan
+                    </button>
+                    <a href="{{ route('admin.dashboard') }}" class="px-4 py-2 bg-gray-500 text-white rounded-lg text-sm font-medium hover:bg-gray-600 text-center">
+                        Reset
+                    </a>
+                </form>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">
+                Filter hanya berlaku untuk data statistik penjualan. Data shift & deadline tetap real-time.
+            </p>
+          </div>
+
+          <!-- === DEADLINE SECTIONS === -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            
+            <!-- 🔴 DEADLINE TERLEWAT -->
+            <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-red-500 {{ $overdueCount > 0 ? 'pulse-alert' : '' }}">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-semibold text-gray-700 flex items-center gap-2">
+                        <i class="bi bi-exclamation-octagon text-red-500"></i>
+                        Deadline Terlewat
+                    </h3>
+                    @if($overdueCount > 0)
+                        <span class="px-2 py-1 bg-red-100 text-red-800 rounded-full text-sm font-bold">
+                            {{ $overdueCount }}
+                        </span>
+                    @endif
+                </div>
+                
+                @if($overdueCount > 0)
+                    <div class="space-y-2">
+                        @foreach($overdueOrders as $order)
+                            @php
+                                $daysLate = \Carbon\Carbon::now()->startOfDay()->diffInDays(\Carbon\Carbon::parse($order->deadline)->startOfDay());
+                            @endphp
+                            
+                            <div class="flex justify-between items-center p-3 bg-red-50 rounded-lg border border-red-200">
+                                <div class="flex-1">
+                                    <div class="font-semibold text-sm text-gray-800">{{ $order->so_number }}</div>
+                                    <div class="text-xs text-gray-600 mt-1">{{ $order->customer->name ?? 'Customer Umum' }}</div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-sm font-bold text-red-600">
+                                        {{ $daysLate }} HARI TERLEWAT
+                                    </div>
+                                    <div class="text-xs text-gray-500 mt-1 capitalize">
+                                        {{ \Carbon\Carbon::parse($order->deadline)->format('d/m') }} • {{ $order->status }}
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="text-center py-6">
+                        <i class="bi bi-check-circle text-green-500 text-3xl mb-2"></i>
+                        <p class="text-gray-500 text-sm">Tidak ada deadline terlewat 🎉</p>
+                    </div>
+                @endif
+            </div>
+
+            <!-- 🟡 DEADLINE MENDEKAT -->
+            <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-orange-500 {{ $upcomingCount > 0 ? 'pulse-alert' : '' }}">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-semibold text-gray-700 flex items-center gap-2">
+                        <i class="bi bi-exclamation-triangle text-orange-500"></i>
+                        Deadline Mendekat (≤5 hari)
+                    </h3>
+                    @if($upcomingCount > 0)
+                        <span class="px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-sm font-bold">
+                            {{ $upcomingCount }}
+                        </span>
+                    @endif
+                </div>
+                
+                @if($upcomingCount > 0)
+                    <div class="space-y-2">
+                        @foreach($upcomingOrders as $order)
+                            @php
+                                $daysLeft = \Carbon\Carbon::now()->startOfDay()->diffInDays(\Carbon\Carbon::parse($order->deadline)->startOfDay(), false);
+                                $isToday = $daysLeft == 0;
+                                
+                                if ($isToday) {
+                                    $bgColor = 'bg-red-100';
+                                    $textColor = 'text-red-800';
+                                    $statusText = 'HARI INI';
+                                } elseif ($daysLeft <= 1) {
+                                    $bgColor = 'bg-orange-100';
+                                    $textColor = 'text-orange-800';
+                                    $statusText = '1 HARI LAGI';
+                                } else {
+                                    $bgColor = 'bg-yellow-100';
+                                    $textColor = 'text-yellow-800';
+                                    $statusText = $daysLeft . ' HARI LAGI';
+                                }
+                            @endphp
+                            
+                            <div class="flex justify-between items-center p-3 {{ $bgColor }} rounded-lg border">
+                                <div class="flex-1">
+                                    <div class="font-semibold text-sm text-gray-800">{{ $order->so_number }}</div>
+                                    <div class="text-xs text-gray-600 mt-1">{{ $order->customer->name ?? 'Customer Umum' }}</div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-sm font-bold {{ $textColor }}">
+                                        {{ $statusText }}
+                                    </div>
+                                    <div class="text-xs text-gray-500 mt-1 capitalize">
+                                        {{ \Carbon\Carbon::parse($order->deadline)->format('d/m') }} • {{ $order->status }}
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="text-center py-6">
+                        <i class="bi bi-check-circle text-green-500 text-3xl mb-2"></i>
+                        <p class="text-gray-500 text-sm">Tidak ada deadline mendekat 🎉</p>
+                    </div>
+                @endif
             </div>
           </div>
+
+          <!-- === JENIS TRANSAKSI === -->
+          <div class="bg-white p-6 rounded-xl shadow-lg mb-6 border-l-4 border-purple-500">
+            <h3 class="font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                <i class="bi bi-pie-chart text-purple-500"></i>
+                Jenis Transaksi 
+                <span class="text-sm text-gray-500 font-normal">
+                    ({{ \Carbon\Carbon::parse($startDate)->format('d/m') }} - {{ \Carbon\Carbon::parse($endDate)->format('d/m') }})
+                </span>
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="text-center p-4 bg-blue-50 rounded-lg">
+                    <div class="text-2xl font-bold text-blue-700">{{ $salesTypeStats['total'] }}</div>
+                    <div class="text-sm text-blue-600">Total Transaksi</div>
+                </div>
+                <div class="text-center p-4 bg-green-50 rounded-lg">
+                    <div class="text-2xl font-bold text-green-700">{{ $salesTypeStats['direct'] }}</div>
+                    <div class="text-sm text-green-600">Langsung ({{ $salesTypeStats['direct_percentage'] }}%)</div>
+                </div>
+                <div class="text-center p-4 bg-purple-50 rounded-lg">
+                    <div class="text-2xl font-bold text-purple-700">{{ $salesTypeStats['po'] }}</div>
+                    <div class="text-sm text-purple-600">Pre-Order ({{ $salesTypeStats['po_percentage'] }}%)</div>
+                </div>
+            </div>
+            
+            <!-- Progress Bar -->
+            <div class="mt-4">
+                <div class="flex justify-between text-sm text-gray-600 mb-1">
+                    <span>Langsung di Toko</span>
+                    <span>Pre-Order</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-3">
+                    <div class="flex h-3 rounded-full">
+                        <div class="bg-green-500" style="width: {{ $salesTypeStats['direct_percentage'] }}%"></div>
+                        <div class="bg-purple-500" style="width: {{ $salesTypeStats['po_percentage'] }}%"></div>
+                    </div>
+                </div>
+            </div>
+          </div>
+
+          <!-- === PENDING PAYMENTS === -->
+          <div class="bg-white p-6 rounded-xl shadow-lg mb-6 border-l-4 border-yellow-500">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-semibold text-gray-700 flex items-center gap-2">
+                <i class="bi bi-clock text-yellow-500"></i>
+                Belum Lunas
+              </h3>
+              @if($pendingPaymentsCount > 0)
+                <span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-bold">
+                  {{ $pendingPaymentsCount }}
+                </span>
+              @endif
+            </div>
+            
+            @if($pendingPaymentsCount > 0)
+              <div class="space-y-2">
+                @foreach($pendingPayments as $order)
+                  <div class="flex justify-between items-center p-2 hover:bg-yellow-50 rounded">
+                    <div>
+                      <div class="font-medium text-sm">{{ $order->so_number }}</div>
+                      <div class="text-xs text-gray-500">{{ $order->customer->name ?? 'Umum' }}</div>
+                    </div>
+                    <div class="text-right">
+                      <div class="text-sm font-semibold text-yellow-700">
+                        Rp {{ number_format($order->remaining_amount, 0, ',', '.') }}
+                      </div>
+                      <div class="text-xs text-gray-500">{{ $order->payment_status }}</div>
+                    </div>
+                  </div>
+                @endforeach
+              </div>
+              <div class="mt-4 pt-4 border-t">
+                <a href="{{ route('admin.sales.index') }}?payment_status=dp" class="text-yellow-600 hover:text-yellow-800 text-sm font-medium flex items-center gap-1">
+                  <i class="bi bi-arrow-right"></i>
+                  Kelola Pembayaran
+                </a>
+              </div>
+            @else
+              <p class="text-gray-500 text-sm py-4 text-center">Semua transaksi lunas ✅</p>
+            @endif
+          </div>
+
+          <!-- === QUICK ACTIONS === -->
+          <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
+            <h3 class="font-semibold text-gray-700 mb-4">Aksi Cepat</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <a href="{{ route('admin.sales.create') }}" class="p-4 bg-blue-50 rounded-lg text-center hover:bg-blue-100 transition-colors">
+                <i class="bi bi-plus-circle text-blue-600 text-2xl mb-2"></i>
+                <div class="font-medium text-blue-800 text-sm">Buat Penjualan</div>
+              </a>
+              <a href="{{ route('admin.sales.index') }}" class="p-4 bg-green-50 rounded-lg text-center hover:bg-green-100 transition-colors">
+                <i class="bi bi-receipt text-green-600 text-2xl mb-2"></i>
+                <div class="font-medium text-green-800 text-sm">Lihat Penjualan</div>
+              </a>
+              <a href="{{ route('admin.shift.dashboard') }}" class="p-4 bg-purple-50 rounded-lg text-center hover:bg-purple-100 transition-colors">
+                <i class="bi bi-cash-coin text-purple-600 text-2xl mb-2"></i>
+                <div class="font-medium text-purple-800 text-sm">Kelola Shift</div>
+              </a>
+              <a href="{{ route('admin.product.index') }}" class="p-4 bg-orange-50 rounded-lg text-center hover:bg-orange-100 transition-colors">
+                <i class="bi bi-box-seam text-orange-600 text-2xl mb-2"></i>
+                <div class="font-medium text-orange-800 text-sm">Produk</div>
+              </a>
+            </div>
+          </div>
+
+          <!-- Auto Refresh Script -->
+          <script>
+
+            // Real-time clock update
+            function updateClock() {
+              const now = new Date();
+              document.getElementById('current-time').textContent = 
+                now.toLocaleTimeString('id-ID', { 
+                  hour: '2-digit', 
+                  minute: '2-digit',
+                  second: '2-digit'
+                });
+            }
+            setInterval(updateClock, 1000);
+            updateClock();
+          </script>
 
         </div>
       </div>
