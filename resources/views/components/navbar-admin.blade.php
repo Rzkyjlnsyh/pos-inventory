@@ -74,10 +74,10 @@
         <div class="flex items-center justify-between p-6 border-b border-gray-200 bg-white">
             <div class="flex items-center space-x-3">
                 <img 
-                    src="{{ asset('assets/logo.png') }}" 
+                    src="{{ asset('https://parecustom.com/public/assets/logo.png') }}" 
                     alt="Pare Custom" 
                     class="w-10 h-10 object-contain"
-                    onerror="this.src='https://via.placeholder.com/40x40/3B82F6/FFFFFF?text=PC'"
+                    onerror="this.src='https://parecustom.com/public/assets/logo.png"
                 >
                 <div>
                     <h1 class="text-xl font-bold text-gray-900">PareCustom</h1>
@@ -89,7 +89,7 @@
             <button
                 class="lg:hidden p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
                 onclick="toggleSidebar()"
-            >
+
                 <i class="bi bi-x-lg text-lg"></i>
             </button>
         </div>
@@ -100,7 +100,7 @@
                 @php
                     $avatarPath = auth()->user()->avatar 
                         ? asset('storage/avatars/' . auth()->user()->avatar) 
-                        : 'https://via.placeholder.com/40x40/6B7280/FFFFFF?text=' . strtoupper(substr(auth()->user()->name, 0, 1));
+                        : 'https://placehold.co/40x40/6B7280/FFFFFF?text=' . strtoupper(substr(auth()->user()->name, 0, 1));
                 @endphp
                 <img 
                     src="{{ $avatarPath }}" 

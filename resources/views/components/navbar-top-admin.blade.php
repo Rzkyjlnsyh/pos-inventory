@@ -74,6 +74,10 @@
 
             <!-- Right Section: Actions & Profile -->
             <div class="flex items-center space-x-3">
+            <div class="hidden lg:flex items-center space-x-2 text-sm text-gray-600">
+        <i class="bi bi-clock"></i>
+        <span id="current-time"></span>
+    </div>
                 <!-- Mobile Search Button -->
                 <button
                     onclick="toggleMobileSearch()"
@@ -139,7 +143,7 @@
                         @php
                             $avatarPath = auth()->user()->avatar 
                                 ? asset('storage/avatars/' . auth()->user()->avatar) 
-                                : 'https://via.placeholder.com/32x32/6B7280/FFFFFF?text=' . strtoupper(substr(auth()->user()->name, 0, 1));
+                                : 'https://placehold.co/32x32/6B7280/FFFFFF?text=' . strtoupper(substr(auth()->user()->name, 0, 1));
                         @endphp
                         <img 
                             src="{{ $avatarPath }}" 
