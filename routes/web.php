@@ -522,6 +522,14 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/sales/export', [\App\Http\Controllers\Admin\SalesOrderController::class, 'export'])->name('sales.export');
     Route::get('/sales/download-template', [\App\Http\Controllers\Admin\SalesOrderController::class, 'downloadTemplate'])->name('sales.download-template');
 
+    // Tambahkan dalam group Admin routes (setelah shift routes)
+Route::prefix('advertisement')->name('advertisement.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Admin\AdvertisementPerformanceController::class, 'index'])->name('index');
+    Route::get('/create', [\App\Http\Controllers\Admin\AdvertisementPerformanceController::class, 'create'])->name('create');
+    Route::post('/', [\App\Http\Controllers\Admin\AdvertisementPerformanceController::class, 'store'])->name('store');
+    Route::get('/descriptions', [\App\Http\Controllers\Admin\AdvertisementPerformanceController::class, 'getDescriptions'])->name('descriptions');
+});
+
     // Admin routes - TAMBAHKAN INI SETELAH SHIFT ROUTES
     Route::middleware(['auth', 'admin', 'check.shift'])->group(function () {
         Route::resource('sales', \App\Http\Controllers\Admin\SalesOrderController::class)
