@@ -120,7 +120,7 @@
                                         <td class="px-4 py-2">
                                             {{ \Carbon\Carbon::parse($so->order_date)->format('d/m/Y') }}
                                         </td>
-                                        <td class="px-4 py-2">{{ $so->customer?->name ?? '-' }}</td>
+                                        <td class="px-4 py-2">{{ $so->customer?->name ?? 'Umum' }}</td>
                                         <td class="px-4 py-2">
                                             <span class="inline-block px-2 py-1 text-xs font-medium rounded-full
                                                 @if($so->status === 'selesai') bg-green-100 text-green-600

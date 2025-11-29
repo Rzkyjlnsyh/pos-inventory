@@ -163,10 +163,6 @@
                     <td class="px-4 py-2 action-buttons" onclick="event.stopPropagation()">
                       <div class="flex space-x-2">
                         @if($opname->status === 'draft')
-                          <a href="{{ route('admin.inventory.stock-opnames.edit', $opname->id) }}" 
-                             class="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600">
-                            <i class="bi bi-pencil"></i>
-                          </a>
                           <form action="{{ route('admin.inventory.stock-opnames.destroy', $opname->id) }}" method="POST">
                             @csrf
                             @method('DELETE')

@@ -13,6 +13,7 @@
     .nav-text { position: relative; display: inline-block; }
     .nav-text::after { content: ''; position: absolute; width: 0; height: 2px; bottom: -2px; left: 0; background-color: #e17f12; transition: width .2s; }
     .hover-link:hover .nav-text::after { width: 100%; }
+    [x-cloak] { display: none !important; }
   </style>
 </head>
 <body class="bg-gray-100">
@@ -35,17 +36,17 @@
                 </a>
               @endif
               <a href="{{ route('admin.inventory.stock-opnames.index') }}"
-                           class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded shadow">
-                            <i class="bi bi-arrow-left"></i> Kembali
-                        </a>
+                 class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded shadow">
+                <i class="bi bi-arrow-left"></i> Kembali
+              </a>
             </div>
           </div>
         </div>
 
         <div class="bg-white p-6 rounded-xl shadow-lg">
           @if($stockOpname->status === 'draft')
-            <!-- Form Edit untuk Draft -->
-            <form action="{{ route('admin.inventory.stock-opnames.update', $stockOpname->id) }}" method="POST" x-data="opnameForm()">
+            <!-- Form Edit untuk Draft dengan Search System -->
+            <form action="{{ route('admin.inventory.stock-opnames.update', $stockOpname->id) }}" method="POST" id="opnameForm">
               @csrf
               @method('PUT')
 
@@ -65,45 +66,10 @@
               <h3 class="text-lg font-semibold mb-4">Daftar Produk</h3>
 
               <div id="product-items">
-                <template x-for="(item, index) in items" :key="index">
-                  <div class="border rounded-lg p-4 mb-4 bg-gray-50">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <label class="block text-gray-700 mb-2">Produk</label>
-                        <select :name="`items[${index}][product_id]`" class="w-full border rounded p-2 product-select"
-                          x-model="item.product_id" @change="getQtySystem(index)" required>
-                          <option value="">-- Pilih Produk --</option>
-                          @foreach($products as $product)
-                            <option value="{{ $product->id }}" data-stock="{{ $product->stock_qty }}"
-                              :selected="item.product_id == {{ $product->id }}">
-                              {{ $product->name }} (Stok: {{ $product->stock_qty }})
-                            </option>
-                          @endforeach
-                        </select>
-                        <input type="hidden" :name="`items[${index}][product_name]`" :value="getProductName(item.product_id)">
-                        <input type="hidden" :name="`items[${index}][sku]`" :value="getProductSku(item.product_id)">
-                      </div>
-                      <div>
-                        <label class="block text-gray-700 mb-2">Qty Sistem</label>
-                        <input type="number" :name="`items[${index}][system_qty]`"
-                          class="w-full border rounded p-2 bg-gray-100 qty-system" x-model="item.system_qty" readonly>
-                      </div>
-                      <div>
-                        <label class="block text-gray-700 mb-2">Qty Aktual</label>
-                        <input type="number" :name="`items[${index}][actual_qty]`"
-                          class="w-full border rounded p-2" x-model="item.actual_qty" required>
-                      </div>
-                    </div>
-                    <div class="text-right mt-2" x-show="items.length > 1">
-                      <button type="button" class="text-red-500 hover:underline" @click="removeItem(index)">
-                        <i class="bi bi-trash"></i> Hapus
-                      </button>
-                    </div>
-                  </div>
-                </template>
+                <!-- Items akan diisi oleh JavaScript -->
               </div>
 
-              <button type="button" @click="addItem"
+              <button type="button" id="add-item-btn"
                 class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 mb-4">
                 <i class="bi bi-plus-circle"></i> Tambah Produk
               </button>
@@ -126,52 +92,247 @@
               </div>
             </form>
 
+            <!-- Template untuk item produk -->
+            <template id="product-item-template">
+              <div class="border rounded-lg p-4 mb-4 bg-gray-50 product-item">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div class="relative">
+                    <label class="block text-gray-700 mb-2">Produk</label>
+                    <div class="relative">
+                      <input 
+                        type="text" 
+                        class="product-search w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Cari produk (nama, SKU, barcode)..."
+                        required>
+                      <input type="hidden" class="product-id" name="items[INDEX][product_id]">
+                      <input type="hidden" class="product-name" name="items[INDEX][product_name]">
+                      <input type="hidden" class="product-sku" name="items[INDEX][sku]">
+                      
+                      <!-- Search Results Dropdown -->
+                      <div class="search-results absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto hidden">
+                        <!-- Results akan diisi oleh JavaScript -->
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-gray-700 mb-2">Qty Sistem</label>
+                    <input type="number" class="system-qty w-full border rounded p-2 bg-gray-100" name="items[INDEX][system_qty]" readonly>
+                  </div>
+                  <div>
+                    <label class="block text-gray-700 mb-2">Qty Aktual</label>
+                    <input type="number" class="actual-qty w-full border rounded p-2" name="items[INDEX][actual_qty]" required>
+                  </div>
+                </div>
+                <div class="text-right mt-2 remove-item-container">
+                  <button type="button" class="remove-item text-red-500 hover:underline">
+                    <i class="bi bi-trash"></i> Hapus
+                  </button>
+                </div>
+              </div>
+            </template>
+
             <script>
-              function opnameForm() {
-                return {
-                  products: @json($products),
-                  items: @json($stockOpname->items->map(function($item) {
-                    return [
-                      'product_id' => $item->product_id,
-                      'system_qty' => $item->system_qty,
-                      'actual_qty' => $item->actual_qty
-                    ];
-                  })),
-                  addItem() {
-                    this.items.push({ 
-                      product_id: '', 
-                      system_qty: 0,
-                      actual_qty: 0 
-                    });
-                  },
-                  removeItem(index) {
-                    this.items.splice(index, 1);
-                  },
-                  getProductName(productId) {
-                    if (!productId) return '';
-                    const product = this.products.find(p => p.id == productId);
-                    return product ? product.name : '';
-                  },
-                  getProductSku(productId) {
-                    if (!productId) return '';
-                    const product = this.products.find(p => p.id == productId);
-                    return product ? (product.sku || '') : '';
-                  },
-                  async getQtySystem(index) {
-                    const productId = this.items[index].product_id;
-                    if (!productId) return;
-                    
-                    const selectedOption = document.querySelector(`select[name="items[${index}][product_id]"] option:checked`);
-                    if (selectedOption) {
-                      const qtySystem = selectedOption.getAttribute('data-stock') || 0;
-                      this.items[index].system_qty = qtySystem;
-                    }
+              // Data items dari PHP
+              const initialItems = {!! json_encode(
+    $stockOpname->items->map(function($item) {
+        return [
+            'product_id' => $item->product_id,
+            'product_name' => $item->product_name,
+            'sku' => $item->sku,
+            'system_qty' => $item->system_qty,
+            'actual_qty' => $item->actual_qty
+        ];
+    })
+, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!};
+
+              // Search timeouts storage
+              const searchTimeouts = {};
+
+              document.addEventListener('DOMContentLoaded', function() {
+                  const productItemsContainer = document.getElementById('product-items');
+                  const template = document.getElementById('product-item-template');
+                  const addItemBtn = document.getElementById('add-item-btn');
+
+                  // Initialize dengan data existing
+                  initialItems.forEach((item, index) => {
+                      addProductItem(item, index);
+                  });
+
+                  // Event listener untuk tambah item
+                  addItemBtn.addEventListener('click', function() {
+                      const newIndex = document.querySelectorAll('.product-item').length;
+                      addProductItem({}, newIndex);
+                  });
+
+                  // Event delegation untuk remove item
+                  productItemsContainer.addEventListener('click', function(e) {
+                      if (e.target.closest('.remove-item')) {
+                          const item = e.target.closest('.product-item');
+                          item.remove();
+                          reindexItems();
+                      }
+                  });
+
+                  // Event delegation untuk search
+                  productItemsContainer.addEventListener('input', function(e) {
+                      if (e.target.classList.contains('product-search')) {
+                          const index = Array.from(document.querySelectorAll('.product-search')).indexOf(e.target);
+                          searchProducts(e.target.value, index);
+                      }
+                  });
+
+                  // Event delegation untuk select product
+                  productItemsContainer.addEventListener('click', function(e) {
+                      if (e.target.closest('.search-result-item')) {
+                          const resultItem = e.target.closest('.search-result-item');
+                          const product = JSON.parse(resultItem.dataset.product);
+                          const searchInput = resultItem.closest('.product-item').querySelector('.product-search');
+                          const index = Array.from(document.querySelectorAll('.product-search')).indexOf(searchInput);
+                          
+                          selectProduct(product, index);
+                      }
+                  });
+
+                  // Hide search results when clicking outside
+                  document.addEventListener('click', function(e) {
+                      if (!e.target.closest('.product-search') && !e.target.closest('.search-results')) {
+                          document.querySelectorAll('.search-results').forEach(el => {
+                              el.classList.add('hidden');
+                          });
+                      }
+                  });
+              });
+
+              function addProductItem(itemData = {}, index) {
+                  const template = document.getElementById('product-item-template');
+                  const clone = template.content.cloneNode(true);
+                  const productItem = clone.querySelector('.product-item');
+                  
+                  // Update semua input dengan index yang benar
+                  productItem.querySelectorAll('[name]').forEach(input => {
+                      input.name = input.name.replace('INDEX', index);
+                  });
+
+                  // Pre-fill data jika ada
+                  if (itemData.product_id) {
+                      productItem.querySelector('.product-id').value = itemData.product_id;
+                      productItem.querySelector('.product-name').value = itemData.product_name;
+                      productItem.querySelector('.product-sku').value = itemData.sku;
+                      productItem.querySelector('.product-search').value = itemData.product_name;
+                      productItem.querySelector('.system-qty').value = itemData.system_qty;
+                      productItem.querySelector('.actual-qty').value = itemData.actual_qty;
+                      
+                      // Style untuk produk yang sudah dipilih
+                      productItem.querySelector('.product-search').classList.add('bg-green-50', 'border-green-300');
                   }
-                }
+
+                  // Sembunyikan remove button jika hanya 1 item
+                  if (document.querySelectorAll('.product-item').length === 0 && index === 0) {
+                      productItem.querySelector('.remove-item-container').classList.add('hidden');
+                  } else {
+                      productItem.querySelector('.remove-item-container').classList.remove('hidden');
+                  }
+
+                  document.getElementById('product-items').appendChild(productItem);
+              }
+
+              function searchProducts(query, index) {
+                  if (!query || query.length < 2) {
+                      hideSearchResults(index);
+                      return;
+                  }
+
+                  // Clear previous timeout
+                  if (searchTimeouts[index]) {
+                      clearTimeout(searchTimeouts[index]);
+                  }
+
+                  // Debounce search
+                  searchTimeouts[index] = setTimeout(() => {
+                      fetch(`{{ route('admin.inventory.stock-opnames.search-products') }}?q=${encodeURIComponent(query)}`)
+                          .then(response => response.json())
+                          .then(data => {
+                              showSearchResults(data, index);
+                          })
+                          .catch(error => {
+                              console.error('Search error:', error);
+                              hideSearchResults(index);
+                          });
+                  }, 300);
+              }
+
+              function showSearchResults(products, index) {
+                  const searchInputs = document.querySelectorAll('.product-search');
+                  const searchInput = searchInputs[index];
+                  const resultsContainer = searchInput.closest('.product-item').querySelector('.search-results');
+                  
+                  resultsContainer.innerHTML = '';
+
+                  if (products.length === 0) {
+                      resultsContainer.innerHTML = '<div class="p-3 text-gray-500 text-sm">Produk tidak ditemukan</div>';
+                  } else {
+                      products.forEach(product => {
+                          const resultItem = document.createElement('div');
+                          resultItem.className = 'search-result-item p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0';
+                          resultItem.dataset.product = JSON.stringify(product);
+                          resultItem.innerHTML = `
+                              <div class="font-medium text-gray-800">${product.name}</div>
+                              <div class="text-sm text-gray-500">
+                                  SKU: ${product.sku} | Stok: ${product.stock_qty}
+                              </div>
+                          `;
+                          resultsContainer.appendChild(resultItem);
+                      });
+                  }
+                  
+                  resultsContainer.classList.remove('hidden');
+              }
+
+              function hideSearchResults(index) {
+                  const searchInputs = document.querySelectorAll('.product-search');
+                  const searchInput = searchInputs[index];
+                  const resultsContainer = searchInput.closest('.product-item').querySelector('.search-results');
+                  resultsContainer.classList.add('hidden');
+              }
+
+              function selectProduct(product, index) {
+                  const searchInputs = document.querySelectorAll('.product-search');
+                  const searchInput = searchInputs[index];
+                  const productItem = searchInput.closest('.product-item');
+                  
+                  productItem.querySelector('.product-id').value = product.id;
+                  productItem.querySelector('.product-name').value = product.name;
+                  productItem.querySelector('.product-sku').value = product.sku;
+                  productItem.querySelector('.system-qty').value = product.stock_qty;
+                  productItem.querySelector('.product-search').value = product.name;
+                  
+                  // Style untuk produk yang dipilih
+                  searchInput.classList.add('bg-green-50', 'border-green-300');
+                  
+                  // Hide results
+                  hideSearchResults(index);
+              }
+
+              function reindexItems() {
+                  const items = document.querySelectorAll('.product-item');
+                  items.forEach((item, newIndex) => {
+                      item.querySelectorAll('[name]').forEach(input => {
+                          const oldName = input.name;
+                          const newName = oldName.replace(/items\[\d+\]/, `items[${newIndex}]`);
+                          input.name = newName;
+                      });
+
+                      // Update remove button visibility
+                      if (items.length === 1) {
+                          item.querySelector('.remove-item-container').classList.add('hidden');
+                      } else {
+                          item.querySelector('.remove-item-container').classList.remove('hidden');
+                      }
+                  });
               }
             </script>
           @else
-            <!-- Tabel untuk Approved -->
+            <!-- Tampilan Read-only untuk Approved (SAMA seperti sebelumnya) -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <div>
                 <h3 class="font-medium text-gray-700">Informasi Dokumen</h3>
