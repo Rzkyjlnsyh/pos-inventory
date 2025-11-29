@@ -475,6 +475,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
             Route::get('create', [\App\Http\Controllers\Owner\StockOpnameController::class, 'create'])->name('create');
             Route::post('/', [\App\Http\Controllers\Owner\StockOpnameController::class, 'store'])->name('store');
             Route::get('template', [\App\Http\Controllers\Owner\StockOpnameController::class, 'downloadTemplate'])->name('template');
+            Route::get('search-products', [\App\Http\Controllers\Owner\StockOpnameController::class, 'searchProducts'])->name('search-products');
             Route::get('{stockOpname}', [\App\Http\Controllers\Owner\StockOpnameController::class, 'show'])->name('show');
             Route::get('{stockOpname}/edit', [\App\Http\Controllers\Owner\StockOpnameController::class, 'edit'])->name('edit');
             Route::put('{stockOpname}', [\App\Http\Controllers\Owner\StockOpnameController::class, 'update'])->name('update');

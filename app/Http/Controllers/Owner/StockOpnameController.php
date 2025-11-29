@@ -35,15 +35,43 @@ class StockOpnameController extends Controller
             return redirect()->route($this->getRoutePrefix() . '.inventory.stock-opnames.index')
                 ->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk membuat Stock Opname.');
         }
-        $products = Product::select('id', 'name', 'stock_qty')->get();
+        // Tidak perlu load semua produk lagi, akan diambil via search
         $autoNumber = $this->generateDocumentNumber();
 
         $prefix = $this->getViewPrefix();
         $view = "{$prefix}.inventory.stock-opnames.create";
         return view($view, [
-            'products' => $products,
             'autoNumber' => $autoNumber
         ]);
+    }
+
+    public function searchProducts(Request $request)
+    {
+        $query = $request->get('q', '');
+        
+        if (strlen($query) < 2) {
+            return response()->json([]);
+        }
+
+        $products = Product::select('id', 'name', 'sku', 'stock_qty')
+            ->where(function($q) use ($query) {
+                $q->where('name', 'like', "%{$query}%")
+                  ->orWhere('sku', 'like', "%{$query}%")
+                  ->orWhere('barcode', 'like', "%{$query}%");
+            })
+            ->limit(20)
+            ->get()
+            ->map(function($product) {
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'sku' => $product->sku ?? '-',
+                    'stock_qty' => $product->stock_qty,
+                    'display' => $product->name . ' (SKU: ' . ($product->sku ?? '-') . ', Stok: ' . $product->stock_qty . ')'
+                ];
+            });
+
+        return response()->json($products);
     }
 
     public function store(Request $request)

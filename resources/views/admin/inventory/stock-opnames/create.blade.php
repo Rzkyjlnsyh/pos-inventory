@@ -51,19 +51,46 @@
             <template x-for="(item, index) in items" :key="index">
               <div class="border rounded-lg p-4 mb-4 bg-gray-50">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
+                  <div class="relative">
                     <label class="block text-gray-700 mb-2">Produk</label>
-                    <select :name="`items[${index}][product_id]`" class="w-full border rounded p-2 product-select"
-                      x-model="item.product_id" @change="getQtySystem(index)" required>
-                      <option value="">-- Pilih Produk --</option>
-                      @foreach($products as $product)
-                        <option value="{{ $product->id }}" data-stock="{{ $product->stock_qty }}">
-                          {{ $product->name }} (Stok: {{ $product->stock_qty }})
-                        </option>
-                      @endforeach
-                    </select>
-                    <input type="hidden" :name="`items[${index}][product_name]`" :value="getProductName(item.product_id)">
-                    <input type="hidden" :name="`items[${index}][sku]`" :value="getProductSku(item.product_id)">
+                    <div class="relative">
+                      <input 
+                        type="text" 
+                        x-model="item.searchQuery"
+                        @input="searchProducts(index)"
+                        @focus="item.showResults = true"
+                        @click.away="item.showResults = false"
+                        :placeholder="item.product_name || 'Cari produk (nama, SKU, barcode)...'"
+                        class="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        :class="item.product_id ? 'bg-green-50 border-green-300' : ''"
+                        required>
+                      <input type="hidden" :name="`items[${index}][product_id]`" x-model="item.product_id">
+                      <input type="hidden" :name="`items[${index}][product_name]`" x-model="item.product_name">
+                      <input type="hidden" :name="`items[${index}][sku]`" x-model="item.sku">
+                      
+                      <!-- Search Results Dropdown -->
+                      <div x-show="item.showResults && item.searchResults && item.searchResults.length > 0" 
+                           x-cloak
+                           class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        <template x-for="product in item.searchResults" :key="product.id">
+                          <div @click="selectProduct(index, product)"
+                               class="p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0">
+                            <div class="font-medium text-gray-800" x-text="product.name"></div>
+                            <div class="text-sm text-gray-500">
+                              SKU: <span x-text="product.sku"></span> | 
+                              Stok: <span x-text="product.stock_qty"></span>
+                            </div>
+                          </div>
+                        </template>
+                      </div>
+                      
+                      <!-- No Results -->
+                      <div x-show="item.showResults && item.searchQuery && item.searchQuery.length >= 2 && item.searchResults && item.searchResults.length === 0" 
+                           x-cloak
+                           class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg p-3 text-gray-500 text-sm">
+                            Produk tidak ditemukan
+                          </div>
+                    </div>
                   </div>
                   <div>
                     <label class="block text-gray-700 mb-2">Qty Sistem</label>
@@ -115,44 +142,81 @@
   <script>
     function opnameForm() {
       return {
-        products: @json($products),
+        searchTimeouts: {},
         items: [{ 
           product_id: '', 
+          product_name: '',
+          sku: '',
           system_qty: 0,
-          actual_qty: 0 
+          actual_qty: 0,
+          searchQuery: '',
+          showResults: false,
+          searchResults: []
         }],
         addItem() {
           this.items.push({ 
             product_id: '', 
+            product_name: '',
+            sku: '',
             system_qty: 0,
-            actual_qty: 0 
+            actual_qty: 0,
+            searchQuery: '',
+            showResults: false,
+            searchResults: []
           });
         },
         removeItem(index) {
           this.items.splice(index, 1);
-        },
-        getProductName(productId) {
-          if (!productId) return '';
-          const product = this.products.find(p => p.id == productId);
-          return product ? product.name : '';
-        },
-        getProductSku(productId) {
-          if (!productId) return '';
-          const product = this.products.find(p => p.id == productId);
-          return product ? (product.sku || '') : '';
-        },
-        async getQtySystem(index) {
-          const productId = this.items[index].product_id;
-          if (!productId) return;
-          
-          const selectedOption = document.querySelector(`select[name="items[${index}][product_id]"] option:checked`);
-          if (selectedOption) {
-            const qtySystem = selectedOption.getAttribute('data-stock') || 0;
-            this.items[index].system_qty = qtySystem;
+          // Clear timeout jika ada
+          if (this.searchTimeouts[index]) {
+            clearTimeout(this.searchTimeouts[index]);
+            delete this.searchTimeouts[index];
           }
+        },
+        searchProducts(index) {
+          const item = this.items[index];
+          const query = item.searchQuery;
+          
+          if (!query || query.length < 2) {
+            item.searchResults = [];
+            return;
+          }
+
+          // Clear previous timeout
+          if (this.searchTimeouts[index]) {
+            clearTimeout(this.searchTimeouts[index]);
+          }
+
+          // Debounce search
+          this.searchTimeouts[index] = setTimeout(() => {
+            fetch(`{{ route('admin.inventory.stock-opnames.search-products') }}?q=${encodeURIComponent(query)}`)
+              .then(response => response.json())
+              .then(data => {
+                item.searchResults = data;
+                item.showResults = true;
+              })
+              .catch(error => {
+                console.error('Search error:', error);
+                item.searchResults = [];
+              });
+          }, 300);
+        },
+        selectProduct(index, product) {
+          const item = this.items[index];
+          item.product_id = product.id;
+          item.product_name = product.name;
+          item.sku = product.sku || '';
+          item.system_qty = product.stock_qty;
+          item.searchQuery = product.name;
+          item.showResults = false;
+          item.searchResults = [];
         }
       }
     }
   </script>
+  
+  <style>
+    [x-cloak] { display: none !important; }
+  </style>
 </body>
 </html>
